@@ -1,0 +1,1 @@
+{"call_id": "AMD_Q4-2024", "role": "Other_Exec", "model": "llama3.1:8b", "n_answers": 2, "unit_ids": ["AMD_Q4-2024__qa__016", "AMD_Q4-2024__qa__022"], "wins": [], "risks": ["sequential growth slows for next 3 quarters", "shift to focus on training versus inference"], "guidance": "none", "_cache_key": "ea10693037f9e9e4"}

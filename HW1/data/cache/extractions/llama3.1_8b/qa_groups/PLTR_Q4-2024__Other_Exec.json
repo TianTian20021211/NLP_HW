@@ -1,0 +1,1 @@
+{"call_id": "PLTR_Q4-2024", "role": "Other_Exec", "model": "llama3.1:8b", "n_answers": 3, "unit_ids": ["PLTR_Q4-2024__qa__009", "PLTR_Q4-2024__qa__013", "PLTR_Q4-2024__qa__018"], "wins": ["quick adoption of AI initiatives", "tangible impact on customers' back-office processes"], "risks": [], "guidance": "none", "_cache_key": "ea10693037f9e9e4"}

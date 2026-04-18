@@ -1,0 +1,353 @@
+{
+  "ticker": "AVGO",
+  "quarter": "Q2-2024",
+  "call_date": "2024-06-12",
+  "variant": "lm",
+  "n_units": {
+    "total": 21,
+    "presenter": 3,
+    "qa": 18
+  },
+  "models": [
+    "gemma3:4b",
+    "llama3.1:8b"
+  ],
+  "consensus": {
+    "sentiment_call": -0.3131496062992126,
+    "sentiment_qa": 0.16015503583908672,
+    "wins_top5": [
+      [
+        "financial performance",
+        1
+      ],
+      [
+        "second quarter results",
+        1
+      ],
+      [
+        "fiscal year 2024 guidance",
+        1
+      ],
+      [
+        "financial performance for the second quarter of fiscal year 2024",
+        1
+      ],
+      [
+        "VMware integration",
+        1
+      ]
+    ],
+    "risks_top5": [
+      [
+        "risk factors",
+        1
+      ],
+      [
+        "actual results",
+        1
+      ],
+      [
+        "forward-looking statements",
+        1
+      ],
+      [
+        "specific risk factors that could cause our actual results to differ materially from the forward-looking statements made on this call",
+        1
+      ],
+      [
+        "Broadband weakness",
+        1
+      ]
+    ],
+    "guidance_call": "raised",
+    "guidance_by_model": {
+      "gemma3:4b": "raised",
+      "llama3.1:8b": "raised"
+    }
+  },
+  "dispersion": {
+    "sentiment_dispersion": 0.7660323462854265,
+    "guidance_disagree": 0,
+    "wins_overlap": 0.0,
+    "risks_overlap": 0.0,
+    "qa_minus_pres_risks": [
+      "ai margin dilution",
+      "channel conflict",
+      "increased competition from new entrant in custom asic ai market",
+      "inventory correction",
+      "inventory correction in non ai semiconductor business",
+      "potential for crowding out of spending on other software solutions"
+    ],
+    "qa_minus_pres_risks_count": 6,
+    "role_sent_means": {
+      "CEO": 0.08333333333333333,
+      "CFO": -1.0
+    }
+  },
+  "by_role": {
+    "CEO": {
+      "n_units": 17,
+      "sentiment": 0.13671468495768674,
+      "wins_top5": [
+        [
+          "VMware integration",
+          1
+        ],
+        [
+          "AI revenue growth",
+          1
+        ],
+        [
+          "Networking demand",
+          1
+        ],
+        [
+          "Accelerated AI revenue to $3.1 billion",
+          1
+        ],
+        [
+          "Integrated VMware and simplified product SKUs from over 8,000 to 4 core offerings",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "Broadband weakness",
+          1
+        ],
+        [
+          "Server storage decline",
+          1
+        ],
+        [
+          "Industrial resale decline",
+          1
+        ],
+        [
+          "inventory correction",
+          1
+        ],
+        [
+          "channel conflict",
+          1
+        ]
+      ],
+      "guidance_vote": "maintained"
+    },
+    "CFO": {
+      "n_units": 1,
+      "sentiment": -1.0,
+      "wins_top5": [
+        [
+          "VMware contribution",
+          1
+        ],
+        [
+          "operating income",
+          1
+        ],
+        [
+          "adjusted EBITDA",
+          1
+        ],
+        [
+          "43% increase in consolidated revenue",
+          1
+        ],
+        [
+          "32% increase in operating income",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "higher mix of custom AI accelerators",
+          1
+        ],
+        [
+          "cash interest expense",
+          1
+        ],
+        [
+          "delay in Section 174 reenactment",
+          1
+        ]
+      ],
+      "guidance_vote": "raised"
+    },
+    "IR": {
+      "n_units": 2,
+      "sentiment": 0.0,
+      "wins_top5": [
+        [
+          "financial performance",
+          1
+        ],
+        [
+          "second quarter results",
+          1
+        ],
+        [
+          "fiscal year 2024 guidance",
+          1
+        ],
+        [
+          "financial performance for the second quarter of fiscal year 2024",
+          1
+        ],
+        [
+          "channel conflict elimination",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "risk factors",
+          1
+        ],
+        [
+          "actual results",
+          1
+        ],
+        [
+          "forward-looking statements",
+          1
+        ],
+        [
+          "specific risk factors that could cause our actual results to differ materially from the forward-looking statements made on this call",
+          1
+        ]
+      ],
+      "guidance_vote": "none"
+    },
+    "Other_Exec": {
+      "n_units": 1,
+      "sentiment": null,
+      "wins_top5": [
+        [
+          "flexibility",
+          1
+        ],
+        [
+          "differentiator",
+          1
+        ],
+        [
+          "open stack",
+          1
+        ],
+        [
+          "unique portfolio flexibility",
+          1
+        ],
+        [
+          "proven differentiator for hyperscalers",
+          1
+        ]
+      ],
+      "risks_top5": [],
+      "guidance_vote": "none"
+    }
+  },
+  "by_section": {
+    "presenter": {
+      "n_units": 3,
+      "sentiment": -0.3131496062992126,
+      "wins_top5": [
+        [
+          "financial performance",
+          1
+        ],
+        [
+          "second quarter results",
+          1
+        ],
+        [
+          "fiscal year 2024 guidance",
+          1
+        ],
+        [
+          "financial performance for the second quarter of fiscal year 2024",
+          1
+        ],
+        [
+          "VMware integration",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "risk factors",
+          1
+        ],
+        [
+          "actual results",
+          1
+        ],
+        [
+          "forward-looking statements",
+          1
+        ],
+        [
+          "specific risk factors that could cause our actual results to differ materially from the forward-looking statements made on this call",
+          1
+        ],
+        [
+          "Broadband weakness",
+          1
+        ]
+      ],
+      "guidance_vote": "raised"
+    },
+    "qa": {
+      "n_units": 18,
+      "sentiment": 0.16015503583908672,
+      "wins_top5": [
+        [
+          "AI accelerators",
+          1
+        ],
+        [
+          "networking mix",
+          1
+        ],
+        [
+          "VMware progress",
+          1
+        ],
+        [
+          "Strong growth in AI business",
+          1
+        ],
+        [
+          "Growing adoption of Tomahawk and Jericho products",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "inventory correction",
+          1
+        ],
+        [
+          "channel conflict",
+          1
+        ],
+        [
+          "AI margin dilution",
+          1
+        ],
+        [
+          "Increased competition from new entrant in custom ASIC AI market",
+          1
+        ],
+        [
+          "Potential for crowding out of spending on other software solutions",
+          1
+        ]
+      ],
+      "guidance_vote": "maintained"
+    }
+  },
+  "_cache_key": "b9c11fa20978a9b0"
+}

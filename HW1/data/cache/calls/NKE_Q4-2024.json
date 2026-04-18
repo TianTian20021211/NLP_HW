@@ -1,0 +1,291 @@
+{
+  "ticker": "NKE",
+  "quarter": "Q4-2024",
+  "call_date": "2024-06-27",
+  "variant": "finbert",
+  "n_units": {
+    "total": 19,
+    "presenter": 3,
+    "qa": 16
+  },
+  "models": [
+    "gemma3:4b",
+    "llama3.1:8b"
+  ],
+  "consensus": {
+    "sentiment_call": 0.37905548505513004,
+    "sentiment_qa": 0.3074995786995522,
+    "wins_top5": [
+      [
+        "joining us today",
+        1
+      ],
+      [
+        "year-over-year growth comparisons",
+        1
+      ],
+      [
+        "basketball growth",
+        1
+      ],
+      [
+        "fitness growth",
+        1
+      ],
+      [
+        "running innovation",
+        1
+      ]
+    ],
+    "risks_top5": [
+      [
+        "macro uncertainty",
+        2
+      ],
+      [
+        "forward-looking statements",
+        1
+      ],
+      [
+        "risks and uncertainties",
+        1
+      ],
+      [
+        "SEC reports",
+        1
+      ],
+      [
+        "certain risks and uncertainties",
+        1
+      ]
+    ],
+    "guidance_call": "lowered",
+    "guidance_by_model": {
+      "gemma3:4b": "lowered",
+      "llama3.1:8b": "lowered"
+    }
+  },
+  "dispersion": {
+    "sentiment_dispersion": 0.190832784475989,
+    "guidance_disagree": 0,
+    "wins_overlap": 0.0,
+    "risks_overlap": 0.0,
+    "qa_minus_pres_risks": [
+      "channel mix headwind in fiscal year 25",
+      "channel shift",
+      "digital channel adjustments",
+      "franchise management",
+      "fx headwinds",
+      "innovation cadence",
+      "macro headwinds",
+      "organizational reset and shifting of cost base",
+      "product life cycle management challenges for the next couple of quarters"
+    ],
+    "qa_minus_pres_risks_count": 9,
+    "role_sent_means": {
+      "CFO": 0.27045541433239306,
+      "Other_Exec": 0.5403337262837585
+    }
+  },
+  "by_role": {
+    "CFO": {
+      "n_units": 11,
+      "sentiment": 0.2888066357897816,
+      "wins_top5": [
+        [
+          "joining us today",
+          1
+        ],
+        [
+          "year-over-year growth comparisons",
+          1
+        ],
+        [
+          "strong double-digit growth",
+          1
+        ],
+        [
+          "fresh releases resonating positively",
+          1
+        ],
+        [
+          "momentum in performance",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "forward-looking statements",
+          1
+        ],
+        [
+          "risks and uncertainties",
+          1
+        ],
+        [
+          "SEC reports",
+          1
+        ],
+        [
+          "certain risks and uncertainties",
+          1
+        ],
+        [
+          "material differences in actual results",
+          1
+        ]
+      ],
+      "guidance_vote": "lowered"
+    },
+    "Other_Exec": {
+      "n_units": 8,
+      "sentiment": 0.4380528153111955,
+      "wins_top5": [
+        [
+          "accelerating innovation pipeline",
+          2
+        ],
+        [
+          "basketball growth",
+          1
+        ],
+        [
+          "fitness growth",
+          1
+        ],
+        [
+          "running innovation",
+          1
+        ],
+        [
+          "double-digit growth in performance product",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "macro uncertainty",
+          2
+        ],
+        [
+          "foreign exchange",
+          1
+        ],
+        [
+          "lifestyle declines",
+          1
+        ],
+        [
+          "worsening foreign exchange",
+          1
+        ],
+        [
+          "declines in lifestyle",
+          1
+        ]
+      ],
+      "guidance_vote": "lowered"
+    }
+  },
+  "by_section": {
+    "presenter": {
+      "n_units": 3,
+      "sentiment": 0.37905548505513004,
+      "wins_top5": [
+        [
+          "joining us today",
+          1
+        ],
+        [
+          "year-over-year growth comparisons",
+          1
+        ],
+        [
+          "basketball growth",
+          1
+        ],
+        [
+          "fitness growth",
+          1
+        ],
+        [
+          "running innovation",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "macro uncertainty",
+          2
+        ],
+        [
+          "forward-looking statements",
+          1
+        ],
+        [
+          "risks and uncertainties",
+          1
+        ],
+        [
+          "SEC reports",
+          1
+        ],
+        [
+          "certain risks and uncertainties",
+          1
+        ]
+      ],
+      "guidance_vote": "lowered"
+    },
+    "qa": {
+      "n_units": 16,
+      "sentiment": 0.3074995786995522,
+      "wins_top5": [
+        [
+          "sport focus",
+          1
+        ],
+        [
+          "innovation pipeline",
+          1
+        ],
+        [
+          "consumer confidence",
+          1
+        ],
+        [
+          "Strong execution of comeback plan",
+          1
+        ],
+        [
+          "Accelerating innovation pipeline",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "macro headwinds",
+          1
+        ],
+        [
+          "channel shift",
+          1
+        ],
+        [
+          "innovation cadence",
+          1
+        ],
+        [
+          "FX headwinds",
+          1
+        ],
+        [
+          "franchise management",
+          1
+        ]
+      ],
+      "guidance_vote": "lowered"
+    }
+  },
+  "_cache_key": "12c5a6764b1a9ff3"
+}

@@ -1,0 +1,1 @@
+{"call_id": "INTC_Q4-2023", "role": "IR", "model": "gemma3:4b", "n_answers": 4, "unit_ids": ["INTC_Q4-2023__qa__009", "INTC_Q4-2023__qa__013", "INTC_Q4-2023__qa__016", "INTC_Q4-2023__qa__019"], "wins": ["gross margin", "60% flow-through", "AI market"], "risks": ["volatility", "data center decline", "incremental CapEx"], "guidance": "none", "_cache_key": "0067eda25f7c1ed6"}

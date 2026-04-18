@@ -1,0 +1,1 @@
+{"call_id": "JNJ_Q4-2025", "role": "CEO", "model": "gemma3:4b", "n_answers": 3, "unit_ids": ["JNJ_Q4-2025__qa__004", "JNJ_Q4-2025__qa__015", "JNJ_Q4-2025__qa__020"], "wins": ["strong portfolio", "double-digit growth", "clean story"], "risks": ["talc litigation", "meritless claims", "modest top-down"], "guidance": "maintained", "_cache_key": "0067eda25f7c1ed6"}

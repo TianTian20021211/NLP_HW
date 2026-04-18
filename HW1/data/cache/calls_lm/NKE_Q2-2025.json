@@ -1,0 +1,291 @@
+{
+  "ticker": "NKE",
+  "quarter": "Q2-2025",
+  "call_date": "2024-12-19",
+  "variant": "lm",
+  "n_units": {
+    "total": 21,
+    "presenter": 4,
+    "qa": 17
+  },
+  "models": [
+    "gemma3:4b",
+    "llama3.1:8b"
+  ],
+  "consensus": {
+    "sentiment_call": 0.16778984386942544,
+    "sentiment_qa": 0.5398007596499704,
+    "wins_top5": [
+      [
+        "earnings call",
+        1
+      ],
+      [
+        "question submissions",
+        1
+      ],
+      [
+        "limited questions",
+        1
+      ],
+      [
+        "fiscal 2025 second quarter results",
+        1
+      ],
+      [
+        "focus on obsessing sport",
+        1
+      ]
+    ],
+    "risks_top5": [
+      [
+        "forward-looking statements",
+        1
+      ],
+      [
+        "uncertainties",
+        1
+      ],
+      [
+        "SEC filings",
+        1
+      ],
+      [
+        "certain risks and uncertainties",
+        1
+      ],
+      [
+        "certain risks",
+        1
+      ]
+    ],
+    "guidance_call": "none",
+    "guidance_by_model": {
+      "gemma3:4b": "none",
+      "llama3.1:8b": "none"
+    }
+  },
+  "dispersion": {
+    "sentiment_dispersion": 0.6286688852152013,
+    "guidance_disagree": 1,
+    "wins_overlap": 0.0,
+    "risks_overlap": 0.0,
+    "qa_minus_pres_risks": [
+      "accelerated actions",
+      "inventory pressure",
+      "larger headwinds",
+      "margin recapture",
+      "mid single digit headwinds",
+      "near term headwinds from repositioning of channel mix and product portfolio",
+      "potential margin rate benefit opportunity within nike direct to run a healthier and more profitable business",
+      "sustainable growth",
+      "transitory headwinds from cleaning up the marketplace and supply chain deleverage"
+    ],
+    "qa_minus_pres_risks_count": 9,
+    "role_sent_means": {
+      "CFO": -0.30790181657657356,
+      "CEO": 0.5811702471367386
+    }
+  },
+  "by_role": {
+    "CEO": {
+      "n_units": 13,
+      "sentiment": 0.6206871021472767,
+      "wins_top5": [
+        [
+          "focus on obsessing sport",
+          1
+        ],
+        [
+          "accelerate a complete product portfolio",
+          1
+        ],
+        [
+          "elevate the marketplace",
+          1
+        ],
+        [
+          "reenergize our culture and identity",
+          1
+        ],
+        [
+          "return to the discipline of franchise management",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "softened NIKE Direct traffic",
+          1
+        ],
+        [
+          "promotional sales",
+          1
+        ],
+        [
+          "negative impact on near-term results",
+          1
+        ],
+        [
+          "lack of newness in product",
+          1
+        ],
+        [
+          "disrupts the overall marketplace and the profitability of our partners",
+          1
+        ]
+      ],
+      "guidance_vote": "raised"
+    },
+    "CFO": {
+      "n_units": 8,
+      "sentiment": -0.06041710309167733,
+      "wins_top5": [
+        [
+          "earnings call",
+          1
+        ],
+        [
+          "question submissions",
+          1
+        ],
+        [
+          "limited questions",
+          1
+        ],
+        [
+          "fiscal 2025 second quarter results",
+          1
+        ],
+        [
+          "Ja 2 launch",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "forward-looking statements",
+          1
+        ],
+        [
+          "uncertainties",
+          1
+        ],
+        [
+          "SEC filings",
+          1
+        ],
+        [
+          "certain risks and uncertainties",
+          1
+        ],
+        [
+          "certain risks",
+          1
+        ]
+      ],
+      "guidance_vote": "lowered"
+    }
+  },
+  "by_section": {
+    "presenter": {
+      "n_units": 4,
+      "sentiment": 0.16778984386942544,
+      "wins_top5": [
+        [
+          "earnings call",
+          1
+        ],
+        [
+          "question submissions",
+          1
+        ],
+        [
+          "limited questions",
+          1
+        ],
+        [
+          "fiscal 2025 second quarter results",
+          1
+        ],
+        [
+          "focus on obsessing sport",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "forward-looking statements",
+          1
+        ],
+        [
+          "uncertainties",
+          1
+        ],
+        [
+          "SEC filings",
+          1
+        ],
+        [
+          "certain risks and uncertainties",
+          1
+        ],
+        [
+          "certain risks",
+          1
+        ]
+      ],
+      "guidance_vote": "none"
+    },
+    "qa": {
+      "n_units": 17,
+      "sentiment": 0.5398007596499704,
+      "wins_top5": [
+        [
+          "product innovation",
+          1
+        ],
+        [
+          "brand marketing",
+          1
+        ],
+        [
+          "marketplace reset",
+          1
+        ],
+        [
+          "return to health",
+          1
+        ],
+        [
+          "drive mutually profitable growth for them and for us",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "inventory pressure",
+          1
+        ],
+        [
+          "margin recapture",
+          1
+        ],
+        [
+          "sustainable growth",
+          1
+        ],
+        [
+          "mid-single-digit headwinds",
+          1
+        ],
+        [
+          "accelerated actions",
+          1
+        ]
+      ],
+      "guidance_vote": "lowered"
+    }
+  },
+  "_cache_key": "b9c11fa20978a9b0"
+}

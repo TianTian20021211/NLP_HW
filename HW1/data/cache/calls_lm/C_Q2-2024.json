@@ -1,0 +1,277 @@
+{
+  "ticker": "C",
+  "quarter": "Q2-2024",
+  "call_date": "2024-07-12",
+  "variant": "lm",
+  "n_units": {
+    "total": 45,
+    "presenter": 3,
+    "qa": 42
+  },
+  "models": [
+    "gemma3:4b",
+    "llama3.1:8b"
+  ],
+  "consensus": {
+    "sentiment_call": 0.3439122812004042,
+    "sentiment_qa": -0.012694630219796908,
+    "wins_top5": [
+      [
+        "earnings call",
+        1
+      ],
+      [
+        "second quarter 2024 earnings call",
+        1
+      ],
+      [
+        "tech investments",
+        1
+      ],
+      [
+        "reducing risk",
+        1
+      ],
+      [
+        "simplifying firm",
+        1
+      ]
+    ],
+    "risks_top5": [
+      [
+        "uncertainty",
+        2
+      ],
+      [
+        "changes in circumstances",
+        2
+      ],
+      [
+        "forward-looking statements",
+        1
+      ],
+      [
+        "regulatory actions",
+        1
+      ],
+      [
+        "poor returns",
+        1
+      ]
+    ],
+    "guidance_call": "raised",
+    "guidance_by_model": {
+      "gemma3:4b": "raised",
+      "llama3.1:8b": "none"
+    }
+  },
+  "dispersion": {
+    "sentiment_dispersion": null,
+    "guidance_disagree": 1,
+    "wins_overlap": null,
+    "risks_overlap": null,
+    "qa_minus_pres_risks": [
+      "data issues",
+      "regulatory approval",
+      "regulatory scrutiny",
+      "timeframes"
+    ],
+    "qa_minus_pres_risks_count": 4,
+    "role_sent_means": {
+      "CEO": 0.3281156266546675
+    }
+  },
+  "by_role": {
+    "CEO": {
+      "n_units": 43,
+      "sentiment": 0.15400677376626248,
+      "wins_top5": [
+        [
+          "tech investments",
+          1
+        ],
+        [
+          "reducing risk",
+          1
+        ],
+        [
+          "simplifying firm",
+          1
+        ],
+        [
+          "increased dividend from $0.53 to $0.56 per share",
+          1
+        ],
+        [
+          "resumed modest buybacks this quarter",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "regulatory actions",
+          1
+        ],
+        [
+          "poor returns",
+          1
+        ],
+        [
+          "uncertainty around Basel III",
+          1
+        ],
+        [
+          "credit seasonality",
+          1
+        ],
+        [
+          "normalization of certain vintages",
+          1
+        ]
+      ],
+      "guidance_vote": "maintained"
+    },
+    "IR": {
+      "n_units": 2,
+      "sentiment": 0.7557251908396947,
+      "wins_top5": [
+        [
+          "earnings call",
+          1
+        ],
+        [
+          "second quarter 2024 earnings call",
+          1
+        ],
+        [
+          "great stuff",
+          1
+        ],
+        [
+          "joining us",
+          1
+        ],
+        [
+          "follow-up questions",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "uncertainty",
+          2
+        ],
+        [
+          "changes in circumstances",
+          2
+        ],
+        [
+          "forward-looking statements",
+          1
+        ],
+        [
+          "regulatory approval",
+          1
+        ]
+      ],
+      "guidance_vote": "none"
+    }
+  },
+  "by_section": {
+    "presenter": {
+      "n_units": 3,
+      "sentiment": 0.3439122812004042,
+      "wins_top5": [
+        [
+          "earnings call",
+          1
+        ],
+        [
+          "second quarter 2024 earnings call",
+          1
+        ],
+        [
+          "tech investments",
+          1
+        ],
+        [
+          "reducing risk",
+          1
+        ],
+        [
+          "simplifying firm",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "uncertainty",
+          2
+        ],
+        [
+          "changes in circumstances",
+          2
+        ],
+        [
+          "forward-looking statements",
+          1
+        ],
+        [
+          "regulatory actions",
+          1
+        ],
+        [
+          "poor returns",
+          1
+        ]
+      ],
+      "guidance_vote": "raised"
+    },
+    "qa": {
+      "n_units": 42,
+      "sentiment": -0.012694630219796908,
+      "wins_top5": [
+        [
+          "returns improve",
+          1
+        ],
+        [
+          "strategic overhaul",
+          1
+        ],
+        [
+          "competitive advantage",
+          1
+        ],
+        [
+          "improving returns in USPB to get to the high teens level over the medium term",
+          1
+        ],
+        [
+          "driving U.S. income, which allows for DTA utilization",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "data issues",
+          1
+        ],
+        [
+          "regulatory scrutiny",
+          1
+        ],
+        [
+          "timeframes",
+          1
+        ],
+        [
+          "regulatory approval",
+          1
+        ]
+      ],
+      "guidance_vote": "maintained"
+    }
+  },
+  "_cache_key": "b9c11fa20978a9b0"
+}

@@ -1,0 +1,1 @@
+{"unit_id": "JPM_Q1-2025__qa__041", "model": "gemma3:4b", "wins": ["investment banking performance", "markets performance", "strategic factors"], "risks": ["revenue slowdown", "environmental changes", "noisy factors"], "guidance": "maintained", "_cache_key": "ec72f2e9b51b1d31"}

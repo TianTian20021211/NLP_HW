@@ -1,0 +1,1 @@
+{"unit_id": "NVDA_Q1-2026__qa__005", "model": "gemma3:4b", "wins": ["Q1 shipments", "Q2 revenue", "TAM assessment"], "risks": ["China impact", "unfulfilled orders", "no product for China"], "guidance": "none", "_cache_key": "ec72f2e9b51b1d31"}

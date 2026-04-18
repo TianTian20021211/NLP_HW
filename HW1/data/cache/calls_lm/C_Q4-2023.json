@@ -1,0 +1,286 @@
+{
+  "ticker": "C",
+  "quarter": "Q4-2023",
+  "call_date": "2024-01-17",
+  "variant": "lm",
+  "n_units": {
+    "total": 37,
+    "presenter": 3,
+    "qa": 34
+  },
+  "models": [
+    "gemma3:4b",
+    "llama3.1:8b"
+  ],
+  "consensus": {
+    "sentiment_call": 0.09443769406995307,
+    "sentiment_qa": 0.24113350352007337,
+    "wins_top5": [
+      [
+        "new client wins",
+        2
+      ],
+      [
+        "deepening with existing clients",
+        2
+      ],
+      [
+        "earnings call",
+        1
+      ],
+      [
+        "fourth quarter 2023 earnings call",
+        1
+      ],
+      [
+        "share gains",
+        1
+      ]
+    ],
+    "risks_top5": [
+      [
+        "uncertainty",
+        2
+      ],
+      [
+        "changes in circumstances",
+        2
+      ],
+      [
+        "Argentina devaluation",
+        2
+      ],
+      [
+        "forward-looking statements",
+        1
+      ],
+      [
+        "Argentine devaluation",
+        1
+      ]
+    ],
+    "guidance_call": "lowered",
+    "guidance_by_model": {
+      "gemma3:4b": "none",
+      "llama3.1:8b": "maintained"
+    }
+  },
+  "dispersion": {
+    "sentiment_dispersion": null,
+    "guidance_disagree": 1,
+    "wins_overlap": null,
+    "risks_overlap": null,
+    "qa_minus_pres_risks": [
+      "argentina business model risks",
+      "credit card late fee proposals and potential revenue impact",
+      "credit losses",
+      "currency risk",
+      "rate cuts",
+      "russian exposure and corporate dividends"
+    ],
+    "qa_minus_pres_risks_count": 6,
+    "role_sent_means": {
+      "CEO": 0.07623675456068686
+    }
+  },
+  "by_role": {
+    "CEO": {
+      "n_units": 34,
+      "sentiment": 0.15629952316714185,
+      "wins_top5": [
+        [
+          "new client wins",
+          2
+        ],
+        [
+          "deepening with existing clients",
+          2
+        ],
+        [
+          "share gains",
+          1
+        ],
+        [
+          "client wins",
+          1
+        ],
+        [
+          "new products",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "Argentina devaluation",
+          2
+        ],
+        [
+          "Argentine devaluation",
+          1
+        ],
+        [
+          "weak wallet globally",
+          1
+        ],
+        [
+          "uncertain recovery",
+          1
+        ],
+        [
+          "transfer risk stemming from exposures to Argentina and Russia",
+          1
+        ]
+      ],
+      "guidance_vote": "raised"
+    },
+    "IR": {
+      "n_units": 2,
+      "sentiment": 0.6906211936662606,
+      "wins_top5": [
+        [
+          "earnings call",
+          1
+        ],
+        [
+          "fourth quarter 2023 earnings call",
+          1
+        ],
+        [
+          "employee reductions",
+          1
+        ],
+        [
+          "expense savings",
+          1
+        ],
+        [
+          "revenue targets",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "uncertainty",
+          2
+        ],
+        [
+          "changes in circumstances",
+          2
+        ],
+        [
+          "forward-looking statements",
+          1
+        ]
+      ],
+      "guidance_vote": "none"
+    },
+    "Unknown": {
+      "n_units": 1,
+      "sentiment": null,
+      "wins_top5": [],
+      "risks_top5": [],
+      "guidance_vote": "none"
+    }
+  },
+  "by_section": {
+    "presenter": {
+      "n_units": 3,
+      "sentiment": 0.09443769406995307,
+      "wins_top5": [
+        [
+          "new client wins",
+          2
+        ],
+        [
+          "deepening with existing clients",
+          2
+        ],
+        [
+          "earnings call",
+          1
+        ],
+        [
+          "fourth quarter 2023 earnings call",
+          1
+        ],
+        [
+          "share gains",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "uncertainty",
+          2
+        ],
+        [
+          "changes in circumstances",
+          2
+        ],
+        [
+          "Argentina devaluation",
+          2
+        ],
+        [
+          "forward-looking statements",
+          1
+        ],
+        [
+          "Argentine devaluation",
+          1
+        ]
+      ],
+      "guidance_vote": "lowered"
+    },
+    "qa": {
+      "n_units": 34,
+      "sentiment": 0.24113350352007337,
+      "wins_top5": [
+        [
+          "strong momentum",
+          1
+        ],
+        [
+          "good foundation",
+          1
+        ],
+        [
+          "confident outlook",
+          1
+        ],
+        [
+          "revenue growth",
+          1
+        ],
+        [
+          "improved efficiency through organization simplification",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "credit losses",
+          1
+        ],
+        [
+          "currency risk",
+          1
+        ],
+        [
+          "rate cuts",
+          1
+        ],
+        [
+          "Russian exposure and corporate dividends",
+          1
+        ],
+        [
+          "Argentina business model risks",
+          1
+        ]
+      ],
+      "guidance_vote": "raised"
+    }
+  },
+  "_cache_key": "b9c11fa20978a9b0"
+}

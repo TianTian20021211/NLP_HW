@@ -1,0 +1,322 @@
+{
+  "ticker": "NVDA",
+  "quarter": "Q2-2025",
+  "call_date": "2024-08-28",
+  "variant": "finbert",
+  "n_units": {
+    "total": 13,
+    "presenter": 2,
+    "qa": 11
+  },
+  "models": [
+    "gemma3:4b",
+    "llama3.1:8b"
+  ],
+  "consensus": {
+    "sentiment_call": 0.4255619392401747,
+    "sentiment_qa": 0.19995780461409288,
+    "wins_top5": [
+      [
+        "Investor Relations call",
+        1
+      ],
+      [
+        "Goldman Sachs Conference",
+        1
+      ],
+      [
+        "upcoming event for the financial community",
+        1
+      ],
+      [
+        "Blackwell sampling",
+        1
+      ],
+      [
+        "Spectrum-X growth",
+        1
+      ]
+    ],
+    "risks_top5": [
+      [
+        "Significant risks and uncertainties",
+        2
+      ],
+      [
+        "Materially differ",
+        2
+      ],
+      [
+        "Forward-looking statements",
+        1
+      ],
+      [
+        "China market competition",
+        1
+      ],
+      [
+        "Blackwell production ramp",
+        1
+      ]
+    ],
+    "guidance_call": "maintained",
+    "guidance_by_model": {
+      "gemma3:4b": "maintained",
+      "llama3.1:8b": "maintained"
+    }
+  },
+  "dispersion": {
+    "sentiment_dispersion": null,
+    "guidance_disagree": 0,
+    "wins_overlap": null,
+    "risks_overlap": null,
+    "qa_minus_pres_risks": [
+      "complexity",
+      "cpu scaling has been slowing for some time and it has slowed to a crawl",
+      "different cost structures that we have on our new product introductions",
+      "integration",
+      "margin uncertainty",
+      "no q4 guidance",
+      "sequential declines",
+      "supply chain",
+      "swift shift in terms of who they are using to complete their full configuration before those things are going into the data center going into notebooks"
+    ],
+    "qa_minus_pres_risks_count": 9,
+    "role_sent_means": {
+      "CFO": 0.4854581206958462
+    }
+  },
+  "by_role": {
+    "CFO": {
+      "n_units": 4,
+      "sentiment": 0.44707086420706743,
+      "wins_top5": [
+        [
+          "Blackwell sampling",
+          1
+        ],
+        [
+          "Spectrum-X growth",
+          1
+        ],
+        [
+          "AI Foundry service",
+          1
+        ],
+        [
+          "record quarter",
+          1
+        ],
+        [
+          "inference leadership",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "China market competition",
+          1
+        ],
+        [
+          "Blackwell production ramp",
+          1
+        ],
+        [
+          "higher mix of new products",
+          1
+        ],
+        [
+          "sequential declines",
+          1
+        ],
+        [
+          "margin uncertainty",
+          1
+        ]
+      ],
+      "guidance_vote": "raised"
+    },
+    "IR": {
+      "n_units": 1,
+      "sentiment": 0.005854413980365398,
+      "wins_top5": [
+        [
+          "Investor Relations call",
+          1
+        ],
+        [
+          "Goldman Sachs Conference",
+          1
+        ],
+        [
+          "upcoming event for the financial community",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "Significant risks and uncertainties",
+          2
+        ],
+        [
+          "Materially differ",
+          2
+        ],
+        [
+          "Forward-looking statements",
+          1
+        ]
+      ],
+      "guidance_vote": "none"
+    },
+    "Other_Exec": {
+      "n_units": 6,
+      "sentiment": 0.1807098236531818,
+      "wins_top5": [
+        [
+          "accelerated computing",
+          1
+        ],
+        [
+          "Blackwell advantage",
+          1
+        ],
+        [
+          "NVLink performance",
+          1
+        ],
+        [
+          "Accelerated computing has reached the tipping point",
+          1
+        ],
+        [
+          "Blackwell is a step-function leap over Hopper, providing 3 to 5x more AI throughput in a power-limited data center than Hopper",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "complexity",
+          1
+        ],
+        [
+          "supply chain",
+          1
+        ],
+        [
+          "integration",
+          1
+        ]
+      ],
+      "guidance_vote": "none"
+    },
+    "Unknown": {
+      "n_units": 2,
+      "sentiment": null,
+      "wins_top5": [],
+      "risks_top5": [],
+      "guidance_vote": "none"
+    }
+  },
+  "by_section": {
+    "presenter": {
+      "n_units": 2,
+      "sentiment": 0.4255619392401747,
+      "wins_top5": [
+        [
+          "Investor Relations call",
+          1
+        ],
+        [
+          "Goldman Sachs Conference",
+          1
+        ],
+        [
+          "upcoming event for the financial community",
+          1
+        ],
+        [
+          "Blackwell sampling",
+          1
+        ],
+        [
+          "Spectrum-X growth",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "Significant risks and uncertainties",
+          2
+        ],
+        [
+          "Materially differ",
+          2
+        ],
+        [
+          "Forward-looking statements",
+          1
+        ],
+        [
+          "China market competition",
+          1
+        ],
+        [
+          "Blackwell production ramp",
+          1
+        ]
+      ],
+      "guidance_vote": "maintained"
+    },
+    "qa": {
+      "n_units": 11,
+      "sentiment": 0.19995780461409288,
+      "wins_top5": [
+        [
+          "accelerated computing",
+          1
+        ],
+        [
+          "Blackwell advantage",
+          1
+        ],
+        [
+          "NVLink performance",
+          1
+        ],
+        [
+          "Accelerated computing has reached the tipping point",
+          1
+        ],
+        [
+          "Blackwell is a step-function leap over Hopper, providing 3 to 5x more AI throughput in a power-limited data center than Hopper",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "complexity",
+          1
+        ],
+        [
+          "supply chain",
+          1
+        ],
+        [
+          "integration",
+          1
+        ],
+        [
+          "sequential declines",
+          1
+        ],
+        [
+          "margin uncertainty",
+          1
+        ]
+      ],
+      "guidance_vote": "raised"
+    }
+  },
+  "_cache_key": "12c5a6764b1a9ff3"
+}

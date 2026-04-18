@@ -1,0 +1,335 @@
+{
+  "ticker": "JNJ",
+  "quarter": "Q2-2024",
+  "call_date": "2024-07-17",
+  "variant": "finbert",
+  "n_units": {
+    "total": 21,
+    "presenter": 3,
+    "qa": 18
+  },
+  "models": [
+    "gemma3:4b",
+    "llama3.1:8b"
+  ],
+  "consensus": {
+    "sentiment_call": 0.44032410010362827,
+    "sentiment_qa": 0.41001258426109966,
+    "wins_top5": [
+      [
+        "DARZALEX growth",
+        1
+      ],
+      [
+        "CARVYKTI sales",
+        1
+      ],
+      [
+        "SPRAVATO growth",
+        1
+      ],
+      [
+        "21.3% growth in DARZALEX",
+        1
+      ],
+      [
+        "59.9% growth in CARVYKTI",
+        1
+      ]
+    ],
+    "risks_top5": [
+      [
+        "Cost of products sold margin deleveraged",
+        1
+      ],
+      [
+        "competitive pressures",
+        1
+      ],
+      [
+        "biosimilar entry",
+        1
+      ],
+      [
+        "competitive pressures in IMBRUVICA",
+        1
+      ],
+      [
+        "unfavorable patient mix in XARELTO",
+        1
+      ]
+    ],
+    "guidance_call": "raised",
+    "guidance_by_model": {
+      "gemma3:4b": "raised",
+      "llama3.1:8b": "none"
+    }
+  },
+  "dispersion": {
+    "sentiment_dispersion": 0.21266123917992247,
+    "guidance_disagree": 1,
+    "wins_overlap": 0.0,
+    "risks_overlap": null,
+    "qa_minus_pres_risks": [
+      "anticorruption campaign impacting procedural volumes and engagement",
+      "china market volatility",
+      "evolving market",
+      "inflation affecting device pricing",
+      "inventory destocking in contact lens business",
+      "part d plan rebates",
+      "potential deceleration or tougher demand environment",
+      "potential exposure",
+      "short term tailwind from vbp but long term impact on price",
+      "vbp issues",
+      "vision challenges",
+      "volatile market in china"
+    ],
+    "qa_minus_pres_risks_count": 12,
+    "role_sent_means": {
+      "CFO": 0.4111471001765299,
+      "CEO": 0.7118955088158448
+    }
+  },
+  "by_role": {
+    "CEO": {
+      "n_units": 3,
+      "sentiment": 0.676759938743616,
+      "wins_top5": [
+        [
+          "position of strength",
+          2
+        ],
+        [
+          "EGFR-positive lung cancer",
+          1
+        ],
+        [
+          "TREMFYA launch",
+          1
+        ],
+        [
+          "Shockwave acquisition",
+          1
+        ],
+        [
+          "13th consecutive year of above-market growth",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "evolving market",
+          1
+        ],
+        [
+          "potential exposure",
+          1
+        ],
+        [
+          "VBP issues",
+          1
+        ]
+      ],
+      "guidance_vote": "none"
+    },
+    "CFO": {
+      "n_units": 7,
+      "sentiment": 0.4035818141911622,
+      "wins_top5": [
+        [
+          "DARZALEX growth",
+          1
+        ],
+        [
+          "CARVYKTI sales",
+          1
+        ],
+        [
+          "SPRAVATO growth",
+          1
+        ],
+        [
+          "21.3% growth in DARZALEX",
+          1
+        ],
+        [
+          "59.9% growth in CARVYKTI",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "Cost of products sold margin deleveraged",
+          1
+        ],
+        [
+          "competitive pressures",
+          1
+        ],
+        [
+          "biosimilar entry",
+          1
+        ],
+        [
+          "competitive pressures in IMBRUVICA",
+          1
+        ],
+        [
+          "unfavorable patient mix in XARELTO",
+          1
+        ]
+      ],
+      "guidance_vote": "maintained"
+    },
+    "Other_Exec": {
+      "n_units": 11,
+      "sentiment": 0.40774902615008796,
+      "wins_top5": [
+        [
+          "RYBREVANT uptake",
+          1
+        ],
+        [
+          "DARZALEX FASPRO momentum",
+          1
+        ],
+        [
+          "Ortho resurgence",
+          1
+        ],
+        [
+          "significant place in frontline non-small cell lung cancer",
+          1
+        ],
+        [
+          "winning combination for patients in the frontline setting",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "China market volatility",
+          1
+        ],
+        [
+          "Part D plan rebates",
+          1
+        ],
+        [
+          "Vision challenges",
+          1
+        ],
+        [
+          "short-term tailwind from VBP, but long-term impact on price",
+          1
+        ],
+        [
+          "anticorruption campaign impacting procedural volumes and engagement",
+          1
+        ]
+      ],
+      "guidance_vote": "maintained"
+    }
+  },
+  "by_section": {
+    "presenter": {
+      "n_units": 3,
+      "sentiment": 0.44032410010362827,
+      "wins_top5": [
+        [
+          "DARZALEX growth",
+          1
+        ],
+        [
+          "CARVYKTI sales",
+          1
+        ],
+        [
+          "SPRAVATO growth",
+          1
+        ],
+        [
+          "21.3% growth in DARZALEX",
+          1
+        ],
+        [
+          "59.9% growth in CARVYKTI",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "Cost of products sold margin deleveraged",
+          1
+        ],
+        [
+          "competitive pressures",
+          1
+        ],
+        [
+          "biosimilar entry",
+          1
+        ],
+        [
+          "competitive pressures in IMBRUVICA",
+          1
+        ],
+        [
+          "unfavorable patient mix in XARELTO",
+          1
+        ]
+      ],
+      "guidance_vote": "raised"
+    },
+    "qa": {
+      "n_units": 18,
+      "sentiment": 0.41001258426109966,
+      "wins_top5": [
+        [
+          "position of strength",
+          2
+        ],
+        [
+          "RYBREVANT uptake",
+          1
+        ],
+        [
+          "DARZALEX FASPRO momentum",
+          1
+        ],
+        [
+          "Ortho resurgence",
+          1
+        ],
+        [
+          "significant place in frontline non-small cell lung cancer",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "China market volatility",
+          1
+        ],
+        [
+          "Part D plan rebates",
+          1
+        ],
+        [
+          "Vision challenges",
+          1
+        ],
+        [
+          "short-term tailwind from VBP, but long-term impact on price",
+          1
+        ],
+        [
+          "anticorruption campaign impacting procedural volumes and engagement",
+          1
+        ]
+      ],
+      "guidance_vote": "maintained"
+    }
+  },
+  "_cache_key": "12c5a6764b1a9ff3"
+}

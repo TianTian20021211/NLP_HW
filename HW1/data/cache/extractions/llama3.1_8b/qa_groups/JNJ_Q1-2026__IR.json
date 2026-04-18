@@ -1,0 +1,1 @@
+{"call_id": "JNJ_Q1-2026", "role": "IR", "model": "llama3.1:8b", "n_answers": 2, "unit_ids": ["JNJ_Q1-2026__qa__015", "JNJ_Q1-2026__qa__019"], "wins": [], "risks": ["disclosure of MFA sales not provided", "no commercialization plan metrics provided"], "guidance": "none", "_cache_key": "ea10693037f9e9e4"}

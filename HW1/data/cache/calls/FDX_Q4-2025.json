@@ -1,0 +1,392 @@
+{
+  "ticker": "FDX",
+  "quarter": "Q4-2025",
+  "call_date": "2025-06-24",
+  "variant": "finbert",
+  "n_units": {
+    "total": 27,
+    "presenter": 5,
+    "qa": 22
+  },
+  "models": [
+    "gemma3:4b",
+    "llama3.1:8b"
+  ],
+  "consensus": {
+    "sentiment_call": 0.3423155399256926,
+    "sentiment_qa": 0.28876390775218785,
+    "wins_top5": [
+      [
+        "adjusted operating income growth",
+        2
+      ],
+      [
+        "revolutionary delivery industry",
+        1
+      ],
+      [
+        "successful company",
+        1
+      ],
+      [
+        "strategic counsel",
+        1
+      ],
+      [
+        "revolutionized the delivery industry",
+        1
+      ]
+    ],
+    "risks_top5": [
+      [
+        "uncertainties",
+        2
+      ],
+      [
+        "forward-looking statements",
+        1
+      ],
+      [
+        "SEC filings",
+        1
+      ],
+      [
+        "risks",
+        1
+      ],
+      [
+        "other factors",
+        1
+      ]
+    ],
+    "guidance_call": "raised",
+    "guidance_by_model": {
+      "gemma3:4b": "raised",
+      "llama3.1:8b": "none"
+    }
+  },
+  "dispersion": {
+    "sentiment_dispersion": 0.0726703175933058,
+    "guidance_disagree": 1,
+    "wins_overlap": 0.0,
+    "risks_overlap": 0.0,
+    "qa_minus_pres_risks": [
+      "complexity",
+      "de minimis impact",
+      "domestic yield",
+      "dynamic environment",
+      "fleeting cost adjustments due to network flexibility",
+      "higher u s barriers that may be here to stay",
+      "industrial economy not showing improvement",
+      "lag in margin contribution from network 2 0",
+      "macro environment uncertainty",
+      "pressure from china to u s tariffs",
+      "trade environment",
+      "trade flow patterns changing due to tariffs",
+      "trade negotiations impact",
+      "uncertain and dynamic economy",
+      "uncertain economy"
+    ],
+    "qa_minus_pres_risks_count": 15,
+    "role_sent_means": {
+      "CEO": 0.38377732929237146,
+      "Other_Exec": 0.42942562948295965,
+      "CFO": 0.28710210828213106
+    }
+  },
+  "by_role": {
+    "CEO": {
+      "n_units": 13,
+      "sentiment": 0.32564462862785865,
+      "wins_top5": [
+        [
+          "adjusted operating income growth",
+          2
+        ],
+        [
+          "revolutionary delivery industry",
+          1
+        ],
+        [
+          "successful company",
+          1
+        ],
+        [
+          "strategic counsel",
+          1
+        ],
+        [
+          "revolutionized the delivery industry",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "volatile global demand",
+          1
+        ],
+        [
+          "trade policy changes",
+          1
+        ],
+        [
+          "higher-margin B2B volumes pressured",
+          1
+        ],
+        [
+          "challenging demand environment",
+          1
+        ],
+        [
+          "expiration of U.S. postal service contract",
+          1
+        ]
+      ],
+      "guidance_vote": "maintained"
+    },
+    "CFO": {
+      "n_units": 7,
+      "sentiment": 0.2647111769095434,
+      "wins_top5": [
+        [
+          "health care wins",
+          1
+        ],
+        [
+          "continued DRIVE savings",
+          1
+        ],
+        [
+          "increased U.S. and international export volume",
+          1
+        ],
+        [
+          "recent health care wins",
+          1
+        ],
+        [
+          "$1 billion in incremental year-over-year benefit from our transformation-related efforts",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "prolonged weakness in the industrial economy",
+          1
+        ],
+        [
+          "escalating trade barriers",
+          1
+        ],
+        [
+          "operating expense inflation",
+          1
+        ],
+        [
+          "escalating trade barriers in the quarter, largely driven by China",
+          1
+        ],
+        [
+          "global trade policy impacts primarily on our transpacific lane",
+          1
+        ]
+      ],
+      "guidance_vote": "maintained"
+    },
+    "IR": {
+      "n_units": 1,
+      "sentiment": 0.008429648513909167,
+      "wins_top5": [
+        [
+          "earnings release",
+          1
+        ],
+        [
+          "stat book",
+          1
+        ],
+        [
+          "Q&A session",
+          1
+        ],
+        [
+          "accommodate all those who would like to participate",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "uncertainties",
+          2
+        ],
+        [
+          "forward-looking statements",
+          1
+        ],
+        [
+          "SEC filings",
+          1
+        ],
+        [
+          "risks",
+          1
+        ],
+        [
+          "other factors",
+          1
+        ]
+      ],
+      "guidance_vote": "none"
+    },
+    "Other_Exec": {
+      "n_units": 6,
+      "sentiment": 0.4271709628436499,
+      "wins_top5": [
+        [
+          "volume growth",
+          1
+        ],
+        [
+          "pricing discipline",
+          1
+        ],
+        [
+          "revenue per pound",
+          1
+        ],
+        [
+          "6% volume growth across our U.S. domestic Purple services",
+          1
+        ],
+        [
+          "5% growth in international air freight revenue",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "tariff-related impact",
+          1
+        ],
+        [
+          "U.S. domestic demand",
+          1
+        ],
+        [
+          "China to U.S. lane",
+          1
+        ],
+        [
+          "customer concerns increased and as a result, volumes softened following the April 2 tariff announcement",
+          1
+        ],
+        [
+          "revenue from the China to U.S. lane to remain pressured, consistent with what we saw exiting Q4",
+          1
+        ]
+      ],
+      "guidance_vote": "raised"
+    }
+  },
+  "by_section": {
+    "presenter": {
+      "n_units": 5,
+      "sentiment": 0.3423155399256926,
+      "wins_top5": [
+        [
+          "adjusted operating income growth",
+          2
+        ],
+        [
+          "revolutionary delivery industry",
+          1
+        ],
+        [
+          "successful company",
+          1
+        ],
+        [
+          "strategic counsel",
+          1
+        ],
+        [
+          "revolutionized the delivery industry",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "uncertainties",
+          2
+        ],
+        [
+          "forward-looking statements",
+          1
+        ],
+        [
+          "SEC filings",
+          1
+        ],
+        [
+          "risks",
+          1
+        ],
+        [
+          "other factors",
+          1
+        ]
+      ],
+      "guidance_vote": "raised"
+    },
+    "qa": {
+      "n_units": 22,
+      "sentiment": 0.28876390775218785,
+      "wins_top5": [
+        [
+          "operating leverage",
+          1
+        ],
+        [
+          "global network",
+          1
+        ],
+        [
+          "cost structure reduction",
+          1
+        ],
+        [
+          "Achieved $4 billion in DRIVE savings over 2 years",
+          1
+        ],
+        [
+          "Reduced total cost by $4 billion plus in a period of inflation",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "uncertain economy",
+          1
+        ],
+        [
+          "dynamic environment",
+          1
+        ],
+        [
+          "complexity",
+          1
+        ],
+        [
+          "Uncertain and dynamic economy",
+          1
+        ],
+        [
+          "Higher U.S. barriers that may be here to stay",
+          1
+        ]
+      ],
+      "guidance_vote": "maintained"
+    }
+  },
+  "_cache_key": "12c5a6764b1a9ff3"
+}

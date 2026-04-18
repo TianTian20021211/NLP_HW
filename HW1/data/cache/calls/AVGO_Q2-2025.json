@@ -1,0 +1,331 @@
+{
+  "ticker": "AVGO",
+  "quarter": "Q2-2025",
+  "call_date": "2025-06-05",
+  "variant": "finbert",
+  "n_units": {
+    "total": 28,
+    "presenter": 3,
+    "qa": 25
+  },
+  "models": [
+    "gemma3:4b",
+    "llama3.1:8b"
+  ],
+  "consensus": {
+    "sentiment_call": 0.36040285969135055,
+    "sentiment_qa": 0.15654927665126522,
+    "wins_top5": [
+      [
+        "financial performance",
+        1
+      ],
+      [
+        "business environment",
+        1
+      ],
+      [
+        "second quarter results",
+        1
+      ],
+      [
+        "financial performance for the second quarter of fiscal year 2025",
+        1
+      ],
+      [
+        "AI semiconductor growth",
+        1
+      ]
+    ],
+    "risks_top5": [
+      [
+        "risk factors",
+        1
+      ],
+      [
+        "actual results",
+        1
+      ],
+      [
+        "specific risk factors that could cause our actual results to differ materially from the forward-looking statements made on this call",
+        1
+      ],
+      [
+        "Non-AI semiconductor slowdown",
+        1
+      ],
+      [
+        "Seasonality impact",
+        1
+      ]
+    ],
+    "guidance_call": "maintained",
+    "guidance_by_model": {
+      "gemma3:4b": "maintained",
+      "llama3.1:8b": "maintained"
+    }
+  },
+  "dispersion": {
+    "sentiment_dispersion": 0.2259451501247174,
+    "guidance_disagree": 1,
+    "wins_overlap": 0.0,
+    "risks_overlap": 0.0,
+    "qa_minus_pres_risks": [
+      "custom is probably dilutive within semis",
+      "export controls",
+      "export controls on ai",
+      "lead times",
+      "lumpy quarters",
+      "potential impact from changing rules and regulations",
+      "semis is dilutive",
+      "uncertainty around trade agreements and bilateral trade"
+    ],
+    "qa_minus_pres_risks_count": 8,
+    "role_sent_means": {
+      "CEO": 0.5745809681592027,
+      "CFO": 0.25504627250040235
+    }
+  },
+  "by_role": {
+    "CEO": {
+      "n_units": 24,
+      "sentiment": 0.2834342771776922,
+      "wins_top5": [
+        [
+          "AI semiconductor growth",
+          1
+        ],
+        [
+          "Tomahawk 6 switch",
+          1
+        ],
+        [
+          "XPU demand acceleration",
+          1
+        ],
+        [
+          "record $15 billion in total revenue",
+          1
+        ],
+        [
+          "20% year-on-year growth in AI semiconductor revenue",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "Non-AI semiconductor slowdown",
+          1
+        ],
+        [
+          "Seasonality impact",
+          1
+        ],
+        [
+          "Economic environment",
+          1
+        ],
+        [
+          "lumpy quarters",
+          1
+        ],
+        [
+          "lead times",
+          1
+        ]
+      ],
+      "guidance_vote": "maintained"
+    },
+    "CFO": {
+      "n_units": 2,
+      "sentiment": 0.19000978169599725,
+      "wins_top5": [
+        [
+          "record revenue",
+          1
+        ],
+        [
+          "operating income up",
+          1
+        ],
+        [
+          "adjusted EBITDA above guidance",
+          1
+        ],
+        [
+          "record $15 billion revenue",
+          1
+        ],
+        [
+          "37% increase in operating income",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "higher mix of XPUs",
+          1
+        ],
+        [
+          "impacted by increased interest expense",
+          1
+        ],
+        [
+          "consolidated gross margins impacted by revenue mix",
+          1
+        ],
+        [
+          "semis is dilutive",
+          1
+        ],
+        [
+          "custom is probably dilutive within semis",
+          1
+        ]
+      ],
+      "guidance_vote": "none"
+    },
+    "IR": {
+      "n_units": 2,
+      "sentiment": -0.0070329472884949696,
+      "wins_top5": [
+        [
+          "financial performance",
+          1
+        ],
+        [
+          "business environment",
+          1
+        ],
+        [
+          "second quarter results",
+          1
+        ],
+        [
+          "financial performance for the second quarter of fiscal year 2025",
+          1
+        ],
+        [
+          "earnings call",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "risk factors",
+          1
+        ],
+        [
+          "actual results",
+          1
+        ],
+        [
+          "specific risk factors that could cause our actual results to differ materially from the forward-looking statements made on this call",
+          1
+        ]
+      ],
+      "guidance_vote": "maintained"
+    }
+  },
+  "by_section": {
+    "presenter": {
+      "n_units": 3,
+      "sentiment": 0.36040285969135055,
+      "wins_top5": [
+        [
+          "financial performance",
+          1
+        ],
+        [
+          "business environment",
+          1
+        ],
+        [
+          "second quarter results",
+          1
+        ],
+        [
+          "financial performance for the second quarter of fiscal year 2025",
+          1
+        ],
+        [
+          "AI semiconductor growth",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "risk factors",
+          1
+        ],
+        [
+          "actual results",
+          1
+        ],
+        [
+          "specific risk factors that could cause our actual results to differ materially from the forward-looking statements made on this call",
+          1
+        ],
+        [
+          "Non-AI semiconductor slowdown",
+          1
+        ],
+        [
+          "Seasonality impact",
+          1
+        ]
+      ],
+      "guidance_vote": "maintained"
+    },
+    "qa": {
+      "n_units": 25,
+      "sentiment": 0.15654927665126522,
+      "wins_top5": [
+        [
+          "growth inflection",
+          1
+        ],
+        [
+          "trajectory",
+          1
+        ],
+        [
+          "visibility",
+          1
+        ],
+        [
+          "60% year-over-year growth rate in AI business",
+          1
+        ],
+        [
+          "Increased deployment of XPUs and networking",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "lumpy quarters",
+          1
+        ],
+        [
+          "lead times",
+          1
+        ],
+        [
+          "export controls",
+          1
+        ],
+        [
+          "Export controls on AI",
+          1
+        ],
+        [
+          "Uncertainty around trade agreements and bilateral trade",
+          1
+        ]
+      ],
+      "guidance_vote": "none"
+    }
+  },
+  "_cache_key": "12c5a6764b1a9ff3"
+}

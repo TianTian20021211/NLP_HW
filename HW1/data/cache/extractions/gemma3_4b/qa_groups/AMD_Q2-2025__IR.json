@@ -1,0 +1,1 @@
+{"call_id": "AMD_Q2-2025", "role": "IR", "model": "gemma3:4b", "n_answers": 1, "unit_ids": ["AMD_Q2-2025__qa__024"], "wins": ["MI300", "run rate", "license"], "risks": [], "guidance": "none", "_cache_key": "0067eda25f7c1ed6"}

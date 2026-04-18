@@ -1,0 +1,298 @@
+{
+  "narratives_path": "/home/tian/code/baruch/NLP_HW/HW1/data/cache/analysis/narratives.json",
+  "reactive_proactive": {
+    "corpus_avg_qa_only": 10.183206106870228,
+    "corpus_avg_pres_risks": 5.0,
+    "top_reactive_calls": [
+      {
+        "ticker": "FDX",
+        "quarter": "Q1-2025",
+        "call_date": "2024-09-19",
+        "n_qa_only_risks": 18,
+        "top_qa_only_risks": "asian shipper volume shifts; challenging u s domestic industrial economy impacting freight margins; costs up despite supposed improvements; economy service a negative margin business dragging down margins; freight margins"
+      },
+      {
+        "ticker": "FDX",
+        "quarter": "Q2-2025",
+        "call_date": "2024-12-19",
+        "n_qa_only_risks": 18,
+        "top_qa_only_risks": "base rate pressure; customer attrition; customer attrition as a result of separation; customers trading down; incrementally softer industrial production and pricing"
+      },
+      {
+        "ticker": "FDX",
+        "quarter": "Q3-2026",
+        "call_date": "2026-03-19",
+        "n_qa_only_risks": 18,
+        "top_qa_only_risks": "anomaly in the market; decelerating shipment rate of change; fuel price; fuel surcharge; iran conflict disrupting flows and creating profit headwind"
+      },
+      {
+        "ticker": "INTC",
+        "quarter": "Q1-2025",
+        "call_date": "2025-04-24",
+        "n_qa_only_risks": 18,
+        "top_qa_only_risks": "7nm constraint; arm competition in head nodes; competition from arm in head nodes; foundry capacity constraints; headwinds from mix on the client side moving more to lunar lake"
+      },
+      {
+        "ticker": "INTC",
+        "quarter": "Q2-2025",
+        "call_date": "2025-07-24",
+        "n_qa_only_risks": 18,
+        "top_qa_only_risks": "14a delay; 14a hedging; competition from arm taking over half the server market; customer commitment; depreciation of assets under construction"
+      },
+      {
+        "ticker": "FDX",
+        "quarter": "Q3-2025",
+        "call_date": "2025-03-20",
+        "n_qa_only_risks": 17,
+        "top_qa_only_risks": "b2b weakness; b2b weakness in industrial production; challenges in europe not yet profitable; de minimis impact; economic uncertainty"
+      },
+      {
+        "ticker": "INTC",
+        "quarter": "Q4-2023",
+        "call_date": "2024-01-25",
+        "n_qa_only_risks": 17,
+        "top_qa_only_risks": "backside power gate all around and high na; capacity utilization; capacity utilization headwinds; data center decline; discrete events"
+      },
+      {
+        "ticker": "INTC",
+        "quarter": "Q1-2024",
+        "call_date": "2024-04-25",
+        "n_qa_only_risks": 17,
+        "top_qa_only_risks": "cpu tam shift; external foundry constraints; flexibility to bring back external volume earlier is limited; foundry operating loss; inventory volatility"
+      },
+      {
+        "ticker": "INTC",
+        "quarter": "Q3-2024",
+        "call_date": "2024-10-31",
+        "n_qa_only_risks": 17,
+        "top_qa_only_risks": "complexity; delayed 18a transition; geopolitical factors affecting market conditions; hard to tie it to financials; headwinds in second half 25"
+      },
+      {
+        "ticker": "INTC",
+        "quarter": "Q4-2025",
+        "call_date": "2026-01-22",
+        "n_qa_only_risks": 17,
+        "top_qa_only_risks": "14a customer visibility; capex delays; constraints in pc segment impacting supply; data center constraints; inventory not being in the right place at the right time"
+      }
+    ],
+    "by_ticker_avg": [
+      {
+        "ticker": "AMD",
+        "n_calls": 9,
+        "avg_qa_only": 8.666666666666666,
+        "avg_pres": 5.0
+      },
+      {
+        "ticker": "AVGO",
+        "n_calls": 9,
+        "avg_qa_only": 7.888888888888889,
+        "avg_pres": 5.0
+      },
+      {
+        "ticker": "BLK",
+        "n_calls": 10,
+        "avg_qa_only": 8.1,
+        "avg_pres": 5.0
+      },
+      {
+        "ticker": "C",
+        "n_calls": 9,
+        "avg_qa_only": 6.0,
+        "avg_pres": 5.0
+      },
+      {
+        "ticker": "FAST",
+        "n_calls": 10,
+        "avg_qa_only": 11.3,
+        "avg_pres": 5.0
+      },
+      {
+        "ticker": "FDX",
+        "n_calls": 9,
+        "avg_qa_only": 16.0,
+        "avg_pres": 5.0
+      },
+      {
+        "ticker": "GS",
+        "n_calls": 10,
+        "avg_qa_only": 11.7,
+        "avg_pres": 5.0
+      },
+      {
+        "ticker": "INTC",
+        "n_calls": 9,
+        "avg_qa_only": 16.11111111111111,
+        "avg_pres": 5.0
+      },
+      {
+        "ticker": "JNJ",
+        "n_calls": 10,
+        "avg_qa_only": 10.0,
+        "avg_pres": 5.0
+      },
+      {
+        "ticker": "JPM",
+        "n_calls": 10,
+        "avg_qa_only": 10.3,
+        "avg_pres": 5.0
+      },
+      {
+        "ticker": "NKE",
+        "n_calls": 9,
+        "avg_qa_only": 9.88888888888889,
+        "avg_pres": 5.0
+      },
+      {
+        "ticker": "NVDA",
+        "n_calls": 9,
+        "avg_qa_only": 7.111111111111111,
+        "avg_pres": 5.0
+      },
+      {
+        "ticker": "PLTR",
+        "n_calls": 9,
+        "avg_qa_only": 7.888888888888889,
+        "avg_pres": 5.0
+      },
+      {
+        "ticker": "WFC",
+        "n_calls": 9,
+        "avg_qa_only": 11.555555555555555,
+        "avg_pres": 5.0
+      }
+    ]
+  },
+  "llm_agreement_overall": {
+    "n_calls_total": 131,
+    "n_agree_total": 60,
+    "agree_rate_overall": 0.4580152671755725,
+    "by_ticker": [
+      {
+        "ticker": "AMD",
+        "n_calls": 9,
+        "n_agree": 5,
+        "agree_rate": 0.5555555555555556,
+        "n_disagree": 4
+      },
+      {
+        "ticker": "AVGO",
+        "n_calls": 9,
+        "n_agree": 6,
+        "agree_rate": 0.6666666666666666,
+        "n_disagree": 3
+      },
+      {
+        "ticker": "BLK",
+        "n_calls": 10,
+        "n_agree": 1,
+        "agree_rate": 0.1,
+        "n_disagree": 9
+      },
+      {
+        "ticker": "C",
+        "n_calls": 9,
+        "n_agree": 2,
+        "agree_rate": 0.2222222222222222,
+        "n_disagree": 7
+      },
+      {
+        "ticker": "FAST",
+        "n_calls": 10,
+        "n_agree": 7,
+        "agree_rate": 0.7,
+        "n_disagree": 3
+      },
+      {
+        "ticker": "FDX",
+        "n_calls": 9,
+        "n_agree": 3,
+        "agree_rate": 0.3333333333333333,
+        "n_disagree": 6
+      },
+      {
+        "ticker": "GS",
+        "n_calls": 10,
+        "n_agree": 1,
+        "agree_rate": 0.1,
+        "n_disagree": 9
+      },
+      {
+        "ticker": "INTC",
+        "n_calls": 9,
+        "n_agree": 4,
+        "agree_rate": 0.4444444444444444,
+        "n_disagree": 5
+      },
+      {
+        "ticker": "JNJ",
+        "n_calls": 10,
+        "n_agree": 6,
+        "agree_rate": 0.6,
+        "n_disagree": 4
+      },
+      {
+        "ticker": "JPM",
+        "n_calls": 10,
+        "n_agree": 7,
+        "agree_rate": 0.7,
+        "n_disagree": 3
+      },
+      {
+        "ticker": "NKE",
+        "n_calls": 9,
+        "n_agree": 4,
+        "agree_rate": 0.4444444444444444,
+        "n_disagree": 5
+      },
+      {
+        "ticker": "NVDA",
+        "n_calls": 9,
+        "n_agree": 6,
+        "agree_rate": 0.6666666666666666,
+        "n_disagree": 3
+      },
+      {
+        "ticker": "PLTR",
+        "n_calls": 9,
+        "n_agree": 5,
+        "agree_rate": 0.5555555555555556,
+        "n_disagree": 4
+      },
+      {
+        "ticker": "WFC",
+        "n_calls": 9,
+        "n_agree": 3,
+        "agree_rate": 0.3333333333333333,
+        "n_disagree": 6
+      }
+    ]
+  },
+  "cross_sectional": {
+    "horizon": "5d",
+    "top_k": 3,
+    "n_quarters": 9,
+    "mean_ret_ls": -0.012517802627397984,
+    "std_ret_ls": 0.020823296099829386,
+    "hit_rate_quarters": 0.1111111111111111,
+    "final_equity": 0.8912474923912441,
+    "sharpe_quarterly": -1.8034324490300861
+  },
+  "momentum_only_baseline": {
+    "5d": {
+      "horizon": "5d",
+      "n_trades": 79,
+      "pnl_sum": 1.0844308807786986,
+      "hit_rate": 0.6329113924050633,
+      "sharpe": 2.4867875317563723,
+      "final_equity": 2.6846160991210257
+    },
+    "21d": {
+      "horizon": "21d",
+      "n_trades": 79,
+      "pnl_sum": 1.7373203005928315,
+      "hit_rate": 0.5949367088607594,
+      "sharpe": 2.243199627295069,
+      "final_equity": 4.230041014492495
+    }
+  }
+}

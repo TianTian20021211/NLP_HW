@@ -1,0 +1,329 @@
+{
+  "ticker": "WFC",
+  "quarter": "Q4-2023",
+  "call_date": "2024-01-17",
+  "variant": "finbert",
+  "n_units": {
+    "total": 30,
+    "presenter": 3,
+    "qa": 27
+  },
+  "models": [
+    "gemma3:4b",
+    "llama3.1:8b"
+  ],
+  "consensus": {
+    "sentiment_call": 0.21964524862549256,
+    "sentiment_qa": 0.08833896070022776,
+    "wins_top5": [
+      [
+        "fourth quarter results",
+        2
+      ],
+      [
+        "earnings materials",
+        1
+      ],
+      [
+        "SEC filings",
+        1
+      ],
+      [
+        "credit card spend",
+        1
+      ],
+      [
+        "CIB revenue growth",
+        1
+      ]
+    ],
+    "risks_top5": [
+      [
+        "risks and uncertainties",
+        2
+      ],
+      [
+        "net interest income decline",
+        2
+      ],
+      [
+        "deposit mix shift",
+        2
+      ],
+      [
+        "forward-looking statements",
+        1
+      ],
+      [
+        "materially from expectations",
+        1
+      ]
+    ],
+    "guidance_call": "lowered",
+    "guidance_by_model": {
+      "gemma3:4b": "lowered",
+      "llama3.1:8b": "none"
+    }
+  },
+  "dispersion": {
+    "sentiment_dispersion": 0.1673476345334177,
+    "guidance_disagree": 0,
+    "wins_overlap": 0.0,
+    "risks_overlap": 0.1,
+    "qa_minus_pres_risks": [
+      "card losses",
+      "card losses getting higher than expected despite good employment and wealth conditions",
+      "cre losses",
+      "economic environment",
+      "market environment",
+      "market environment for interest rates and overall economic environment",
+      "nii decline",
+      "potential stress spread beyond cre office to other parts of the portfolio",
+      "risk of qt stopping shift towards interest bearing deposits",
+      "uncertainty around forward curve and impact on nii"
+    ],
+    "qa_minus_pres_risks_count": 10,
+    "role_sent_means": {
+      "CEO": 0.3972853168644918,
+      "CFO": 0.16062002247627638
+    }
+  },
+  "by_role": {
+    "CEO": {
+      "n_units": 3,
+      "sentiment": 0.3587953939948434,
+      "wins_top5": [
+        [
+          "credit card spend",
+          1
+        ],
+        [
+          "CIB revenue growth",
+          1
+        ],
+        [
+          "mobile adoption momentum",
+          1
+        ],
+        [
+          "improved growth and increase market share",
+          1
+        ],
+        [
+          "new credit card products have driven an increase in consumer spend at a rate significantly better than the industry average",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "net interest income decline",
+          1
+        ],
+        [
+          "credit deterioration",
+          1
+        ],
+        [
+          "uncertain Fed rate actions",
+          1
+        ],
+        [
+          "modest deterioration of credit",
+          1
+        ],
+        [
+          "significant uncertainty exists regarding eventual timing and extent of Federal Reserve interest rate actions",
+          1
+        ]
+      ],
+      "guidance_vote": "none"
+    },
+    "CFO": {
+      "n_units": 26,
+      "sentiment": 0.1178932701985285,
+      "wins_top5": [
+        [
+          "net interest income",
+          1
+        ],
+        [
+          "credit card growth",
+          1
+        ],
+        [
+          "commercial banking revenue",
+          1
+        ],
+        [
+          "7% to 9% lower net interest income",
+          1
+        ],
+        [
+          "$12 billion in common stock repurchased in 2023",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "deposit mix shift",
+          2
+        ],
+        [
+          "net interest income decline",
+          1
+        ],
+        [
+          "commercial real estate losses",
+          1
+        ],
+        [
+          "market fundamentals remain weak",
+          1
+        ],
+        [
+          "capital markets and liquidity challenges in commercial real estate sector",
+          1
+        ]
+      ],
+      "guidance_vote": "lowered"
+    },
+    "IR": {
+      "n_units": 1,
+      "sentiment": -0.0008967442795483753,
+      "wins_top5": [
+        [
+          "fourth quarter results",
+          2
+        ],
+        [
+          "earnings materials",
+          1
+        ],
+        [
+          "SEC filings",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "risks and uncertainties",
+          2
+        ],
+        [
+          "forward-looking statements",
+          1
+        ],
+        [
+          "materially from expectations",
+          1
+        ],
+        [
+          "factors that may cause actual results to differ materially from expectations",
+          1
+        ]
+      ],
+      "guidance_vote": "none"
+    }
+  },
+  "by_section": {
+    "presenter": {
+      "n_units": 3,
+      "sentiment": 0.21964524862549256,
+      "wins_top5": [
+        [
+          "fourth quarter results",
+          2
+        ],
+        [
+          "earnings materials",
+          1
+        ],
+        [
+          "SEC filings",
+          1
+        ],
+        [
+          "credit card spend",
+          1
+        ],
+        [
+          "CIB revenue growth",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "risks and uncertainties",
+          2
+        ],
+        [
+          "net interest income decline",
+          2
+        ],
+        [
+          "forward-looking statements",
+          1
+        ],
+        [
+          "materially from expectations",
+          1
+        ],
+        [
+          "factors that may cause actual results to differ materially from expectations",
+          1
+        ]
+      ],
+      "guidance_vote": "lowered"
+    },
+    "qa": {
+      "n_units": 27,
+      "sentiment": 0.08833896070022776,
+      "wins_top5": [
+        [
+          "efficiency journey",
+          1
+        ],
+        [
+          "fee income drivers",
+          1
+        ],
+        [
+          "rate sensitivity",
+          1
+        ],
+        [
+          "Expecting a full year NII to be down, 7% to 9%",
+          1
+        ],
+        [
+          "Continuing to make progress on efficiency journey",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "NII decline",
+          1
+        ],
+        [
+          "CRE losses",
+          1
+        ],
+        [
+          "deposit mix shift",
+          1
+        ],
+        [
+          "Potential stress spread beyond CRE office to other parts of the portfolio",
+          1
+        ],
+        [
+          "Uncertainty around forward curve and impact on NII",
+          1
+        ]
+      ],
+      "guidance_vote": "lowered"
+    }
+  },
+  "_cache_key": "12c5a6764b1a9ff3"
+}

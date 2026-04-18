@@ -1,0 +1,347 @@
+{
+  "ticker": "INTC",
+  "quarter": "Q4-2024",
+  "call_date": "2025-01-30",
+  "variant": "finbert",
+  "n_units": {
+    "total": 39,
+    "presenter": 4,
+    "qa": 35
+  },
+  "models": [
+    "gemma3:4b",
+    "llama3.1:8b"
+  ],
+  "consensus": {
+    "sentiment_call": 0.3991929812437691,
+    "sentiment_qa": 0.24227043627052422,
+    "wins_top5": [
+      [
+        "earnings presentation",
+        2
+      ],
+      [
+        "earnings release",
+        1
+      ],
+      [
+        "webcast window",
+        1
+      ],
+      [
+        "Q4 earnings release",
+        1
+      ],
+      [
+        "strong position",
+        1
+      ]
+    ],
+    "risks_top5": [
+      [
+        "macro uncertainty",
+        2
+      ],
+      [
+        "forward-looking statements",
+        1
+      ],
+      [
+        "risks and uncertainties",
+        1
+      ],
+      [
+        "non-GAAP financial measures",
+        1
+      ],
+      [
+        "various risks and uncertainties",
+        1
+      ]
+    ],
+    "guidance_call": "lowered",
+    "guidance_by_model": {
+      "gemma3:4b": "lowered",
+      "llama3.1:8b": "lowered"
+    }
+  },
+  "dispersion": {
+    "sentiment_dispersion": 0.1309764748795844,
+    "guidance_disagree": 1,
+    "wins_overlap": 0.0,
+    "risks_overlap": 0.0,
+    "qa_minus_pres_risks": [
+      "clearwater forest volume",
+      "client pricing",
+      "dependence on external customers for foundry business profitability",
+      "euv wafer cost",
+      "increased competition from new market entrants",
+      "inventory digestion",
+      "jaguar shores delay",
+      "lunar lake pressure",
+      "margin pressure from lunar lake due to higher costs",
+      "market share loss",
+      "pc headwinds",
+      "pressure on margins due to cost of product",
+      "regaining share in data center server cpu market",
+      "share gains by intel due to better design or access to manufacturing",
+      "share loss in data center market",
+      "uncertainty around tariffs and their impact on revenue"
+    ],
+    "qa_minus_pres_risks_count": 16,
+    "role_sent_means": {
+      "CEO": 0.5460562764416559,
+      "CFO": 0.36082756931512866
+    }
+  },
+  "by_role": {
+    "CEO": {
+      "n_units": 8,
+      "sentiment": 0.4412846038457505,
+      "wins_top5": [
+        [
+          "strong position",
+          1
+        ],
+        [
+          "market leader",
+          1
+        ],
+        [
+          "competitive position",
+          1
+        ],
+        [
+          "delivered revenue, gross margin and EPS above our guide",
+          1
+        ],
+        [
+          "established Intel as the market leader in AI PC CPUs",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "market is becoming more competitive",
+          1
+        ],
+        [
+          "not participating in the cloud-based AI data center market",
+          1
+        ],
+        [
+          "not happy with where we are today",
+          1
+        ],
+        [
+          "market is becoming more competitive, especially as we see new entrants trying to participate in the AI PC category",
+          1
+        ],
+        [
+          "not yet participating in the cloud-based AI data center market in a meaningful way",
+          1
+        ]
+      ],
+      "guidance_vote": "none"
+    },
+    "CFO": {
+      "n_units": 19,
+      "sentiment": 0.28608508323785165,
+      "wins_top5": [
+        [
+          "Intel 18A design wins",
+          1
+        ],
+        [
+          "EUV wafer mix shift",
+          1
+        ],
+        [
+          "advanced packaging growth",
+          1
+        ],
+        [
+          "Intel 18A design wins to date provide good validation of the strategy",
+          1
+        ],
+        [
+          "healthy RFQ pipeline of potential customers",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "macro uncertainty",
+          2
+        ],
+        [
+          "tariff pressure",
+          1
+        ],
+        [
+          "PC inventory balancing",
+          1
+        ],
+        [
+          "macro uncertainty, especially around tariffs",
+          1
+        ],
+        [
+          "balancing of PC inventory and increasing competition",
+          1
+        ]
+      ],
+      "guidance_vote": "lowered"
+    },
+    "IR": {
+      "n_units": 12,
+      "sentiment": -0.0006387187264554518,
+      "wins_top5": [
+        [
+          "earnings presentation",
+          2
+        ],
+        [
+          "earnings release",
+          1
+        ],
+        [
+          "webcast window",
+          1
+        ],
+        [
+          "Q4 earnings release",
+          1
+        ],
+        [
+          "Q&A portion",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "forward-looking statements",
+          1
+        ],
+        [
+          "risks and uncertainties",
+          1
+        ],
+        [
+          "non-GAAP financial measures",
+          1
+        ],
+        [
+          "various risks and uncertainties",
+          1
+        ],
+        [
+          "PC headwinds",
+          1
+        ]
+      ],
+      "guidance_vote": "none"
+    }
+  },
+  "by_section": {
+    "presenter": {
+      "n_units": 4,
+      "sentiment": 0.3991929812437691,
+      "wins_top5": [
+        [
+          "earnings presentation",
+          2
+        ],
+        [
+          "earnings release",
+          1
+        ],
+        [
+          "webcast window",
+          1
+        ],
+        [
+          "Q4 earnings release",
+          1
+        ],
+        [
+          "strong position",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "forward-looking statements",
+          1
+        ],
+        [
+          "risks and uncertainties",
+          1
+        ],
+        [
+          "non-GAAP financial measures",
+          1
+        ],
+        [
+          "various risks and uncertainties",
+          1
+        ],
+        [
+          "market is becoming more competitive",
+          1
+        ]
+      ],
+      "guidance_vote": "lowered"
+    },
+    "qa": {
+      "n_units": 35,
+      "sentiment": 0.24227043627052422,
+      "wins_top5": [
+        [
+          "Granite Rapids",
+          1
+        ],
+        [
+          "Diamond Rapids",
+          1
+        ],
+        [
+          "competitive gap closure",
+          1
+        ],
+        [
+          "Closing the gap with competitors",
+          1
+        ],
+        [
+          "Delivering competitive products to customers",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "clearwater forest volume",
+          1
+        ],
+        [
+          "Jaguar Shores delay",
+          1
+        ],
+        [
+          "market share loss",
+          1
+        ],
+        [
+          "Increased competition from new market entrants",
+          1
+        ],
+        [
+          "Pressure on margins due to cost of product",
+          1
+        ]
+      ],
+      "guidance_vote": "none"
+    }
+  },
+  "_cache_key": "12c5a6764b1a9ff3"
+}

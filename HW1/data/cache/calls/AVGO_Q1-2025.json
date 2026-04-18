@@ -1,0 +1,332 @@
+{
+  "ticker": "AVGO",
+  "quarter": "Q1-2025",
+  "call_date": "2025-03-06",
+  "variant": "finbert",
+  "n_units": {
+    "total": 19,
+    "presenter": 3,
+    "qa": 16
+  },
+  "models": [
+    "gemma3:4b",
+    "llama3.1:8b"
+  ],
+  "consensus": {
+    "sentiment_call": 0.29290394150877863,
+    "sentiment_qa": 0.1047323320358236,
+    "wins_top5": [
+      [
+        "financial performance",
+        1
+      ],
+      [
+        "business environment",
+        1
+      ],
+      [
+        "first quarter results",
+        1
+      ],
+      [
+        "provided details of our first quarter fiscal year 2025 results",
+        1
+      ],
+      [
+        "provided guidance for our second quarter of fiscal year 2025",
+        1
+      ]
+    ],
+    "risks_top5": [
+      [
+        "risk factors",
+        1
+      ],
+      [
+        "actual results",
+        1
+      ],
+      [
+        "forward-looking statements",
+        1
+      ],
+      [
+        "specific risk factors that could cause our actual results to differ materially from the forward-looking statements made on this call",
+        1
+      ],
+      [
+        "seasonal decline in wireless",
+        1
+      ]
+    ],
+    "guidance_call": "raised",
+    "guidance_by_model": {
+      "gemma3:4b": "raised",
+      "llama3.1:8b": "maintained"
+    }
+  },
+  "dispersion": {
+    "sentiment_dispersion": 0.13689806323012316,
+    "guidance_disagree": 0,
+    "wins_overlap": 0.0,
+    "risks_overlap": 0.0,
+    "qa_minus_pres_risks": [
+      "china",
+      "disruption",
+      "geopolitical tensions and dramatic actions by governments",
+      "new regulations or ai diffusion rules impacting existing customers",
+      "tariffs",
+      "tariffs on chips"
+    ],
+    "qa_minus_pres_risks_count": 6,
+    "role_sent_means": {
+      "CEO": 0.41332320010288354,
+      "CFO": 0.21972010242023385
+    }
+  },
+  "by_role": {
+    "CEO": {
+      "n_units": 14,
+      "sentiment": 0.19020919879770565,
+      "wins_top5": [
+        [
+          "AI revenue growth",
+          1
+        ],
+        [
+          "custom accelerator development",
+          1
+        ],
+        [
+          "VCF adoption",
+          1
+        ],
+        [
+          "record $14.9 billion in total revenue",
+          1
+        ],
+        [
+          "41% year-on-year growth in consolidated adjusted EBITDA",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "seasonal decline in wireless",
+          1
+        ],
+        [
+          "slow recovery in non-AI semiconductors",
+          1
+        ],
+        [
+          "resales in industrial",
+          1
+        ],
+        [
+          "tariffs",
+          1
+        ],
+        [
+          "disruption",
+          1
+        ]
+      ],
+      "guidance_vote": "none"
+    },
+    "CFO": {
+      "n_units": 2,
+      "sentiment": 0.2512181418792166,
+      "wins_top5": [
+        [
+          "record EBITDA",
+          1
+        ],
+        [
+          "improved margins",
+          1
+        ],
+        [
+          "reduced debt",
+          1
+        ],
+        [
+          "25% increase in consolidated revenue",
+          1
+        ],
+        [
+          "44% increase in Q1 operating income",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "corporate AMT",
+          1
+        ],
+        [
+          "VMware debt",
+          1
+        ],
+        [
+          "revenue mix",
+          1
+        ]
+      ],
+      "guidance_vote": "none"
+    },
+    "IR": {
+      "n_units": 2,
+      "sentiment": -0.008150539435059424,
+      "wins_top5": [
+        [
+          "financial performance",
+          1
+        ],
+        [
+          "business environment",
+          1
+        ],
+        [
+          "first quarter results",
+          1
+        ],
+        [
+          "provided details of our first quarter fiscal year 2025 results",
+          1
+        ],
+        [
+          "provided guidance for our second quarter of fiscal year 2025",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "risk factors",
+          1
+        ],
+        [
+          "actual results",
+          1
+        ],
+        [
+          "forward-looking statements",
+          1
+        ],
+        [
+          "specific risk factors that could cause our actual results to differ materially from the forward-looking statements made on this call",
+          1
+        ]
+      ],
+      "guidance_vote": "maintained"
+    },
+    "Unknown": {
+      "n_units": 1,
+      "sentiment": null,
+      "wins_top5": [],
+      "risks_top5": [],
+      "guidance_vote": "none"
+    }
+  },
+  "by_section": {
+    "presenter": {
+      "n_units": 3,
+      "sentiment": 0.29290394150877863,
+      "wins_top5": [
+        [
+          "financial performance",
+          1
+        ],
+        [
+          "business environment",
+          1
+        ],
+        [
+          "first quarter results",
+          1
+        ],
+        [
+          "provided details of our first quarter fiscal year 2025 results",
+          1
+        ],
+        [
+          "provided guidance for our second quarter of fiscal year 2025",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "risk factors",
+          1
+        ],
+        [
+          "actual results",
+          1
+        ],
+        [
+          "forward-looking statements",
+          1
+        ],
+        [
+          "specific risk factors that could cause our actual results to differ materially from the forward-looking statements made on this call",
+          1
+        ],
+        [
+          "seasonal decline in wireless",
+          1
+        ]
+      ],
+      "guidance_vote": "raised"
+    },
+    "qa": {
+      "n_units": 16,
+      "sentiment": 0.1047323320358236,
+      "wins_top5": [
+        [
+          "scale production",
+          1
+        ],
+        [
+          "optimization",
+          1
+        ],
+        [
+          "innovation",
+          1
+        ],
+        [
+          "4 new customers coming online",
+          1
+        ],
+        [
+          "accelerated development of semiconductor technology, both process and packaging as well as design towards higher and higher performance accelerators and network",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "tariffs",
+          1
+        ],
+        [
+          "disruption",
+          1
+        ],
+        [
+          "China",
+          1
+        ],
+        [
+          "tariffs on chips",
+          1
+        ],
+        [
+          "new regulations or AI diffusion rules impacting existing customers",
+          1
+        ]
+      ],
+      "guidance_vote": "none"
+    }
+  },
+  "_cache_key": "12c5a6764b1a9ff3"
+}

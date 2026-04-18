@@ -1,0 +1,395 @@
+{
+  "ticker": "FDX",
+  "quarter": "Q1-2025",
+  "call_date": "2024-09-19",
+  "variant": "lm",
+  "n_units": {
+    "total": 25,
+    "presenter": 4,
+    "qa": 21
+  },
+  "models": [
+    "gemma3:4b",
+    "llama3.1:8b"
+  ],
+  "consensus": {
+    "sentiment_call": 0.4127942937985571,
+    "sentiment_qa": 0.6127525193526782,
+    "wins_top5": [
+      [
+        "revenue quality",
+        2
+      ],
+      [
+        "earnings release",
+        1
+      ],
+      [
+        "slides",
+        1
+      ],
+      [
+        "replay",
+        1
+      ],
+      [
+        "replay and slides will be available for about 1 year",
+        1
+      ]
+    ],
+    "risks_top5": [
+      [
+        "forward-looking statements",
+        1
+      ],
+      [
+        "SEC filings",
+        1
+      ],
+      [
+        "non-GAAP measures",
+        1
+      ],
+      [
+        "risks",
+        1
+      ],
+      [
+        "uncertainties",
+        1
+      ]
+    ],
+    "guidance_call": "lowered",
+    "guidance_by_model": {
+      "gemma3:4b": "raised",
+      "llama3.1:8b": "lowered"
+    }
+  },
+  "dispersion": {
+    "sentiment_dispersion": 0.30044168065546434,
+    "guidance_disagree": 1,
+    "wins_overlap": 0.030303030303030304,
+    "risks_overlap": 0.0,
+    "qa_minus_pres_risks": [
+      "asian shipper volume shifts",
+      "challenging u s domestic industrial economy impacting freight margins",
+      "costs up despite supposed improvements",
+      "economy service a negative margin business dragging down margins",
+      "freight margins",
+      "industrial economy weighing on b2b volumes",
+      "industrial environment",
+      "international losses",
+      "low freight profitability",
+      "negative margin business",
+      "peak demand pressure",
+      "port disruption",
+      "potential disruption from east coast ports and gulf strike on air freight volumes",
+      "potential for continued pt pressure on some colors",
+      "pressure on demand surcharges in international markets",
+      "strategic review of ltl business with uncertain outcome",
+      "tough freight environment",
+      "weak industrial economy"
+    ],
+    "qa_minus_pres_risks_count": 18,
+    "role_sent_means": {
+      "CEO": 0.7407407407407407,
+      "Other_Exec": 0.3,
+      "CFO": 0.16666666666666663
+    }
+  },
+  "by_role": {
+    "CEO": {
+      "n_units": 6,
+      "sentiment": 0.6682624246893514,
+      "wins_top5": [
+        [
+          "Network 2.0 rollout",
+          1
+        ],
+        [
+          "Shipment Eligibility Orchestrator",
+          1
+        ],
+        [
+          "Hold-to-match solution",
+          1
+        ],
+        [
+          "achieved $390 million of DRIVE-related savings",
+          1
+        ],
+        [
+          "realized a 10% reduction in pickup and delivery costs in markets where Network 2.0 has been fully rolled out",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "weaker than expected demand",
+          1
+        ],
+        [
+          "European savings skewed",
+          1
+        ],
+        [
+          "assessment of FedEx Freight",
+          1
+        ],
+        [
+          "weak industrial economy",
+          1
+        ],
+        [
+          "international losses",
+          1
+        ]
+      ],
+      "guidance_vote": "raised"
+    },
+    "CFO": {
+      "n_units": 12,
+      "sentiment": 0.37550640897921234,
+      "wins_top5": [
+        [
+          "DRIVE savings",
+          1
+        ],
+        [
+          "International Economy profitability",
+          1
+        ],
+        [
+          "revenue quality",
+          1
+        ],
+        [
+          "solid Q1 DRIVE results",
+          1
+        ],
+        [
+          "ramping DRIVE savings",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "soft revenue trends",
+          1
+        ],
+        [
+          "lower weight per shipment",
+          1
+        ],
+        [
+          "U.S. domestic network",
+          1
+        ],
+        [
+          "challenging revenue environment",
+          1
+        ],
+        [
+          "competitive pricing environment",
+          1
+        ]
+      ],
+      "guidance_vote": "none"
+    },
+    "IR": {
+      "n_units": 1,
+      "sentiment": 0.0,
+      "wins_top5": [
+        [
+          "earnings release",
+          1
+        ],
+        [
+          "slides",
+          1
+        ],
+        [
+          "replay",
+          1
+        ],
+        [
+          "replay and slides will be available for about 1 year",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "forward-looking statements",
+          1
+        ],
+        [
+          "SEC filings",
+          1
+        ],
+        [
+          "non-GAAP measures",
+          1
+        ],
+        [
+          "risks",
+          1
+        ],
+        [
+          "uncertainties",
+          1
+        ]
+      ],
+      "guidance_vote": "none"
+    },
+    "Other_Exec": {
+      "n_units": 6,
+      "sentiment": 0.5331637201010251,
+      "wins_top5": [
+        [
+          "profitable market share",
+          1
+        ],
+        [
+          "revenue quality",
+          1
+        ],
+        [
+          "increased international export volume",
+          1
+        ],
+        [
+          "gained profitable market share in the United States and around the world",
+          1
+        ],
+        [
+          "continued to lead the LTL market in total revenue share",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "weaker B2B demand environment",
+          1
+        ],
+        [
+          "shift of heavier freight",
+          1
+        ],
+        [
+          "tapering of international export demand surcharges",
+          1
+        ],
+        [
+          "weakness in the U.S. market",
+          1
+        ],
+        [
+          "shift of heavier freight to the truckload market due to excess truckload capacity and associated lower rates",
+          1
+        ]
+      ],
+      "guidance_vote": "lowered"
+    }
+  },
+  "by_section": {
+    "presenter": {
+      "n_units": 4,
+      "sentiment": 0.4127942937985571,
+      "wins_top5": [
+        [
+          "revenue quality",
+          2
+        ],
+        [
+          "earnings release",
+          1
+        ],
+        [
+          "slides",
+          1
+        ],
+        [
+          "replay",
+          1
+        ],
+        [
+          "replay and slides will be available for about 1 year",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "forward-looking statements",
+          1
+        ],
+        [
+          "SEC filings",
+          1
+        ],
+        [
+          "non-GAAP measures",
+          1
+        ],
+        [
+          "risks",
+          1
+        ],
+        [
+          "uncertainties",
+          1
+        ]
+      ],
+      "guidance_vote": "lowered"
+    },
+    "qa": {
+      "n_units": 21,
+      "sentiment": 0.6127525193526782,
+      "wins_top5": [
+        [
+          "capture rates",
+          1
+        ],
+        [
+          "international yields",
+          1
+        ],
+        [
+          "Europe pricing strategy",
+          1
+        ],
+        [
+          "Confident capture rate from GRI",
+          1
+        ],
+        [
+          "Profitably growing FedEx Freight portfolio",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "peak demand pressure",
+          1
+        ],
+        [
+          "low freight profitability",
+          1
+        ],
+        [
+          "Asian shipper volume shifts",
+          1
+        ],
+        [
+          "Pressure on demand surcharges in international markets",
+          1
+        ],
+        [
+          "Tough freight environment",
+          1
+        ]
+      ],
+      "guidance_vote": "raised"
+    }
+  },
+  "_cache_key": "b9c11fa20978a9b0"
+}

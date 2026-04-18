@@ -1,0 +1,1 @@
+{"unit_id": "JPM_Q2-2024__qa__012", "model": "llama3.1:8b", "wins": ["17% through-the-cycle ROTCE is still achievable"], "risks": ["volatility of rules", "uncertainty behind that 17%", "GSIB recalibration and so on"], "guidance": "maintained", "_cache_key": "4e3fac7c17838d34"}

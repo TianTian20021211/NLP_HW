@@ -1,0 +1,343 @@
+{
+  "ticker": "AMD",
+  "quarter": "Q1-2025",
+  "call_date": "2025-05-06",
+  "variant": "lm",
+  "n_units": {
+    "total": 26,
+    "presenter": 4,
+    "qa": 22
+  },
+  "models": [
+    "gemma3:4b",
+    "llama3.1:8b"
+  ],
+  "consensus": {
+    "sentiment_call": 0.8164964587700972,
+    "sentiment_qa": 0.6023945192917155,
+    "wins_top5": [
+      [
+        "earnings press release",
+        1
+      ],
+      [
+        "accompanying slides",
+        1
+      ],
+      [
+        "conference call",
+        1
+      ],
+      [
+        "review a copy of our earnings press release and the accompanying slides",
+        1
+      ],
+      [
+        "EPYC CPU sales",
+        1
+      ]
+    ],
+    "risks_top5": [
+      [
+        "export controls for Instinct MI308X shipments to China",
+        2
+      ],
+      [
+        "dynamic macro and regulatory environments",
+        2
+      ],
+      [
+        "macro and trade policy-related uncertainties",
+        2
+      ],
+      [
+        "forward-looking statements",
+        1
+      ],
+      [
+        "risks and uncertainties",
+        1
+      ]
+    ],
+    "guidance_call": "raised",
+    "guidance_by_model": {
+      "gemma3:4b": "raised",
+      "llama3.1:8b": "raised"
+    }
+  },
+  "dispersion": {
+    "sentiment_dispersion": 0.15851624545280837,
+    "guidance_disagree": 0,
+    "wins_overlap": 0.0,
+    "risks_overlap": 0.0,
+    "qa_minus_pres_risks": [
+      "800 million charge related to mi308",
+      "ai diffusion rules",
+      "china export controls",
+      "china export controls on mi308",
+      "china headwind",
+      "china headwinds",
+      "inventory levels",
+      "inventory still among different customers in industrial side",
+      "mi308 charge",
+      "mi308 headwind",
+      "potential pull ins in the first half of the year",
+      "tariffs and macroeconomic uncertainty"
+    ],
+    "qa_minus_pres_risks_count": 12,
+    "role_sent_means": {
+      "CEO": 0.9384615384615385,
+      "CFO": 0.7142857142857144
+    }
+  },
+  "by_role": {
+    "CEO": {
+      "n_units": 15,
+      "sentiment": 0.8475365580652872,
+      "wins_top5": [
+        [
+          "EPYC CPU sales",
+          1
+        ],
+        [
+          "Instinct AI accelerator sales",
+          1
+        ],
+        [
+          "client CPU ASP",
+          1
+        ],
+        [
+          "new public sector wins",
+          1
+        ],
+        [
+          "wins with Internet native streaming, transportation, financial services, and social media companies",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "export controls for Instinct MI308X shipments to China",
+          2
+        ],
+        [
+          "dynamic macro and regulatory environments",
+          2
+        ],
+        [
+          "uncertain macroeconomic backdrop",
+          1
+        ],
+        [
+          "China export controls",
+          1
+        ],
+        [
+          "MI308 headwind",
+          1
+        ]
+      ],
+      "guidance_vote": "raised"
+    },
+    "CFO": {
+      "n_units": 9,
+      "sentiment": 0.5223544973544973,
+      "wins_top5": [
+        [
+          "record first quarter revenue",
+          1
+        ],
+        [
+          "expanded gross and operating margins",
+          1
+        ],
+        [
+          "closed the key acquisition of ZT Systems",
+          1
+        ],
+        [
+          "record first quarter revenue of $7.4 billion",
+          1
+        ],
+        [
+          "57% revenue growth in the Data Center segment and a 28% revenue growth in the Client & Gaming segment",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "macro and trade policy-related uncertainties",
+          2
+        ],
+        [
+          "new export license requirement",
+          1
+        ],
+        [
+          "exclusion of MI308 revenue",
+          1
+        ],
+        [
+          "new export license requirement was put in place for MI308 shipments to China",
+          1
+        ],
+        [
+          "MI308 charge",
+          1
+        ]
+      ],
+      "guidance_vote": "raised"
+    },
+    "IR": {
+      "n_units": 2,
+      "sentiment": 0.0,
+      "wins_top5": [
+        [
+          "earnings press release",
+          1
+        ],
+        [
+          "accompanying slides",
+          1
+        ],
+        [
+          "conference call",
+          1
+        ],
+        [
+          "review a copy of our earnings press release and the accompanying slides",
+          1
+        ],
+        [
+          "Q&A session",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "forward-looking statements",
+          1
+        ],
+        [
+          "risks and uncertainties",
+          1
+        ],
+        [
+          "materially differ",
+          1
+        ],
+        [
+          "risks and uncertainties that could cause actual results to differ materially from our current expectations",
+          1
+        ],
+        [
+          "factors that could cause actual results to differ materially",
+          1
+        ]
+      ],
+      "guidance_vote": "none"
+    }
+  },
+  "by_section": {
+    "presenter": {
+      "n_units": 4,
+      "sentiment": 0.8164964587700972,
+      "wins_top5": [
+        [
+          "earnings press release",
+          1
+        ],
+        [
+          "accompanying slides",
+          1
+        ],
+        [
+          "conference call",
+          1
+        ],
+        [
+          "review a copy of our earnings press release and the accompanying slides",
+          1
+        ],
+        [
+          "EPYC CPU sales",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "export controls for Instinct MI308X shipments to China",
+          2
+        ],
+        [
+          "dynamic macro and regulatory environments",
+          2
+        ],
+        [
+          "macro and trade policy-related uncertainties",
+          2
+        ],
+        [
+          "forward-looking statements",
+          1
+        ],
+        [
+          "risks and uncertainties",
+          1
+        ]
+      ],
+      "guidance_vote": "raised"
+    },
+    "qa": {
+      "n_units": 22,
+      "sentiment": 0.6023945192917155,
+      "wins_top5": [
+        [
+          "client growth",
+          2
+        ],
+        [
+          "strong performance",
+          1
+        ],
+        [
+          "desktop strength",
+          1
+        ],
+        [
+          "Strong desktop performance",
+          1
+        ],
+        [
+          "Gaming business growth due to Radeon launch",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "China export controls",
+          1
+        ],
+        [
+          "MI308 headwind",
+          1
+        ],
+        [
+          "AI diffusion rules",
+          1
+        ],
+        [
+          "China export controls on MI308",
+          1
+        ],
+        [
+          "Tariffs and macroeconomic uncertainty",
+          1
+        ]
+      ],
+      "guidance_vote": "raised"
+    }
+  },
+  "_cache_key": "b9c11fa20978a9b0"
+}

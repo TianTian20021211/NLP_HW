@@ -1,0 +1,1 @@
+{"call_id": "AVGO_Q4-2025", "role": "CFO", "model": "llama3.1:8b", "n_answers": 1, "unit_ids": ["AVGO_Q4-2025__qa__008"], "wins": ["gross margin dollars will go up"], "risks": ["lower gross margins", "operating margin percentage will come down a bit"], "guidance": "none", "_cache_key": "ea10693037f9e9e4"}

@@ -1,0 +1,352 @@
+{
+  "ticker": "WFC",
+  "quarter": "Q1-2025",
+  "call_date": "2025-04-11",
+  "variant": "lm",
+  "n_units": {
+    "total": 42,
+    "presenter": 3,
+    "qa": 39
+  },
+  "models": [
+    "gemma3:4b",
+    "llama3.1:8b"
+  ],
+  "consensus": {
+    "sentiment_call": 0.14783762402346967,
+    "sentiment_qa": 0.25079905146113446,
+    "wins_top5": [
+      [
+        "improved credit performance",
+        2
+      ],
+      [
+        "earnings results",
+        1
+      ],
+      [
+        "presentation deck",
+        1
+      ],
+      [
+        "first quarter results",
+        1
+      ],
+      [
+        "strong first quarter results",
+        1
+      ]
+    ],
+    "risks_top5": [
+      [
+        "risks and uncertainties",
+        2
+      ],
+      [
+        "continued volatility and uncertainty",
+        2
+      ],
+      [
+        "forward-looking statements",
+        1
+      ],
+      [
+        "factors that may cause actual results to differ materially from expectations",
+        1
+      ],
+      [
+        "lower net interest income",
+        1
+      ]
+    ],
+    "guidance_call": "lowered",
+    "guidance_by_model": {
+      "gemma3:4b": "lowered",
+      "llama3.1:8b": "none"
+    }
+  },
+  "dispersion": {
+    "sentiment_dispersion": 0.34433025866475353,
+    "guidance_disagree": 1,
+    "wins_overlap": 0.0,
+    "risks_overlap": 0.0,
+    "qa_minus_pres_risks": [
+      "asset cap impact",
+      "economic uncertainty",
+      "fee compression",
+      "need to be cautious about nii due to volatility",
+      "nii volatility",
+      "potential impact of economic slowdown on credit quality",
+      "potential weakness could develop in a slower economy",
+      "potential weakness in the c i loan portfolio",
+      "rate volatility",
+      "slower economy",
+      "uncertain economic backdrop",
+      "uncertainty around interest rates and their impact on nii",
+      "uncertainty around rate cuts and loan balances",
+      "volatility in trading nii and fee revenue"
+    ],
+    "qa_minus_pres_risks_count": 14,
+    "role_sent_means": {
+      "CEO": 0.42028985507246375,
+      "CFO": -0.06666666666666667
+    }
+  },
+  "by_role": {
+    "CEO": {
+      "n_units": 20,
+      "sentiment": 0.3578157368762832,
+      "wins_top5": [
+        [
+          "strong first quarter results",
+          1
+        ],
+        [
+          "fee-based revenue growth",
+          1
+        ],
+        [
+          "credit performance improved",
+          1
+        ],
+        [
+          "solid first quarter results",
+          1
+        ],
+        [
+          "diluted earnings per share up 16%",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "continued volatility and uncertainty",
+          2
+        ],
+        [
+          "lower net interest income",
+          1
+        ],
+        [
+          "economic downturn",
+          1
+        ],
+        [
+          "economic uncertainty that now exists",
+          1
+        ],
+        [
+          "potential effects on the economy from policy changes",
+          1
+        ]
+      ],
+      "guidance_vote": "raised"
+    },
+    "CFO": {
+      "n_units": 19,
+      "sentiment": 0.08913367421985957,
+      "wins_top5": [
+        [
+          "improved credit performance",
+          2
+        ],
+        [
+          "solid results",
+          1
+        ],
+        [
+          "fee-based revenue",
+          1
+        ],
+        [
+          "double-digit growth in diluted earnings per share",
+          1
+        ],
+        [
+          "grew fee-based revenue across many of our businesses",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "lower rates",
+          1
+        ],
+        [
+          "potential economic weakness",
+          1
+        ],
+        [
+          "trading-related net interest income",
+          1
+        ],
+        [
+          "rate volatility",
+          1
+        ],
+        [
+          "fee compression",
+          1
+        ]
+      ],
+      "guidance_vote": "raised"
+    },
+    "IR": {
+      "n_units": 2,
+      "sentiment": -0.3333333333333333,
+      "wins_top5": [
+        [
+          "earnings results",
+          1
+        ],
+        [
+          "presentation deck",
+          1
+        ],
+        [
+          "first quarter results",
+          1
+        ],
+        [
+          "C&I loan portfolio",
+          1
+        ],
+        [
+          "credit quality",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "risks and uncertainties",
+          2
+        ],
+        [
+          "forward-looking statements",
+          1
+        ],
+        [
+          "factors that may cause actual results to differ materially from expectations",
+          1
+        ],
+        [
+          "slower economy",
+          1
+        ],
+        [
+          "potential weakness could develop in a slower economy",
+          1
+        ]
+      ],
+      "guidance_vote": "none"
+    },
+    "Unknown": {
+      "n_units": 1,
+      "sentiment": null,
+      "wins_top5": [],
+      "risks_top5": [],
+      "guidance_vote": "none"
+    }
+  },
+  "by_section": {
+    "presenter": {
+      "n_units": 3,
+      "sentiment": 0.14783762402346967,
+      "wins_top5": [
+        [
+          "improved credit performance",
+          2
+        ],
+        [
+          "earnings results",
+          1
+        ],
+        [
+          "presentation deck",
+          1
+        ],
+        [
+          "first quarter results",
+          1
+        ],
+        [
+          "strong first quarter results",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "risks and uncertainties",
+          2
+        ],
+        [
+          "continued volatility and uncertainty",
+          2
+        ],
+        [
+          "forward-looking statements",
+          1
+        ],
+        [
+          "factors that may cause actual results to differ materially from expectations",
+          1
+        ],
+        [
+          "lower net interest income",
+          1
+        ]
+      ],
+      "guidance_vote": "lowered"
+    },
+    "qa": {
+      "n_units": 39,
+      "sentiment": 0.25079905146113446,
+      "wins_top5": [
+        [
+          "strong customer base",
+          1
+        ],
+        [
+          "regulatory progress",
+          1
+        ],
+        [
+          "diverse revenue streams",
+          1
+        ],
+        [
+          "Continued strength in consumer and corporate customer behavior",
+          1
+        ],
+        [
+          "Progress on knocking down consent orders, with 11 closes since 2019",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "uncertain economic backdrop",
+          1
+        ],
+        [
+          "NII volatility",
+          1
+        ],
+        [
+          "asset cap impact",
+          1
+        ],
+        [
+          "Uncertainty around rate cuts and loan balances",
+          1
+        ],
+        [
+          "Potential impact of economic slowdown on credit quality",
+          1
+        ]
+      ],
+      "guidance_vote": "raised"
+    }
+  },
+  "_cache_key": "b9c11fa20978a9b0"
+}

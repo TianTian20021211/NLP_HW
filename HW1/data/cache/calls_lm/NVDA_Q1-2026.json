@@ -1,0 +1,326 @@
+{
+  "ticker": "NVDA",
+  "quarter": "Q1-2026",
+  "call_date": "2025-05-28",
+  "variant": "lm",
+  "n_units": {
+    "total": 13,
+    "presenter": 4,
+    "qa": 9
+  },
+  "models": [
+    "gemma3:4b",
+    "llama3.1:8b"
+  ],
+  "consensus": {
+    "sentiment_call": 0.6148808862213331,
+    "sentiment_qa": 0.5618953967180873,
+    "wins_top5": [
+      [
+        "welcome call",
+        1
+      ],
+      [
+        "webcast",
+        1
+      ],
+      [
+        "Blackwell ramp",
+        1
+      ],
+      [
+        "GB200 NVL",
+        1
+      ],
+      [
+        "Spectrum-X growth",
+        1
+      ]
+    ],
+    "risks_top5": [
+      [
+        "export controls",
+        2
+      ],
+      [
+        "forward-looking statements",
+        1
+      ],
+      [
+        "significant risks",
+        1
+      ],
+      [
+        "materially differ",
+        1
+      ],
+      [
+        "significant risks and uncertainties",
+        1
+      ]
+    ],
+    "guidance_call": "none",
+    "guidance_by_model": {
+      "gemma3:4b": "none",
+      "llama3.1:8b": "none"
+    }
+  },
+  "dispersion": {
+    "sentiment_dispersion": 0.10475656017578486,
+    "guidance_disagree": 0,
+    "wins_overlap": 0.0,
+    "risks_overlap": 0.0,
+    "qa_minus_pres_risks": [
+      "china data center revenue down",
+      "china export controls",
+      "china headwind",
+      "difficulty in scaling up computing infrastructure for ai",
+      "export controls limiting hopper s use in china",
+      "h20 sku replacement",
+      "inventory and purchase commitments write down",
+      "market that we will not be able to serve",
+      "stringent limits on exporting products to china",
+      "uncertainty in ai spending",
+      "unfulfilled orders"
+    ],
+    "qa_minus_pres_risks_count": 11,
+    "role_sent_means": {
+      "CFO": 0.6296296296296297,
+      "CEO": 0.48148148148148145
+    }
+  },
+  "by_role": {
+    "CEO": {
+      "n_units": 8,
+      "sentiment": 0.6117561621598531,
+      "wins_top5": [
+        [
+          "AI leadership",
+          1
+        ],
+        [
+          "American infrastructure",
+          1
+        ],
+        [
+          "national AI platforms",
+          1
+        ],
+        [
+          "win the AI developers win",
+          1
+        ],
+        [
+          "lead globally",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "China market closed",
+          1
+        ],
+        [
+          "assumption wrong",
+          1
+        ],
+        [
+          "export controls",
+          1
+        ],
+        [
+          "half of the world's AI talent to rivals",
+          1
+        ],
+        [
+          "drive half of the world's AI talent to rivals",
+          1
+        ]
+      ],
+      "guidance_vote": "raised"
+    },
+    "CFO": {
+      "n_units": 3,
+      "sentiment": 0.5473325081722683,
+      "wins_top5": [
+        [
+          "Blackwell ramp",
+          1
+        ],
+        [
+          "GB200 NVL",
+          1
+        ],
+        [
+          "Spectrum-X growth",
+          1
+        ],
+        [
+          "record $44 billion revenue",
+          1
+        ],
+        [
+          "73% year-over-year increase in Data Center revenue",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "H20 export controls",
+          1
+        ],
+        [
+          "China data center revenue decline",
+          1
+        ],
+        [
+          "Omniverse tariff uncertainty",
+          1
+        ],
+        [
+          "material adverse impact on our business going forward due to losing access to the China AI accelerator market",
+          1
+        ],
+        [
+          "H20 export licensing controls impacting China data center revenue",
+          1
+        ]
+      ],
+      "guidance_vote": "raised"
+    },
+    "IR": {
+      "n_units": 2,
+      "sentiment": 0.8945454545454545,
+      "wins_top5": [
+        [
+          "welcome call",
+          1
+        ],
+        [
+          "webcast",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "forward-looking statements",
+          1
+        ],
+        [
+          "significant risks",
+          1
+        ],
+        [
+          "materially differ",
+          1
+        ],
+        [
+          "significant risks and uncertainties",
+          1
+        ]
+      ],
+      "guidance_vote": "none"
+    }
+  },
+  "by_section": {
+    "presenter": {
+      "n_units": 4,
+      "sentiment": 0.6148808862213331,
+      "wins_top5": [
+        [
+          "welcome call",
+          1
+        ],
+        [
+          "webcast",
+          1
+        ],
+        [
+          "Blackwell ramp",
+          1
+        ],
+        [
+          "GB200 NVL",
+          1
+        ],
+        [
+          "Spectrum-X growth",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "forward-looking statements",
+          1
+        ],
+        [
+          "significant risks",
+          1
+        ],
+        [
+          "materially differ",
+          1
+        ],
+        [
+          "significant risks and uncertainties",
+          1
+        ],
+        [
+          "H20 export controls",
+          1
+        ]
+      ],
+      "guidance_vote": "none"
+    },
+    "qa": {
+      "n_units": 9,
+      "sentiment": 0.5618953967180873,
+      "wins_top5": [
+        [
+          "inference scaling",
+          1
+        ],
+        [
+          "enterprise AI",
+          1
+        ],
+        [
+          "industrial AI",
+          1
+        ],
+        [
+          "exponential growth of reasoning AI",
+          1
+        ],
+        [
+          "AI diffusion and the rescinding of the AI Diffusion Rule",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "China export controls",
+          1
+        ],
+        [
+          "H20 SKU replacement",
+          1
+        ],
+        [
+          "uncertainty in AI spending",
+          1
+        ],
+        [
+          "export controls limiting Hopper's use in China",
+          1
+        ],
+        [
+          "stringent limits on exporting products to China",
+          1
+        ]
+      ],
+      "guidance_vote": "raised"
+    }
+  },
+  "_cache_key": "b9c11fa20978a9b0"
+}

@@ -1,0 +1,1 @@
+{"call_id": "FAST_Q3-2025", "role": "CFO", "model": "llama3.1:8b", "n_answers": 1, "unit_ids": ["FAST_Q3-2025__qa__012"], "wins": ["flat gross profit percentage for 2025", "fastener expansion project promoting gross margins"], "risks": ["gross margin drop in the fourth quarter"], "guidance": "maintained", "_cache_key": "ea10693037f9e9e4"}

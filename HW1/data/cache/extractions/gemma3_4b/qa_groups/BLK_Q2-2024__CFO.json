@@ -1,0 +1,1 @@
+{"call_id": "BLK_Q2-2024", "role": "CFO", "model": "gemma3:4b", "n_answers": 4, "unit_ids": ["BLK_Q2-2024__qa__004", "BLK_Q2-2024__qa__006", "BLK_Q2-2024__qa__009", "BLK_Q2-2024__qa__012"], "wins": ["organic growth", "private markets", "Aladdin"], "risks": ["rate cuts", "legacy systems", "SPV Bank"], "guidance": "raised", "_cache_key": "0067eda25f7c1ed6"}

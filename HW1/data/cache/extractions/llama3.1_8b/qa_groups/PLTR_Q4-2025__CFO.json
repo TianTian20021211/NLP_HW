@@ -1,0 +1,1 @@
+{"call_id": "PLTR_Q4-2025", "role": "CFO", "model": "llama3.1:8b", "n_answers": 5, "unit_ids": ["PLTR_Q4-2025__qa__005", "PLTR_Q4-2025__qa__008", "PLTR_Q4-2025__qa__014", "PLTR_Q4-2025__qa__016", "PLTR_Q4-2025__qa__018"], "wins": ["reacceleration in the near future due to European rearmament"], "risks": [], "guidance": "none", "_cache_key": "ea10693037f9e9e4"}

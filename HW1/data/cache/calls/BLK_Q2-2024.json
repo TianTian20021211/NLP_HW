@@ -1,0 +1,310 @@
+{
+  "ticker": "BLK",
+  "quarter": "Q2-2024",
+  "call_date": "2024-07-15",
+  "variant": "finbert",
+  "n_units": {
+    "total": 15,
+    "presenter": 4,
+    "qa": 11
+  },
+  "models": [
+    "gemma3:4b",
+    "llama3.1:8b"
+  ],
+  "consensus": {
+    "sentiment_call": 0.5824348367448418,
+    "sentiment_qa": 0.3743355617017706,
+    "wins_top5": [
+      [
+        "forward-looking statements",
+        1
+      ],
+      [
+        "filed reports with the SEC",
+        1
+      ],
+      [
+        "civility and unity",
+        1
+      ],
+      [
+        "hope for all Americans",
+        1
+      ],
+      [
+        "condemn political violence",
+        1
+      ]
+    ],
+    "risks_top5": [
+      [
+        "materially differ",
+        1
+      ],
+      [
+        "results may differ from these statements",
+        1
+      ],
+      [
+        "BlackRock's actual results may differ materially",
+        1
+      ],
+      [
+        "large insurance client redemption",
+        1
+      ],
+      [
+        "private market realizations",
+        1
+      ]
+    ],
+    "guidance_call": "raised",
+    "guidance_by_model": {
+      "gemma3:4b": "raised",
+      "llama3.1:8b": "none"
+    }
+  },
+  "dispersion": {
+    "sentiment_dispersion": 0.39189928632497595,
+    "guidance_disagree": 0,
+    "wins_overlap": 0.0,
+    "risks_overlap": 0.0,
+    "qa_minus_pres_risks": [
+      "clients increasing demand for technology and data services to drive operating leverage",
+      "legacy systems",
+      "market volatility and potential for rate cuts to normalize bond markets",
+      "potential for clients to migrate out of banks to money market funds or other cash management options",
+      "rate cuts",
+      "spv bank"
+    ],
+    "qa_minus_pres_risks_count": 6,
+    "role_sent_means": {
+      "Other_Exec": -0.08333850601532806,
+      "CEO": 0.5973774943659768,
+      "CFO": 0.5935078995992497
+    }
+  },
+  "by_role": {
+    "CEO": {
+      "n_units": 9,
+      "sentiment": 0.47450419149352724,
+      "wins_top5": [
+        [
+          "civility and unity",
+          1
+        ],
+        [
+          "hope for all Americans",
+          1
+        ],
+        [
+          "condemn political violence",
+          1
+        ],
+        [
+          "promote civility and unity",
+          1
+        ],
+        [
+          "infrastructure investments",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "cash overweight investors",
+          1
+        ],
+        [
+          "re-risking",
+          1
+        ],
+        [
+          "private market allocations",
+          1
+        ]
+      ],
+      "guidance_vote": "none"
+    },
+    "CFO": {
+      "n_units": 5,
+      "sentiment": 0.5640768713822938,
+      "wins_top5": [
+        [
+          "organic base fee growth",
+          1
+        ],
+        [
+          "operating margin expansion",
+          1
+        ],
+        [
+          "significant net inflows",
+          1
+        ],
+        [
+          "record AUM of over $10.6 trillion",
+          1
+        ],
+        [
+          "$82 billion of total net inflows in the second quarter",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "large insurance client redemption",
+          1
+        ],
+        [
+          "private market realizations",
+          1
+        ],
+        [
+          "low-fee index outflows",
+          1
+        ],
+        [
+          "rate cuts",
+          1
+        ],
+        [
+          "legacy systems",
+          1
+        ]
+      ],
+      "guidance_vote": "raised"
+    },
+    "Other_Exec": {
+      "n_units": 1,
+      "sentiment": -0.08333850601532806,
+      "wins_top5": [
+        [
+          "forward-looking statements",
+          1
+        ],
+        [
+          "filed reports with the SEC",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "materially differ",
+          1
+        ],
+        [
+          "results may differ from these statements",
+          1
+        ],
+        [
+          "BlackRock's actual results may differ materially",
+          1
+        ]
+      ],
+      "guidance_vote": "none"
+    }
+  },
+  "by_section": {
+    "presenter": {
+      "n_units": 4,
+      "sentiment": 0.5824348367448418,
+      "wins_top5": [
+        [
+          "forward-looking statements",
+          1
+        ],
+        [
+          "filed reports with the SEC",
+          1
+        ],
+        [
+          "civility and unity",
+          1
+        ],
+        [
+          "hope for all Americans",
+          1
+        ],
+        [
+          "condemn political violence",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "materially differ",
+          1
+        ],
+        [
+          "results may differ from these statements",
+          1
+        ],
+        [
+          "BlackRock's actual results may differ materially",
+          1
+        ],
+        [
+          "large insurance client redemption",
+          1
+        ],
+        [
+          "private market realizations",
+          1
+        ]
+      ],
+      "guidance_vote": "raised"
+    },
+    "qa": {
+      "n_units": 11,
+      "sentiment": 0.3743355617017706,
+      "wins_top5": [
+        [
+          "organic growth",
+          1
+        ],
+        [
+          "private markets",
+          1
+        ],
+        [
+          "Aladdin",
+          1
+        ],
+        [
+          "Achieved premium organic base fee growth target of 5% on average over the last 5 years",
+          1
+        ],
+        [
+          "Expecting significant, differentiated, durable earnings and multiple expansion in supportive markets",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "rate cuts",
+          1
+        ],
+        [
+          "legacy systems",
+          1
+        ],
+        [
+          "SPV Bank",
+          1
+        ],
+        [
+          "Market volatility and potential for rate cuts to normalize bond markets",
+          1
+        ],
+        [
+          "Clients' increasing demand for technology and data services to drive operating leverage",
+          1
+        ]
+      ],
+      "guidance_vote": "raised"
+    }
+  },
+  "_cache_key": "12c5a6764b1a9ff3"
+}

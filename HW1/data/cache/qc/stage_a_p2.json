@@ -1,0 +1,31 @@
+{
+  "metrics": {
+    "n_presenter": 64,
+    "n_qa": 423,
+    "executive_unknown_rate": 0.0,
+    "qa_orphan_rate": 0.0070921985815602835,
+    "parse_failures": 0
+  },
+  "calls": [
+    "AMD_Q1-2024",
+    "AMD_Q1-2025",
+    "AMD_Q2-2024",
+    "AMD_Q2-2025",
+    "AMD_Q3-2024",
+    "JPM_Q1-2024",
+    "JPM_Q1-2025",
+    "JPM_Q1-2026",
+    "JPM_Q2-2024",
+    "JPM_Q2-2025",
+    "NVDA_Q1-2025",
+    "NVDA_Q1-2026",
+    "NVDA_Q2-2025",
+    "NVDA_Q2-2026",
+    "NVDA_Q3-2025",
+    "PLTR_Q1-2024",
+    "PLTR_Q1-2025",
+    "PLTR_Q2-2024",
+    "PLTR_Q2-2025",
+    "PLTR_Q3-2024"
+  ]
+}

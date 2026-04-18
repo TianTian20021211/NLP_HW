@@ -1,0 +1,1 @@
+{"call_id": "PLTR_Q3-2024", "role": "CFO", "model": "llama3.1:8b", "n_answers": 2, "unit_ids": ["PLTR_Q3-2024__qa__007", "PLTR_Q3-2024__qa__014"], "wins": ["30% year-over-year revenue growth", "38% adjusted operating margin", "exceeding $1 billion in adjusted free cash flow"], "risks": [], "guidance": "raised", "_cache_key": "ea10693037f9e9e4"}

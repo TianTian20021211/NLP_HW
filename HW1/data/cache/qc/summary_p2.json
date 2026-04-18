@@ -1,0 +1,28 @@
+{
+  "phase": "P2",
+  "n_calls": 20,
+  "stage_a": {
+    "n_presenter": 64,
+    "n_qa": 423,
+    "executive_unknown_rate": 0.0,
+    "qa_orphan_rate": 0.0070921985815602835,
+    "parse_failures": 0
+  },
+  "stage_b": {
+    "n_seen": 484,
+    "n_nan": 0,
+    "nan_rate": 0.0
+  },
+  "stage_c": {
+    "gemma3:4b": {
+      "n_seen": 471,
+      "n_failed": 0,
+      "failure_rate": 0.0
+    },
+    "llama3.1:8b": {
+      "n_seen": 463,
+      "n_failed": 0,
+      "failure_rate": 0.0
+    }
+  }
+}

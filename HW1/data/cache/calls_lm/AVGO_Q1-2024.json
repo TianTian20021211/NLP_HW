@@ -1,0 +1,330 @@
+{
+  "ticker": "AVGO",
+  "quarter": "Q1-2024",
+  "call_date": "2024-03-07",
+  "variant": "lm",
+  "n_units": {
+    "total": 22,
+    "presenter": 3,
+    "qa": 19
+  },
+  "models": [
+    "gemma3:4b",
+    "llama3.1:8b"
+  ],
+  "consensus": {
+    "sentiment_call": -0.18838837954269302,
+    "sentiment_qa": 0.5403635473407186,
+    "wins_top5": [
+      [
+        "financial performance",
+        1
+      ],
+      [
+        "first quarter results",
+        1
+      ],
+      [
+        "business environment",
+        1
+      ],
+      [
+        "provided details of our first quarter fiscal year 2024 results",
+        1
+      ],
+      [
+        "provided guidance for our fiscal year 2024",
+        1
+      ]
+    ],
+    "risks_top5": [
+      [
+        "risk factors",
+        1
+      ],
+      [
+        "actual results",
+        1
+      ],
+      [
+        "forward-looking statements",
+        1
+      ],
+      [
+        "specific risk factors that could cause our actual results to differ materially from the forward-looking statements made on this call",
+        1
+      ],
+      [
+        "broadband decline",
+        1
+      ]
+    ],
+    "guidance_call": "maintained",
+    "guidance_by_model": {
+      "gemma3:4b": "maintained",
+      "llama3.1:8b": "maintained"
+    }
+  },
+  "dispersion": {
+    "sentiment_dispersion": 0.48854650336525096,
+    "guidance_disagree": 1,
+    "wins_overlap": 0.0,
+    "risks_overlap": 0.0,
+    "qa_minus_pres_risks": [
+      "customer segmentation",
+      "dependence on customer s success with custom silicon",
+      "market outlook softened",
+      "market slowdown",
+      "potential increase in opex as a share of sales due to expanded customer base",
+      "supply chain constraint on ai accelerators",
+      "supply chain constraints"
+    ],
+    "qa_minus_pres_risks_count": 7,
+    "role_sent_means": {
+      "CEO": 0.0909090909090909,
+      "CFO": -0.6
+    }
+  },
+  "by_role": {
+    "CEO": {
+      "n_units": 19,
+      "sentiment": 0.3979792368904992,
+      "wins_top5": [
+        [
+          "VMware Cloud Foundation",
+          1
+        ],
+        [
+          "AI revenue",
+          1
+        ],
+        [
+          "networking revenue",
+          1
+        ],
+        [
+          "revenue from AI to be much stronger, representing some 35% of semiconductor revenue at over $10 billion",
+          1
+        ],
+        [
+          "semiconductor solutions revenue grew 4% year-over-year to $7.4 billion",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "broadband decline",
+          1
+        ],
+        [
+          "server storage decline",
+          1
+        ],
+        [
+          "wireless revenue decline",
+          1
+        ],
+        [
+          "cyclical weakness in broadband and server storage",
+          1
+        ],
+        [
+          "weaker-than-expected demand in broadband and service storage",
+          1
+        ]
+      ],
+      "guidance_vote": "raised"
+    },
+    "CFO": {
+      "n_units": 1,
+      "sentiment": -0.6,
+      "wins_top5": [
+        [
+          "14-week quarter",
+          1
+        ],
+        [
+          "34% revenue increase",
+          1
+        ],
+        [
+          "59% operating margin",
+          1
+        ],
+        [
+          "34% increase in consolidated revenue",
+          1
+        ],
+        [
+          "30% increase in operating profit excluding transition costs",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "product mix decline",
+          1
+        ],
+        [
+          "60-day payment terms",
+          1
+        ],
+        [
+          "VMware divestiture",
+          1
+        ]
+      ],
+      "guidance_vote": "maintained"
+    },
+    "IR": {
+      "n_units": 2,
+      "sentiment": 0.3411970292704238,
+      "wins_top5": [
+        [
+          "financial performance",
+          1
+        ],
+        [
+          "first quarter results",
+          1
+        ],
+        [
+          "business environment",
+          1
+        ],
+        [
+          "provided details of our first quarter fiscal year 2024 results",
+          1
+        ],
+        [
+          "provided guidance for our fiscal year 2024",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "risk factors",
+          1
+        ],
+        [
+          "actual results",
+          1
+        ],
+        [
+          "forward-looking statements",
+          1
+        ],
+        [
+          "specific risk factors that could cause our actual results to differ materially from the forward-looking statements made on this call",
+          1
+        ],
+        [
+          "market outlook softened",
+          1
+        ]
+      ],
+      "guidance_vote": "maintained"
+    }
+  },
+  "by_section": {
+    "presenter": {
+      "n_units": 3,
+      "sentiment": -0.18838837954269302,
+      "wins_top5": [
+        [
+          "financial performance",
+          1
+        ],
+        [
+          "first quarter results",
+          1
+        ],
+        [
+          "business environment",
+          1
+        ],
+        [
+          "provided details of our first quarter fiscal year 2024 results",
+          1
+        ],
+        [
+          "provided guidance for our fiscal year 2024",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "risk factors",
+          1
+        ],
+        [
+          "actual results",
+          1
+        ],
+        [
+          "forward-looking statements",
+          1
+        ],
+        [
+          "specific risk factors that could cause our actual results to differ materially from the forward-looking statements made on this call",
+          1
+        ],
+        [
+          "broadband decline",
+          1
+        ]
+      ],
+      "guidance_vote": "maintained"
+    },
+    "qa": {
+      "n_units": 19,
+      "sentiment": 0.5403635473407186,
+      "wins_top5": [
+        [
+          "private cloud deployment",
+          1
+        ],
+        [
+          "VMware bookings",
+          1
+        ],
+        [
+          "Tomahawk 5 demand",
+          1
+        ],
+        [
+          "Accelerating bookings and backlog on VMware",
+          1
+        ],
+        [
+          "Successful launch of private cloud solution with VCF",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "supply chain constraints",
+          1
+        ],
+        [
+          "customer segmentation",
+          1
+        ],
+        [
+          "market slowdown",
+          1
+        ],
+        [
+          "Supply chain constraint on AI accelerators",
+          1
+        ],
+        [
+          "Dependence on customer's success with custom silicon",
+          1
+        ]
+      ],
+      "guidance_vote": "raised"
+    }
+  },
+  "_cache_key": "b9c11fa20978a9b0"
+}

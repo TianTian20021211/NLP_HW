@@ -1,0 +1,334 @@
+{
+  "ticker": "WFC",
+  "quarter": "Q2-2024",
+  "call_date": "2024-07-12",
+  "variant": "lm",
+  "n_units": {
+    "total": 31,
+    "presenter": 3,
+    "qa": 28
+  },
+  "models": [
+    "gemma3:4b",
+    "llama3.1:8b"
+  ],
+  "consensus": {
+    "sentiment_call": 0.024201661005891967,
+    "sentiment_qa": 0.08061450363312643,
+    "wins_top5": [
+      [
+        "earnings results",
+        1
+      ],
+      [
+        "presentation deck",
+        1
+      ],
+      [
+        "second quarter results",
+        1
+      ],
+      [
+        "fee-based revenue growth",
+        1
+      ],
+      [
+        "credit card platform improvements",
+        1
+      ]
+    ],
+    "risks_top5": [
+      [
+        "risks and uncertainties",
+        2
+      ],
+      [
+        "forward-looking statements",
+        1
+      ],
+      [
+        "materially from expectations",
+        1
+      ],
+      [
+        "regulatory oversight environment",
+        1
+      ],
+      [
+        "commercial real estate losses",
+        1
+      ]
+    ],
+    "guidance_call": "lowered",
+    "guidance_by_model": {
+      "gemma3:4b": "lowered",
+      "llama3.1:8b": "lowered"
+    }
+  },
+  "dispersion": {
+    "sentiment_dispersion": 0.5469577672586109,
+    "guidance_disagree": 1,
+    "wins_overlap": 0.0,
+    "risks_overlap": 0.0,
+    "qa_minus_pres_risks": [
+      "asset cap",
+      "asset cap constraint limiting trading growth",
+      "basel iii",
+      "basel iii uncertainty",
+      "credit quality in cre portfolio",
+      "higher loss rates in credit card business",
+      "loan tightening",
+      "margin moderation",
+      "market volatility",
+      "risk in credit card business",
+      "scb",
+      "uncertainty around interest bearing costs going forward"
+    ],
+    "qa_minus_pres_risks_count": 12,
+    "role_sent_means": {
+      "CEO": 0.5076923076923077,
+      "CFO": -0.26582278481012656
+    }
+  },
+  "by_role": {
+    "CEO": {
+      "n_units": 14,
+      "sentiment": 0.1454726768981034,
+      "wins_top5": [
+        [
+          "fee-based revenue growth",
+          1
+        ],
+        [
+          "credit card platform improvements",
+          1
+        ],
+        [
+          "corporate investment bank growth",
+          1
+        ],
+        [
+          "strong fee-based revenue growth",
+          1
+        ],
+        [
+          "improved credit card platform with more competitive offerings",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "regulatory oversight environment",
+          1
+        ],
+        [
+          "commercial real estate losses",
+          1
+        ],
+        [
+          "elevated inflation and interest rates",
+          1
+        ],
+        [
+          "regulatory actions",
+          1
+        ],
+        [
+          "elevated inflation",
+          1
+        ]
+      ],
+      "guidance_vote": "maintained"
+    },
+    "CFO": {
+      "n_units": 15,
+      "sentiment": -0.019956227656235448,
+      "wins_top5": [
+        [
+          "solid performance in fee-based businesses",
+          1
+        ],
+        [
+          "growth in deposit balances",
+          1
+        ],
+        [
+          "increased noninterest income",
+          1
+        ],
+        [
+          "EPS grew from both the first quarter and a year ago",
+          1
+        ],
+        [
+          "Noninterest income increased 19% from a year ago",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "higher funding costs",
+          1
+        ],
+        [
+          "loan balances continue to decline",
+          1
+        ],
+        [
+          "expected decline in net interest income",
+          1
+        ],
+        [
+          "Higher funding costs, including the impact of lower deposit balances and customers migrating to higher-yielding deposit products in our consumer businesses",
+          1
+        ],
+        [
+          "Higher deposit costs in our commercial businesses as well as lower loan balances",
+          1
+        ]
+      ],
+      "guidance_vote": "raised"
+    },
+    "IR": {
+      "n_units": 1,
+      "sentiment": -0.3333333333333333,
+      "wins_top5": [
+        [
+          "earnings results",
+          1
+        ],
+        [
+          "presentation deck",
+          1
+        ],
+        [
+          "second quarter results",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "risks and uncertainties",
+          2
+        ],
+        [
+          "forward-looking statements",
+          1
+        ],
+        [
+          "materially from expectations",
+          1
+        ]
+      ],
+      "guidance_vote": "none"
+    },
+    "Unknown": {
+      "n_units": 1,
+      "sentiment": null,
+      "wins_top5": [],
+      "risks_top5": [],
+      "guidance_vote": "none"
+    }
+  },
+  "by_section": {
+    "presenter": {
+      "n_units": 3,
+      "sentiment": 0.024201661005891967,
+      "wins_top5": [
+        [
+          "earnings results",
+          1
+        ],
+        [
+          "presentation deck",
+          1
+        ],
+        [
+          "second quarter results",
+          1
+        ],
+        [
+          "fee-based revenue growth",
+          1
+        ],
+        [
+          "credit card platform improvements",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "risks and uncertainties",
+          2
+        ],
+        [
+          "forward-looking statements",
+          1
+        ],
+        [
+          "materially from expectations",
+          1
+        ],
+        [
+          "regulatory oversight environment",
+          1
+        ],
+        [
+          "commercial real estate losses",
+          1
+        ]
+      ],
+      "guidance_vote": "lowered"
+    },
+    "qa": {
+      "n_units": 28,
+      "sentiment": 0.08061450363312643,
+      "wins_top5": [
+        [
+          "deposit growth",
+          1
+        ],
+        [
+          "trading gains",
+          1
+        ],
+        [
+          "fee momentum",
+          1
+        ],
+        [
+          "Positive trends emerging on deposit migration",
+          1
+        ],
+        [
+          "Trading business taking market share and growing incrementally",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "asset cap",
+          1
+        ],
+        [
+          "loan tightening",
+          1
+        ],
+        [
+          "margin moderation",
+          1
+        ],
+        [
+          "Asset cap constraint limiting trading growth",
+          1
+        ],
+        [
+          "Higher loss rates in credit card business",
+          1
+        ]
+      ],
+      "guidance_vote": "raised"
+    }
+  },
+  "_cache_key": "b9c11fa20978a9b0"
+}

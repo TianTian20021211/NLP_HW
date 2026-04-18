@@ -1,0 +1,329 @@
+{
+  "ticker": "JNJ",
+  "quarter": "Q2-2025",
+  "call_date": "2025-07-16",
+  "variant": "lm",
+  "n_units": {
+    "total": 17,
+    "presenter": 4,
+    "qa": 13
+  },
+  "models": [
+    "gemma3:4b",
+    "llama3.1:8b"
+  ],
+  "consensus": {
+    "sentiment_call": 0.5605775306510004,
+    "sentiment_qa": 0.7194824399211848,
+    "wins_top5": [
+      [
+        "Investor Relations team",
+        1
+      ],
+      [
+        "2025 second quarter review",
+        1
+      ],
+      [
+        "updated financial outlook",
+        1
+      ],
+      [
+        "review of business results and updated financial outlook",
+        1
+      ],
+      [
+        "multiple myeloma",
+        1
+      ]
+    ],
+    "risks_top5": [
+      [
+        "tariffs",
+        3
+      ],
+      [
+        "Part D redesign",
+        2
+      ],
+      [
+        "EP headwinds",
+        2
+      ],
+      [
+        "forward-looking statements",
+        1
+      ],
+      [
+        "risks and uncertainties",
+        1
+      ]
+    ],
+    "guidance_call": "raised",
+    "guidance_by_model": {
+      "gemma3:4b": "raised",
+      "llama3.1:8b": "raised"
+    }
+  },
+  "dispersion": {
+    "sentiment_dispersion": 0.2437584112122535,
+    "guidance_disagree": 0,
+    "wins_overlap": 0.0,
+    "risks_overlap": null,
+    "qa_minus_pres_risks": [
+      "effects of stelara loe",
+      "ep headwinds",
+      "medtech underperformers in surgery and orthopedics",
+      "ortho performance was softer than we would like",
+      "part d redesign impacting margins this year",
+      "patient access challenges",
+      "stelara loe",
+      "tariffs playing out",
+      "uncertainty around tariffs",
+      "underperforming medtech segments"
+    ],
+    "qa_minus_pres_risks_count": 10,
+    "role_sent_means": {
+      "Other_Exec": 0.4378822445732872,
+      "CEO": 0.7826086956521741
+    }
+  },
+  "by_role": {
+    "CEO": {
+      "n_units": 3,
+      "sentiment": 0.7855754038329276,
+      "wins_top5": [
+        [
+          "multiple myeloma",
+          1
+        ],
+        [
+          "lung cancer",
+          1
+        ],
+        [
+          "bladder cancer",
+          1
+        ],
+        [
+          "become the #1 oncology company by 2030",
+          1
+        ],
+        [
+          "generate at least $50 billion in sales",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "Tariffs",
+          1
+        ],
+        [
+          "Uncertainty around tariffs",
+          1
+        ]
+      ],
+      "guidance_vote": "maintained"
+    },
+    "CFO": {
+      "n_units": 3,
+      "sentiment": 0.6224246367382347,
+      "wins_top5": [
+        [
+          "TREMFYA growth",
+          1
+        ],
+        [
+          "RYBREVANT approval",
+          1
+        ],
+        [
+          "EP energy",
+          1
+        ],
+        [
+          "$15 billion quarter despite $1.2 billion of year-on-year erosion",
+          1
+        ],
+        [
+          "30% growth in TREMFYA",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "STELARA LOE",
+          1
+        ],
+        [
+          "Part D redesign",
+          1
+        ],
+        [
+          "tariffs",
+          1
+        ],
+        [
+          "Part D redesign impacting margins this year",
+          1
+        ],
+        [
+          "tariffs playing out",
+          1
+        ]
+      ],
+      "guidance_vote": "raised"
+    },
+    "Other_Exec": {
+      "n_units": 11,
+      "sentiment": 0.5821531503266056,
+      "wins_top5": [
+        [
+          "Investor Relations team",
+          1
+        ],
+        [
+          "2025 second quarter review",
+          1
+        ],
+        [
+          "updated financial outlook",
+          1
+        ],
+        [
+          "review of business results and updated financial outlook",
+          1
+        ],
+        [
+          "STELARA growth",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "EP headwinds",
+          2
+        ],
+        [
+          "forward-looking statements",
+          1
+        ],
+        [
+          "risks and uncertainties",
+          1
+        ],
+        [
+          "SEC filings",
+          1
+        ],
+        [
+          "certain risks",
+          1
+        ]
+      ],
+      "guidance_vote": "raised"
+    }
+  },
+  "by_section": {
+    "presenter": {
+      "n_units": 4,
+      "sentiment": 0.5605775306510004,
+      "wins_top5": [
+        [
+          "Investor Relations team",
+          1
+        ],
+        [
+          "2025 second quarter review",
+          1
+        ],
+        [
+          "updated financial outlook",
+          1
+        ],
+        [
+          "review of business results and updated financial outlook",
+          1
+        ],
+        [
+          "multiple myeloma",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "forward-looking statements",
+          1
+        ],
+        [
+          "risks and uncertainties",
+          1
+        ],
+        [
+          "SEC filings",
+          1
+        ],
+        [
+          "certain risks",
+          1
+        ],
+        [
+          "uncertainties that may cause the company's actual results to differ materially from those projected",
+          1
+        ]
+      ],
+      "guidance_vote": "raised"
+    },
+    "qa": {
+      "n_units": 13,
+      "sentiment": 0.7194824399211848,
+      "wins_top5": [
+        [
+          "TREMFYA growth",
+          1
+        ],
+        [
+          "RYBREVANT approval",
+          1
+        ],
+        [
+          "EP energy",
+          1
+        ],
+        [
+          "$15 billion quarter despite $1.2 billion of year-on-year erosion",
+          1
+        ],
+        [
+          "30% growth in TREMFYA",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "tariffs",
+          2
+        ],
+        [
+          "EP headwinds",
+          2
+        ],
+        [
+          "STELARA LOE",
+          1
+        ],
+        [
+          "Part D redesign",
+          1
+        ],
+        [
+          "Part D redesign impacting margins this year",
+          1
+        ]
+      ],
+      "guidance_vote": "raised"
+    }
+  },
+  "_cache_key": "b9c11fa20978a9b0"
+}

@@ -1,0 +1,294 @@
+{
+  "ticker": "GS",
+  "quarter": "Q1-2025",
+  "call_date": "2025-04-14",
+  "variant": "finbert",
+  "n_units": {
+    "total": 32,
+    "presenter": 2,
+    "qa": 30
+  },
+  "models": [
+    "gemma3:4b",
+    "llama3.1:8b"
+  ],
+  "consensus": {
+    "sentiment_call": 0.43817985518070296,
+    "sentiment_qa": 0.19347992620986204,
+    "wins_top5": [
+      [
+        "strong results",
+        1
+      ],
+      [
+        "client franchise",
+        1
+      ],
+      [
+        "marquee transactions",
+        1
+      ],
+      [
+        "record $3.2 trillion in assets under supervision",
+        1
+      ],
+      [
+        "29th consecutive quarter of long-term fee-based net inflows",
+        1
+      ]
+    ],
+    "risks_top5": [
+      [
+        "market volatility",
+        1
+      ],
+      [
+        "near-term uncertainty",
+        1
+      ],
+      [
+        "potential recession",
+        1
+      ],
+      [
+        "material risks to the U.S. and global economy",
+        1
+      ],
+      [
+        "growing indications that economic activity is slowing down around the world",
+        1
+      ]
+    ],
+    "guidance_call": "raised",
+    "guidance_by_model": {
+      "gemma3:4b": "raised",
+      "llama3.1:8b": "none"
+    }
+  },
+  "dispersion": {
+    "sentiment_dispersion": 0.050313908937056166,
+    "guidance_disagree": 0,
+    "wins_overlap": 0.0,
+    "risks_overlap": 0.0,
+    "qa_minus_pres_risks": [
+      "asset prices",
+      "changes in their overall levels of balances",
+      "deleveraging activity on behalf of clients",
+      "headcount reduction",
+      "lower base",
+      "market uncertainty",
+      "persistent levels of volatility could have upward pressure on the var measure",
+      "potential decline in international revenue due to global policy volatility",
+      "regulatory changes",
+      "risk of slowing m a activity",
+      "uncertainty around policy landscape",
+      "volatility"
+    ],
+    "qa_minus_pres_risks_count": 12,
+    "role_sent_means": {
+      "CEO": 0.4701511919621986,
+      "CFO": 0.3989965795674089
+    }
+  },
+  "by_role": {
+    "CEO": {
+      "n_units": 15,
+      "sentiment": 0.2646311868633927,
+      "wins_top5": [
+        [
+          "strong results",
+          1
+        ],
+        [
+          "client franchise",
+          1
+        ],
+        [
+          "marquee transactions",
+          1
+        ],
+        [
+          "record $3.2 trillion in assets under supervision",
+          1
+        ],
+        [
+          "29th consecutive quarter of long-term fee-based net inflows",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "market volatility",
+          1
+        ],
+        [
+          "near-term uncertainty",
+          1
+        ],
+        [
+          "potential recession",
+          1
+        ],
+        [
+          "material risks to the U.S. and global economy",
+          1
+        ],
+        [
+          "growing indications that economic activity is slowing down around the world",
+          1
+        ]
+      ],
+      "guidance_vote": "raised"
+    },
+    "CFO": {
+      "n_units": 17,
+      "sentiment": 0.30996518356544245,
+      "wins_top5": [
+        [
+          "record equities revenues",
+          1
+        ],
+        [
+          "long-term fee-based net inflows",
+          1
+        ],
+        [
+          "firm-wide net interest income",
+          1
+        ],
+        [
+          "record FICC financing revenues of $1 billion",
+          1
+        ],
+        [
+          "record equities financing revenues of $1.6 billion",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "NIM compression",
+          1
+        ],
+        [
+          "challenging market backdrop",
+          1
+        ],
+        [
+          "deposit paydown",
+          1
+        ],
+        [
+          "asset prices",
+          1
+        ],
+        [
+          "volatility",
+          1
+        ]
+      ],
+      "guidance_vote": "maintained"
+    }
+  },
+  "by_section": {
+    "presenter": {
+      "n_units": 2,
+      "sentiment": 0.43817985518070296,
+      "wins_top5": [
+        [
+          "strong results",
+          1
+        ],
+        [
+          "client franchise",
+          1
+        ],
+        [
+          "marquee transactions",
+          1
+        ],
+        [
+          "record $3.2 trillion in assets under supervision",
+          1
+        ],
+        [
+          "29th consecutive quarter of long-term fee-based net inflows",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "market volatility",
+          1
+        ],
+        [
+          "near-term uncertainty",
+          1
+        ],
+        [
+          "potential recession",
+          1
+        ],
+        [
+          "material risks to the U.S. and global economy",
+          1
+        ],
+        [
+          "growing indications that economic activity is slowing down around the world",
+          1
+        ]
+      ],
+      "guidance_vote": "raised"
+    },
+    "qa": {
+      "n_units": 30,
+      "sentiment": 0.19347992620986204,
+      "wins_top5": [
+        [
+          "client activity",
+          2
+        ],
+        [
+          "capital deployment",
+          1
+        ],
+        [
+          "market share",
+          1
+        ],
+        [
+          "record average prime balances",
+          1
+        ],
+        [
+          "significant demand across the client base for both our FICC and equity financing",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "asset prices",
+          1
+        ],
+        [
+          "volatility",
+          1
+        ],
+        [
+          "lower base",
+          1
+        ],
+        [
+          "deleveraging activity on behalf of clients",
+          1
+        ],
+        [
+          "changes in their overall levels of balances",
+          1
+        ]
+      ],
+      "guidance_vote": "raised"
+    }
+  },
+  "_cache_key": "12c5a6764b1a9ff3"
+}

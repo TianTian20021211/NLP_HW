@@ -1,0 +1,19 @@
+{
+  "extraction": "ext_finbert_llm",
+  "model": "rule",
+  "horizon": "21d",
+  "score_kind": "rule",
+  "n_rows": 54,
+  "n_trades": 21,
+  "n_long": 18,
+  "n_short": 3,
+  "directional_accuracy": 0.4444444444444444,
+  "hit_rate": 0.47619047619047616,
+  "IC_spearman": 0.0930436439870402,
+  "pnl_sum": 0.01030116132036063,
+  "pnl_mean_per_trade": 0.0004905314914457443,
+  "sharpe_annualized": 0.02956936519750492,
+  "avg_win": 0.05921113224833974,
+  "avg_loss": -0.05289183283300334,
+  "final_equity": 0.9518012607154238
+}

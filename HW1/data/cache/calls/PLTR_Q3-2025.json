@@ -1,0 +1,362 @@
+{
+  "ticker": "PLTR",
+  "quarter": "Q3-2025",
+  "call_date": "2025-11-03",
+  "variant": "finbert",
+  "n_units": {
+    "total": 22,
+    "presenter": 5,
+    "qa": 17
+  },
+  "models": [
+    "gemma3:4b",
+    "llama3.1:8b"
+  ],
+  "consensus": {
+    "sentiment_call": 0.3627069015584665,
+    "sentiment_qa": 0.0548934610503698,
+    "wins_top5": [
+      [
+        "earnings call",
+        1
+      ],
+      [
+        "press release",
+        1
+      ],
+      [
+        "investor presentation",
+        1
+      ],
+      [
+        "year-over-year comparisons",
+        1
+      ],
+      [
+        "strong execution",
+        1
+      ]
+    ],
+    "risks_top5": [
+      [
+        "stagnant Europe",
+        2
+      ],
+      [
+        "forward-looking statements",
+        1
+      ],
+      [
+        "risks and uncertainties",
+        1
+      ],
+      [
+        "non-GAAP measures",
+        1
+      ],
+      [
+        "ranks and uncertainties which could cause them to differ materially from actual results",
+        1
+      ]
+    ],
+    "guidance_call": "none",
+    "guidance_by_model": {
+      "gemma3:4b": "none",
+      "llama3.1:8b": "none"
+    }
+  },
+  "dispersion": {
+    "sentiment_dispersion": 0.2610106880222993,
+    "guidance_disagree": 0,
+    "wins_overlap": 0.0,
+    "risks_overlap": 0.0,
+    "qa_minus_pres_risks": [
+      "aligning internal dynamics with external goals",
+      "customers not really using or understanding palantir software",
+      "fake ways",
+      "giving up palantir s unique attributes",
+      "internal dynamics",
+      "not being able to comment on all opportunities",
+      "pathogens",
+      "recruiting the right people",
+      "spicy conflicts in the world"
+    ],
+    "qa_minus_pres_risks_count": 9,
+    "role_sent_means": {
+      "CFO": 0.5810627984433328,
+      "Other_Exec": 0.4965380778138557,
+      "CTO": 0.27310104459681794,
+      "CEO": -0.002525582543162049
+    }
+  },
+  "by_role": {
+    "CEO": {
+      "n_units": 8,
+      "sentiment": 0.009975394800669325,
+      "wins_top5": [
+        [
+          "value creation",
+          1
+        ],
+        [
+          "revenue growth",
+          1
+        ],
+        [
+          "American worker",
+          1
+        ],
+        [
+          "best results that any software company has ever delivered",
+          1
+        ],
+        [
+          "Rule of 40 above 100%",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "stagnant Europe",
+          2
+        ],
+        [
+          "declining sales force",
+          1
+        ],
+        [
+          "commodity software",
+          1
+        ],
+        [
+          "pressure on people with commodity like high-trained, elite institution, general specialists",
+          1
+        ],
+        [
+          "pathogens",
+          1
+        ]
+      ],
+      "guidance_vote": "raised"
+    },
+    "CFO": {
+      "n_units": 7,
+      "sentiment": 0.5498701952827334,
+      "wins_top5": [
+        [
+          "accelerated sales cycles",
+          2
+        ],
+        [
+          "increased customer adoption",
+          2
+        ],
+        [
+          "earnings call",
+          1
+        ],
+        [
+          "press release",
+          1
+        ],
+        [
+          "investor presentation",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "forward-looking statements",
+          1
+        ],
+        [
+          "risks and uncertainties",
+          1
+        ],
+        [
+          "non-GAAP measures",
+          1
+        ],
+        [
+          "ranks and uncertainties which could cause them to differ materially from actual results",
+          1
+        ],
+        [
+          "risks",
+          1
+        ]
+      ],
+      "guidance_vote": "none"
+    },
+    "CTO": {
+      "n_units": 4,
+      "sentiment": 0.23089738162552595,
+      "wins_top5": [
+        [
+          "AI FDE",
+          1
+        ],
+        [
+          "AI Hivemind",
+          1
+        ],
+        [
+          "Edge Ontology",
+          1
+        ],
+        [
+          "accelerating progress in AI applications inside of AIP",
+          1
+        ],
+        [
+          "AI FDE unleashing incredible speed and productivity for our FDEs and customer developers alike",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "spicy conflicts in the world",
+          1
+        ],
+        [
+          "not being able to comment on all opportunities",
+          1
+        ],
+        [
+          "customers not really using or understanding Palantir software",
+          1
+        ]
+      ],
+      "guidance_vote": "none"
+    },
+    "Other_Exec": {
+      "n_units": 3,
+      "sentiment": 0.4026759765650972,
+      "wins_top5": [
+        [
+          "strong execution",
+          1
+        ],
+        [
+          "Rule of 40 score",
+          1
+        ],
+        [
+          "highest TCV quarter",
+          1
+        ],
+        [
+          "highest TCV quarter ever at $2.8 billion",
+          1
+        ],
+        [
+          "204 deals worth $1 million or more, of which 91 deals were worth $5 million or more and 53 deals were worth $10 million or more",
+          1
+        ]
+      ],
+      "risks_top5": [],
+      "guidance_vote": "none"
+    }
+  },
+  "by_section": {
+    "presenter": {
+      "n_units": 5,
+      "sentiment": 0.3627069015584665,
+      "wins_top5": [
+        [
+          "earnings call",
+          1
+        ],
+        [
+          "press release",
+          1
+        ],
+        [
+          "investor presentation",
+          1
+        ],
+        [
+          "year-over-year comparisons",
+          1
+        ],
+        [
+          "strong execution",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "stagnant Europe",
+          2
+        ],
+        [
+          "forward-looking statements",
+          1
+        ],
+        [
+          "risks and uncertainties",
+          1
+        ],
+        [
+          "non-GAAP measures",
+          1
+        ],
+        [
+          "ranks and uncertainties which could cause them to differ materially from actual results",
+          1
+        ]
+      ],
+      "guidance_vote": "none"
+    },
+    "qa": {
+      "n_units": 17,
+      "sentiment": 0.0548934610503698,
+      "wins_top5": [
+        [
+          "accelerated sales cycles",
+          3
+        ],
+        [
+          "increased customer adoption",
+          2
+        ],
+        [
+          "AI agent integration",
+          1
+        ],
+        [
+          "existing customers going up the value chain",
+          1
+        ],
+        [
+          "FDE productivity",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "spicy conflicts in the world",
+          1
+        ],
+        [
+          "not being able to comment on all opportunities",
+          1
+        ],
+        [
+          "customers not really using or understanding Palantir software",
+          1
+        ],
+        [
+          "pathogens",
+          1
+        ],
+        [
+          "fake ways",
+          1
+        ]
+      ],
+      "guidance_vote": "none"
+    }
+  },
+  "_cache_key": "12c5a6764b1a9ff3"
+}

@@ -1,0 +1,1 @@
+{"call_id": "JNJ_Q3-2025", "role": "IR", "model": "gemma3:4b", "n_answers": 3, "unit_ids": ["JNJ_Q3-2025__qa__015", "JNJ_Q3-2025__qa__023", "JNJ_Q3-2025__qa__026"], "wins": ["base business", "new product cycle", "second half improvement"], "risks": [], "guidance": "none", "_cache_key": "0067eda25f7c1ed6"}

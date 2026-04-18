@@ -1,0 +1,291 @@
+{
+  "ticker": "NKE",
+  "quarter": "Q3-2024",
+  "call_date": "2024-03-21",
+  "variant": "lm",
+  "n_units": {
+    "total": 14,
+    "presenter": 3,
+    "qa": 11
+  },
+  "models": [
+    "gemma3:4b",
+    "llama3.1:8b"
+  ],
+  "consensus": {
+    "sentiment_call": 0.3809897805644531,
+    "sentiment_qa": 0.7472933893330314,
+    "wins_top5": [
+      [
+        "joining us today",
+        1
+      ],
+      [
+        "year-over-year growth comparisons",
+        1
+      ],
+      [
+        "product innovation",
+        1
+      ],
+      [
+        "brand storytelling",
+        1
+      ],
+      [
+        "consumer focus",
+        1
+      ]
+    ],
+    "risks_top5": [
+      [
+        "macro volatility",
+        2
+      ],
+      [
+        "forward-looking statements",
+        1
+      ],
+      [
+        "risks and uncertainties",
+        1
+      ],
+      [
+        "SEC reports",
+        1
+      ],
+      [
+        "certain risks and uncertainties",
+        1
+      ]
+    ],
+    "guidance_call": "lowered",
+    "guidance_by_model": {
+      "gemma3:4b": "lowered",
+      "llama3.1:8b": "none"
+    }
+  },
+  "dispersion": {
+    "sentiment_dispersion": 0.41883640829574564,
+    "guidance_disagree": 1,
+    "wins_overlap": 0.0,
+    "risks_overlap": 0.0625,
+    "qa_minus_pres_risks": [
+      "channel mix headwind from transitioning product portfolio",
+      "difficulty rebuilding wholesale muscle in certain markets",
+      "digital channel headwinds",
+      "digital channel slowdown",
+      "international economic conditions",
+      "low single digit growth",
+      "promotional activity in digital channels",
+      "rebuilding wholesale muscle",
+      "wholesale brand experience"
+    ],
+    "qa_minus_pres_risks_count": 9,
+    "role_sent_means": {
+      "CFO": 0.1615220248186752,
+      "Other_Exec": 0.7538461538461538
+    }
+  },
+  "by_role": {
+    "CFO": {
+      "n_units": 8,
+      "sentiment": 0.44498238688160563,
+      "wins_top5": [
+        [
+          "joining us today",
+          1
+        ],
+        [
+          "year-over-year growth comparisons",
+          1
+        ],
+        [
+          "strong holiday sales",
+          1
+        ],
+        [
+          "lighter markdowns",
+          1
+        ],
+        [
+          "unit growth",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "forward-looking statements",
+          1
+        ],
+        [
+          "risks and uncertainties",
+          1
+        ],
+        [
+          "SEC reports",
+          1
+        ],
+        [
+          "certain risks and uncertainties",
+          1
+        ],
+        [
+          "material differences in actual results",
+          1
+        ]
+      ],
+      "guidance_vote": "lowered"
+    },
+    "Other_Exec": {
+      "n_units": 6,
+      "sentiment": 0.7382098118780278,
+      "wins_top5": [
+        [
+          "product innovation",
+          1
+        ],
+        [
+          "brand storytelling",
+          1
+        ],
+        [
+          "consumer focus",
+          1
+        ],
+        [
+          "Air is a double-digit billion-dollar business on its own, larger than some Fortune 500 companies",
+          1
+        ],
+        [
+          "We're well on our way to building a multiyear cycle of innovation that's bringing freshness and newness to consumers",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "macro volatility",
+          1
+        ],
+        [
+          "organizational restructure",
+          1
+        ],
+        [
+          "product portfolio transition",
+          1
+        ],
+        [
+          "we need to make some important adjustments",
+          1
+        ],
+        [
+          "we know NIKE is not performing in our potential",
+          1
+        ]
+      ],
+      "guidance_vote": "lowered"
+    }
+  },
+  "by_section": {
+    "presenter": {
+      "n_units": 3,
+      "sentiment": 0.3809897805644531,
+      "wins_top5": [
+        [
+          "joining us today",
+          1
+        ],
+        [
+          "year-over-year growth comparisons",
+          1
+        ],
+        [
+          "product innovation",
+          1
+        ],
+        [
+          "brand storytelling",
+          1
+        ],
+        [
+          "consumer focus",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "macro volatility",
+          2
+        ],
+        [
+          "forward-looking statements",
+          1
+        ],
+        [
+          "risks and uncertainties",
+          1
+        ],
+        [
+          "SEC reports",
+          1
+        ],
+        [
+          "certain risks and uncertainties",
+          1
+        ]
+      ],
+      "guidance_vote": "lowered"
+    },
+    "qa": {
+      "n_units": 11,
+      "sentiment": 0.7472933893330314,
+      "wins_top5": [
+        [
+          "innovation pipeline",
+          1
+        ],
+        [
+          "brand is strong",
+          1
+        ],
+        [
+          "growing share",
+          1
+        ],
+        [
+          "Strong innovation pipeline",
+          1
+        ],
+        [
+          "Growing market share in China",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "low single-digit growth",
+          1
+        ],
+        [
+          "digital channel slowdown",
+          1
+        ],
+        [
+          "rebuilding wholesale muscle",
+          1
+        ],
+        [
+          "digital channel headwinds",
+          1
+        ],
+        [
+          "wholesale brand experience",
+          1
+        ]
+      ],
+      "guidance_vote": "lowered"
+    }
+  },
+  "_cache_key": "b9c11fa20978a9b0"
+}

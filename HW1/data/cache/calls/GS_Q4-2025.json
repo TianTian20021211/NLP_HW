@@ -1,0 +1,294 @@
+{
+  "ticker": "GS",
+  "quarter": "Q4-2025",
+  "call_date": "2026-01-15",
+  "variant": "finbert",
+  "n_units": {
+    "total": 32,
+    "presenter": 2,
+    "qa": 30
+  },
+  "models": [
+    "gemma3:4b",
+    "llama3.1:8b"
+  ],
+  "consensus": {
+    "sentiment_call": 0.6304007978377032,
+    "sentiment_qa": 0.26435603663281754,
+    "wins_top5": [
+      [
+        "strong performance",
+        1
+      ],
+      [
+        "significant revenue growth",
+        1
+      ],
+      [
+        "record M&A transaction volumes",
+        1
+      ],
+      [
+        "delivered earnings per share of $51.32, a 27% increase versus last year",
+        1
+      ],
+      [
+        "generated an incremental $5 billion in advisory revenues versus the #2 competitor",
+        1
+      ]
+    ],
+    "risks_top5": [
+      [
+        "market volatility",
+        2
+      ],
+      [
+        "policy uncertainty",
+        2
+      ],
+      [
+        "cybersecurity threats",
+        1
+      ],
+      [
+        "regulatory scrutiny",
+        1
+      ],
+      [
+        "geopolitical developments",
+        1
+      ]
+    ],
+    "guidance_call": "raised",
+    "guidance_by_model": {
+      "gemma3:4b": "raised",
+      "llama3.1:8b": "none"
+    }
+  },
+  "dispersion": {
+    "sentiment_dispersion": 0.14314514017186933,
+    "guidance_disagree": 1,
+    "wins_overlap": 0.0,
+    "risks_overlap": 0.14285714285714285,
+    "qa_minus_pres_risks": [
+      "drawdown or deleveraging in the financing piece",
+      "efficiency ratio",
+      "exogenous event that slows down m a and capital markets activity",
+      "market downturn",
+      "negative year over year impact on efficiency ratio",
+      "nim compression due to rate cycle",
+      "non comp expenses",
+      "potential drag from deregulation expenses",
+      "rate compression",
+      "regulatory changes",
+      "regulatory changes that could impact goldman sachs ability to operate",
+      "transformational m a"
+    ],
+    "qa_minus_pres_risks_count": 12,
+    "role_sent_means": {
+      "CEO": 0.6872083021299545,
+      "CFO": 0.4847705035110992
+    }
+  },
+  "by_role": {
+    "CEO": {
+      "n_units": 20,
+      "sentiment": 0.4408499537557038,
+      "wins_top5": [
+        [
+          "mid-teens returns",
+          2
+        ],
+        [
+          "strong performance",
+          1
+        ],
+        [
+          "significant revenue growth",
+          1
+        ],
+        [
+          "record M&A transaction volumes",
+          1
+        ],
+        [
+          "delivered earnings per share of $51.32, a 27% increase versus last year",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "cybersecurity threats",
+          1
+        ],
+        [
+          "regulatory scrutiny",
+          1
+        ],
+        [
+          "market volatility",
+          1
+        ],
+        [
+          "market downturn",
+          1
+        ],
+        [
+          "regulatory changes",
+          1
+        ]
+      ],
+      "guidance_vote": "raised"
+    },
+    "CFO": {
+      "n_units": 12,
+      "sentiment": 0.3452945085441289,
+      "wins_top5": [
+        [
+          "record revenues",
+          1
+        ],
+        [
+          "M&A leadership",
+          1
+        ],
+        [
+          "equity underwriting",
+          1
+        ],
+        [
+          "record revenues of $41.5 billion for the year",
+          1
+        ],
+        [
+          "investment banking fees of $2.6 billion rose 25% year-over-year",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "policy uncertainty",
+          2
+        ],
+        [
+          "geopolitical developments",
+          1
+        ],
+        [
+          "market volatility",
+          1
+        ],
+        [
+          "economic growth",
+          1
+        ],
+        [
+          "geopolitical developments and market volatility",
+          1
+        ]
+      ],
+      "guidance_vote": "raised"
+    }
+  },
+  "by_section": {
+    "presenter": {
+      "n_units": 2,
+      "sentiment": 0.6304007978377032,
+      "wins_top5": [
+        [
+          "strong performance",
+          1
+        ],
+        [
+          "significant revenue growth",
+          1
+        ],
+        [
+          "record M&A transaction volumes",
+          1
+        ],
+        [
+          "delivered earnings per share of $51.32, a 27% increase versus last year",
+          1
+        ],
+        [
+          "generated an incremental $5 billion in advisory revenues versus the #2 competitor",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "market volatility",
+          2
+        ],
+        [
+          "policy uncertainty",
+          2
+        ],
+        [
+          "cybersecurity threats",
+          1
+        ],
+        [
+          "regulatory scrutiny",
+          1
+        ],
+        [
+          "geopolitical developments",
+          1
+        ]
+      ],
+      "guidance_vote": "raised"
+    },
+    "qa": {
+      "n_units": 30,
+      "sentiment": 0.26435603663281754,
+      "wins_top5": [
+        [
+          "mid-teens returns",
+          2
+        ],
+        [
+          "ultra-high net worth",
+          1
+        ],
+        [
+          "constructive environment",
+          1
+        ],
+        [
+          "30% margin for Asset & Wealth Management business",
+          1
+        ],
+        [
+          "accelerated growth trajectory of the Asset & Wealth Management business",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "market downturn",
+          1
+        ],
+        [
+          "regulatory changes",
+          1
+        ],
+        [
+          "transformational M&A",
+          1
+        ],
+        [
+          "exogenous event that slows down M&A and capital markets activity",
+          1
+        ],
+        [
+          "regulatory changes that could impact Goldman Sachs' ability to operate",
+          1
+        ]
+      ],
+      "guidance_vote": "raised"
+    }
+  },
+  "_cache_key": "12c5a6764b1a9ff3"
+}

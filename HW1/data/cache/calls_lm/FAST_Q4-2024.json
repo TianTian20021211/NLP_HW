@@ -1,0 +1,332 @@
+{
+  "ticker": "FAST",
+  "quarter": "Q4-2024",
+  "call_date": "2025-01-17",
+  "variant": "lm",
+  "n_units": {
+    "total": 18,
+    "presenter": 3,
+    "qa": 15
+  },
+  "models": [
+    "gemma3:4b",
+    "llama3.1:8b"
+  ],
+  "consensus": {
+    "sentiment_call": 0.01726131547919657,
+    "sentiment_qa": 0.21678234158261941,
+    "wins_top5": [
+      [
+        "general overview",
+        1
+      ],
+      [
+        "open for questions",
+        1
+      ],
+      [
+        "audio simulcast",
+        1
+      ],
+      [
+        "up to 1 hour of call time",
+        1
+      ],
+      [
+        "Onsite signings",
+        1
+      ]
+    ],
+    "risks_top5": [
+      [
+        "statements regarding future plans",
+        1
+      ],
+      [
+        "actual results may differ",
+        1
+      ],
+      [
+        "factors contained in earnings release",
+        1
+      ],
+      [
+        "Facility shutdowns",
+        1
+      ],
+      [
+        "Weather impact",
+        1
+      ]
+    ],
+    "guidance_call": "lowered",
+    "guidance_by_model": {
+      "gemma3:4b": "lowered",
+      "llama3.1:8b": "none"
+    }
+  },
+  "dispersion": {
+    "sentiment_dispersion": 0.6393761479917263,
+    "guidance_disagree": 1,
+    "wins_overlap": 0.0,
+    "risks_overlap": 0.0,
+    "qa_minus_pres_risks": [
+      "80 20 customer base",
+      "challenges in managing inventory levels and availability",
+      "concentration of sales",
+      "e commerce challenges",
+      "impact of weak fasteners and strong safety on mix",
+      "inventory overhang",
+      "labor costs as a significant portion of operating expenses",
+      "potential disruption in global supply chains",
+      "tariff uncertainty",
+      "tariffs and trade uncertainty",
+      "volatile margins",
+      "volatile q4 to q1 gross margin swings"
+    ],
+    "qa_minus_pres_risks_count": 12,
+    "role_sent_means": {
+      "Other_Exec": -1.0,
+      "CEO": 0.017543859649122806,
+      "CFO": 0.1794871794871795
+    }
+  },
+  "by_role": {
+    "CEO": {
+      "n_units": 10,
+      "sentiment": 0.1390397439700912,
+      "wins_top5": [
+        [
+          "Onsite signings",
+          1
+        ],
+        [
+          "E-commerce growth",
+          1
+        ],
+        [
+          "Incremental margin",
+          1
+        ],
+        [
+          "14% compound annual growth rate of revenue through customer sites with over $10,000 monthly spend",
+          1
+        ],
+        [
+          "18% compound annual growth rate of revenue through customer sites with over $50,000 monthly spend",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "Facility shutdowns",
+          1
+        ],
+        [
+          "Weather impact",
+          1
+        ],
+        [
+          "E-commerce struggles",
+          1
+        ],
+        [
+          "Customer sites spending between $5,000 and $10,000 per month have a CAGR of only 4%",
+          1
+        ],
+        [
+          "The e-commerce piece that contains web still struggles",
+          1
+        ]
+      ],
+      "guidance_vote": "raised"
+    },
+    "CFO": {
+      "n_units": 7,
+      "sentiment": 0.12840448163140739,
+      "wins_top5": [
+        [
+          "customer signings",
+          1
+        ],
+        [
+          "sales growth",
+          1
+        ],
+        [
+          "margin management",
+          1
+        ],
+        [
+          "customer signings continue to build",
+          1
+        ],
+        [
+          "monthly daily sales rate exceeded the historical sequential in 3 of the last 5 months",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "holiday shutdown impacts",
+          1
+        ],
+        [
+          "product margin pressure",
+          1
+        ],
+        [
+          "inventory buildup",
+          1
+        ],
+        [
+          "sustained marketplace weakness",
+          1
+        ],
+        [
+          "holiday-related production slowdowns",
+          1
+        ]
+      ],
+      "guidance_vote": "raised"
+    },
+    "Other_Exec": {
+      "n_units": 1,
+      "sentiment": -1.0,
+      "wins_top5": [
+        [
+          "general overview",
+          1
+        ],
+        [
+          "open for questions",
+          1
+        ],
+        [
+          "audio simulcast",
+          1
+        ],
+        [
+          "up to 1 hour of call time",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "statements regarding future plans",
+          1
+        ],
+        [
+          "actual results may differ",
+          1
+        ],
+        [
+          "factors contained in earnings release",
+          1
+        ]
+      ],
+      "guidance_vote": "none"
+    }
+  },
+  "by_section": {
+    "presenter": {
+      "n_units": 3,
+      "sentiment": 0.01726131547919657,
+      "wins_top5": [
+        [
+          "general overview",
+          1
+        ],
+        [
+          "open for questions",
+          1
+        ],
+        [
+          "audio simulcast",
+          1
+        ],
+        [
+          "up to 1 hour of call time",
+          1
+        ],
+        [
+          "Onsite signings",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "statements regarding future plans",
+          1
+        ],
+        [
+          "actual results may differ",
+          1
+        ],
+        [
+          "factors contained in earnings release",
+          1
+        ],
+        [
+          "Facility shutdowns",
+          1
+        ],
+        [
+          "Weather impact",
+          1
+        ]
+      ],
+      "guidance_vote": "lowered"
+    },
+    "qa": {
+      "n_units": 15,
+      "sentiment": 0.21678234158261941,
+      "wins_top5": [
+        [
+          "customer sentiment",
+          1
+        ],
+        [
+          "gross margin",
+          1
+        ],
+        [
+          "operating leverage",
+          1
+        ],
+        [
+          "improving customer sentiment",
+          1
+        ],
+        [
+          "opportunities to expand services to more customers",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "inventory overhang",
+          1
+        ],
+        [
+          "volatile margins",
+          1
+        ],
+        [
+          "80/20 customer base",
+          1
+        ],
+        [
+          "volatile Q4 to Q1 gross margin swings",
+          1
+        ],
+        [
+          "impact of weak fasteners and strong safety on mix",
+          1
+        ]
+      ],
+      "guidance_vote": "raised"
+    }
+  },
+  "_cache_key": "b9c11fa20978a9b0"
+}

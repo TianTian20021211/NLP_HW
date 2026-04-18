@@ -1,0 +1,19 @@
+{
+  "extraction": "ext_lm_llm",
+  "model": "rule",
+  "horizon": "21d",
+  "score_kind": "rule",
+  "n_rows": 54,
+  "n_trades": 26,
+  "n_long": 23,
+  "n_short": 3,
+  "directional_accuracy": 0.4444444444444444,
+  "hit_rate": 0.5,
+  "IC_spearman": 0.0324375833809796,
+  "pnl_sum": 0.0177043035874892,
+  "pnl_mean_per_trade": 0.0006809347533649693,
+  "sharpe_annualized": 0.04845979814098898,
+  "avg_win": 0.05564833579764667,
+  "avg_loss": -0.05428646629091673,
+  "final_equity": 0.9527508911566013
+}

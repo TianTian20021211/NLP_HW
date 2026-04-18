@@ -1,0 +1,292 @@
+{
+  "ticker": "GS",
+  "quarter": "Q4-2024",
+  "call_date": "2025-01-15",
+  "variant": "finbert",
+  "n_units": {
+    "total": 22,
+    "presenter": 2,
+    "qa": 20
+  },
+  "models": [
+    "gemma3:4b",
+    "llama3.1:8b"
+  ],
+  "consensus": {
+    "sentiment_call": 0.5389419263600964,
+    "sentiment_qa": 0.36667613799361215,
+    "wins_top5": [
+      [
+        "strong performance",
+        1
+      ],
+      [
+        "meeting targets",
+        1
+      ],
+      [
+        "accelerate growth",
+        1
+      ],
+      [
+        "generated revenues of $13.9 billion",
+        1
+      ],
+      [
+        "grew EPS by 77% to $40.54",
+        1
+      ]
+    ],
+    "risks_top5": [
+      [
+        "regulatory uncertainty",
+        3
+      ],
+      [
+        "policy uncertainty",
+        2
+      ],
+      [
+        "regulatory burden",
+        2
+      ],
+      [
+        "market environments",
+        1
+      ],
+      [
+        "operational footprint",
+        1
+      ]
+    ],
+    "guidance_call": "raised",
+    "guidance_by_model": {
+      "gemma3:4b": "raised",
+      "llama3.1:8b": "maintained"
+    }
+  },
+  "dispersion": {
+    "sentiment_dispersion": 0.0028033038769628934,
+    "guidance_disagree": 0,
+    "wins_overlap": 0.0,
+    "risks_overlap": 0.0,
+    "qa_minus_pres_risks": [
+      "credit risk related to financing organic growth",
+      "cyber risk",
+      "fee compression",
+      "geopolitical risks",
+      "policy initiatives",
+      "policy initiatives immigration trade tax energy",
+      "sentiment shifts",
+      "sentiment shifts due to uncertainty",
+      "slr constraints at level of capital return",
+      "transaction volumes"
+    ],
+    "qa_minus_pres_risks_count": 10,
+    "role_sent_means": {
+      "CEO": 0.5376943923541936,
+      "CFO": 0.5416588627164476
+    }
+  },
+  "by_role": {
+    "CEO": {
+      "n_units": 13,
+      "sentiment": 0.39035164067588224,
+      "wins_top5": [
+        [
+          "strong performance",
+          1
+        ],
+        [
+          "meeting targets",
+          1
+        ],
+        [
+          "accelerate growth",
+          1
+        ],
+        [
+          "generated revenues of $13.9 billion",
+          1
+        ],
+        [
+          "grew EPS by 77% to $40.54",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "regulatory uncertainty",
+          1
+        ],
+        [
+          "market environments",
+          1
+        ],
+        [
+          "operational footprint",
+          1
+        ],
+        [
+          "geopolitical risks",
+          1
+        ],
+        [
+          "policy initiatives",
+          1
+        ]
+      ],
+      "guidance_vote": "raised"
+    },
+    "CFO": {
+      "n_units": 9,
+      "sentiment": 0.5318192614327508,
+      "wins_top5": [
+        [
+          "M&A leadership",
+          1
+        ],
+        [
+          "equity underwriting",
+          1
+        ],
+        [
+          "leveraged lending",
+          1
+        ],
+        [
+          "16% year-over-year revenue growth in Global Banking & Markets",
+          1
+        ],
+        [
+          "24% year-over-year increase in Investment Banking fees",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "policy uncertainty",
+          2
+        ],
+        [
+          "regulatory burden",
+          2
+        ],
+        [
+          "regulatory uncertainty",
+          2
+        ],
+        [
+          "strong accruals",
+          1
+        ],
+        [
+          "transaction volumes",
+          1
+        ]
+      ],
+      "guidance_vote": "raised"
+    }
+  },
+  "by_section": {
+    "presenter": {
+      "n_units": 2,
+      "sentiment": 0.5389419263600964,
+      "wins_top5": [
+        [
+          "strong performance",
+          1
+        ],
+        [
+          "meeting targets",
+          1
+        ],
+        [
+          "accelerate growth",
+          1
+        ],
+        [
+          "generated revenues of $13.9 billion",
+          1
+        ],
+        [
+          "grew EPS by 77% to $40.54",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "policy uncertainty",
+          2
+        ],
+        [
+          "regulatory burden",
+          2
+        ],
+        [
+          "regulatory uncertainty",
+          1
+        ],
+        [
+          "market environments",
+          1
+        ],
+        [
+          "operational footprint",
+          1
+        ]
+      ],
+      "guidance_vote": "raised"
+    },
+    "qa": {
+      "n_units": 20,
+      "sentiment": 0.36667613799361215,
+      "wins_top5": [
+        [
+          "constructive environment",
+          1
+        ],
+        [
+          "strong relationships",
+          1
+        ],
+        [
+          "execution confidence",
+          1
+        ],
+        [
+          "improved regulatory environment",
+          1
+        ],
+        [
+          "increased sponsor activity",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "regulatory uncertainty",
+          2
+        ],
+        [
+          "geopolitical risks",
+          1
+        ],
+        [
+          "policy initiatives",
+          1
+        ],
+        [
+          "sentiment shifts",
+          1
+        ],
+        [
+          "cyber risk",
+          1
+        ]
+      ],
+      "guidance_vote": "raised"
+    }
+  },
+  "_cache_key": "12c5a6764b1a9ff3"
+}

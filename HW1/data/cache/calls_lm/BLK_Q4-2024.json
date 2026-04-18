@@ -1,0 +1,310 @@
+{
+  "ticker": "BLK",
+  "quarter": "Q4-2024",
+  "call_date": "2025-01-15",
+  "variant": "lm",
+  "n_units": {
+    "total": 15,
+    "presenter": 3,
+    "qa": 12
+  },
+  "models": [
+    "gemma3:4b",
+    "llama3.1:8b"
+  ],
+  "consensus": {
+    "sentiment_call": 0.7975049891279022,
+    "sentiment_qa": 0.7892861997307886,
+    "wins_top5": [
+      [
+        "forward-looking statements",
+        1
+      ],
+      [
+        "BlackRock's actual results may differ from these statements",
+        1
+      ],
+      [
+        "organic growth",
+        1
+      ],
+      [
+        "margin expansion",
+        1
+      ],
+      [
+        "record inflows",
+        1
+      ]
+    ],
+    "risks_top5": [
+      [
+        "material differences",
+        1
+      ],
+      [
+        "factors that may cause the results of BlackRock to differ materially",
+        1
+      ],
+      [
+        "results of BlackRock to differ materially",
+        1
+      ],
+      [
+        "higher incentive compensation",
+        1
+      ],
+      [
+        "G&A expense",
+        1
+      ]
+    ],
+    "guidance_call": "raised",
+    "guidance_by_model": {
+      "gemma3:4b": "raised",
+      "llama3.1:8b": "none"
+    }
+  },
+  "dispersion": {
+    "sentiment_dispersion": 0.12131408558576288,
+    "guidance_disagree": 0,
+    "wins_overlap": 0.0,
+    "risks_overlap": 0.0,
+    "qa_minus_pres_risks": [
+      "higher for longer rates",
+      "macro events",
+      "potential roadblocks in growing wealth manager and retail allocations to private markets",
+      "regulatory hurdles",
+      "regulatory reforms or safe harbors needed for private markets in dc plans",
+      "uncertainty around market conditions and interest rates"
+    ],
+    "qa_minus_pres_risks_count": 6,
+    "role_sent_means": {
+      "Other_Exec": 1.0,
+      "CFO": 0.8222222222222222,
+      "CEO": 0.7681159420289855
+    }
+  },
+  "by_role": {
+    "CEO": {
+      "n_units": 7,
+      "sentiment": 0.7905977979283193,
+      "wins_top5": [
+        [
+          "record flows",
+          1
+        ],
+        [
+          "increased margins",
+          1
+        ],
+        [
+          "strategic acquisitions",
+          1
+        ],
+        [
+          "record $641 billion of net inflows",
+          1
+        ],
+        [
+          "21% annualized total return for shareholders",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "M&A results",
+          1
+        ],
+        [
+          "client pausing",
+          1
+        ],
+        [
+          "private market integration",
+          1
+        ]
+      ],
+      "guidance_vote": "none"
+    },
+    "CFO": {
+      "n_units": 7,
+      "sentiment": 0.7928466737518762,
+      "wins_top5": [
+        [
+          "organic growth",
+          2
+        ],
+        [
+          "margin expansion",
+          2
+        ],
+        [
+          "record inflows",
+          1
+        ],
+        [
+          "record net inflows in 2024",
+          1
+        ],
+        [
+          "double-digit growth in annual revenue, operating income and earnings per share",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "higher incentive compensation",
+          1
+        ],
+        [
+          "G&A expense",
+          1
+        ],
+        [
+          "regulatory approvals",
+          1
+        ],
+        [
+          "higher for longer rates",
+          1
+        ],
+        [
+          "macro events",
+          1
+        ]
+      ],
+      "guidance_vote": "raised"
+    },
+    "Other_Exec": {
+      "n_units": 1,
+      "sentiment": 1.0,
+      "wins_top5": [
+        [
+          "forward-looking statements",
+          1
+        ],
+        [
+          "BlackRock's actual results may differ from these statements",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "material differences",
+          1
+        ],
+        [
+          "factors that may cause the results of BlackRock to differ materially",
+          1
+        ],
+        [
+          "results of BlackRock to differ materially",
+          1
+        ]
+      ],
+      "guidance_vote": "none"
+    }
+  },
+  "by_section": {
+    "presenter": {
+      "n_units": 3,
+      "sentiment": 0.7975049891279022,
+      "wins_top5": [
+        [
+          "forward-looking statements",
+          1
+        ],
+        [
+          "BlackRock's actual results may differ from these statements",
+          1
+        ],
+        [
+          "organic growth",
+          1
+        ],
+        [
+          "margin expansion",
+          1
+        ],
+        [
+          "record inflows",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "material differences",
+          1
+        ],
+        [
+          "factors that may cause the results of BlackRock to differ materially",
+          1
+        ],
+        [
+          "results of BlackRock to differ materially",
+          1
+        ],
+        [
+          "higher incentive compensation",
+          1
+        ],
+        [
+          "G&A expense",
+          1
+        ]
+      ],
+      "guidance_vote": "raised"
+    },
+    "qa": {
+      "n_units": 12,
+      "sentiment": 0.7892861997307886,
+      "wins_top5": [
+        [
+          "organic growth",
+          1
+        ],
+        [
+          "margin expansion",
+          1
+        ],
+        [
+          "scale & productivity",
+          1
+        ],
+        [
+          "Continued momentum and strength in the business",
+          1
+        ],
+        [
+          "Strong organic base fee growth driven by structural growers, ETFs, and private markets",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "higher for longer rates",
+          1
+        ],
+        [
+          "macro events",
+          1
+        ],
+        [
+          "regulatory hurdles",
+          1
+        ],
+        [
+          "Regulatory reforms or safe harbors needed for private markets in DC plans",
+          1
+        ],
+        [
+          "Potential roadblocks in growing wealth manager and retail allocations to private markets",
+          1
+        ]
+      ],
+      "guidance_vote": "raised"
+    }
+  },
+  "_cache_key": "b9c11fa20978a9b0"
+}

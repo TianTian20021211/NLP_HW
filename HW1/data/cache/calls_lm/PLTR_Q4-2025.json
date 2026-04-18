@@ -1,0 +1,335 @@
+{
+  "ticker": "PLTR",
+  "quarter": "Q4-2025",
+  "call_date": "2026-02-02",
+  "variant": "lm",
+  "n_units": {
+    "total": 19,
+    "presenter": 5,
+    "qa": 14
+  },
+  "models": [
+    "gemma3:4b",
+    "llama3.1:8b"
+  ],
+  "consensus": {
+    "sentiment_call": 0.403303068691503,
+    "sentiment_qa": -0.14877709756602492,
+    "wins_top5": [
+      [
+        "Rule of 40 score",
+        2
+      ],
+      [
+        "earnings call",
+        1
+      ],
+      [
+        "press release",
+        1
+      ],
+      [
+        "year-over-year comparisons",
+        1
+      ],
+      [
+        "growth rates",
+        1
+      ]
+    ],
+    "risks_top5": [
+      [
+        "forward-looking statements",
+        1
+      ],
+      [
+        "uncertainties",
+        1
+      ],
+      [
+        "risks and uncertainties",
+        1
+      ],
+      [
+        "materially from actual results",
+        1
+      ],
+      [
+        "increased expenses",
+        1
+      ]
+    ],
+    "guidance_call": "raised",
+    "guidance_by_model": {
+      "gemma3:4b": "raised",
+      "llama3.1:8b": "raised"
+    }
+  },
+  "dispersion": {
+    "sentiment_dispersion": 0.5048592403751307,
+    "guidance_disagree": 1,
+    "wins_overlap": 0.011111111111111112,
+    "risks_overlap": 0.0,
+    "qa_minus_pres_risks": [
+      "customer understanding",
+      "implementation difficulties",
+      "political resistance"
+    ],
+    "qa_minus_pres_risks_count": 3,
+    "role_sent_means": {
+      "CFO": 0.8482270347453594,
+      "Other_Exec": 0.45454545454545453,
+      "CTO": 0.3333333333333333,
+      "CEO": -0.36363636363636365
+    }
+  },
+  "by_role": {
+    "CEO": {
+      "n_units": 6,
+      "sentiment": -0.24146509709309985,
+      "wins_top5": [
+        [
+          "93% growth in the U.S.",
+          2
+        ],
+        [
+          "historic performance",
+          1
+        ],
+        [
+          "Rule of 127",
+          1
+        ],
+        [
+          "organic growth",
+          1
+        ],
+        [
+          "70% aggregate growth",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "hesitation to adopt",
+          1
+        ],
+        [
+          "distorted view of value",
+          1
+        ],
+        [
+          "political pressure",
+          1
+        ],
+        [
+          "hesitance to adopt these kind of products in the West outside of America",
+          1
+        ],
+        [
+          "companies that cannot be expected to perform at this level because this is truly historic",
+          1
+        ]
+      ],
+      "guidance_vote": "raised"
+    },
+    "CFO": {
+      "n_units": 7,
+      "sentiment": 0.7890978201399488,
+      "wins_top5": [
+        [
+          "earnings call",
+          1
+        ],
+        [
+          "press release",
+          1
+        ],
+        [
+          "year-over-year comparisons",
+          1
+        ],
+        [
+          "growth rates",
+          1
+        ],
+        [
+          "Rule of 40 score",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "forward-looking statements",
+          1
+        ],
+        [
+          "uncertainties",
+          1
+        ],
+        [
+          "risks and uncertainties",
+          1
+        ],
+        [
+          "materially from actual results",
+          1
+        ],
+        [
+          "increased expenses",
+          1
+        ]
+      ],
+      "guidance_vote": "none"
+    },
+    "CTO": {
+      "n_units": 4,
+      "sentiment": 0.38540031397174257,
+      "wins_top5": [
+        [
+          "reindustrialization",
+          2
+        ],
+        [
+          "SAP ERP migrations",
+          1
+        ],
+        [
+          "pro code builders",
+          1
+        ],
+        [
+          "live-fire exercise",
+          1
+        ],
+        [
+          "powered complex SAP ERP migrations from ECC to S/4 in as little as 2 weeks",
+          1
+        ]
+      ],
+      "risks_top5": [],
+      "guidance_vote": "maintained"
+    },
+    "Other_Exec": {
+      "n_units": 2,
+      "sentiment": 0.45454545454545453,
+      "wins_top5": [
+        [
+          "historic results",
+          1
+        ],
+        [
+          "Rule of 40 score",
+          1
+        ],
+        [
+          "highest TCV quarter",
+          1
+        ],
+        [
+          "highest TCV quarter ever at $4.3 billion",
+          1
+        ],
+        [
+          "Rule of 40 score reached new heights at 127%",
+          1
+        ]
+      ],
+      "risks_top5": [],
+      "guidance_vote": "none"
+    }
+  },
+  "by_section": {
+    "presenter": {
+      "n_units": 5,
+      "sentiment": 0.403303068691503,
+      "wins_top5": [
+        [
+          "Rule of 40 score",
+          2
+        ],
+        [
+          "earnings call",
+          1
+        ],
+        [
+          "press release",
+          1
+        ],
+        [
+          "year-over-year comparisons",
+          1
+        ],
+        [
+          "growth rates",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "forward-looking statements",
+          1
+        ],
+        [
+          "uncertainties",
+          1
+        ],
+        [
+          "risks and uncertainties",
+          1
+        ],
+        [
+          "materially from actual results",
+          1
+        ],
+        [
+          "increased expenses",
+          1
+        ]
+      ],
+      "guidance_vote": "raised"
+    },
+    "qa": {
+      "n_units": 14,
+      "sentiment": -0.14877709756602492,
+      "wins_top5": [
+        [
+          "ShipOS",
+          2
+        ],
+        [
+          "reindustrialization",
+          2
+        ],
+        [
+          "phenomenal quarter",
+          1
+        ],
+        [
+          "AI adoption",
+          1
+        ],
+        [
+          "reacceleration in the near future due to European rearmament",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "implementation difficulties",
+          1
+        ],
+        [
+          "political resistance",
+          1
+        ],
+        [
+          "customer understanding",
+          1
+        ]
+      ],
+      "guidance_vote": "none"
+    }
+  },
+  "_cache_key": "b9c11fa20978a9b0"
+}

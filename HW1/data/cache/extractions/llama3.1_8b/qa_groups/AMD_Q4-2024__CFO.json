@@ -1,0 +1,1 @@
+{"call_id": "AMD_Q4-2024", "role": "CFO", "model": "llama3.1:8b", "n_answers": 3, "unit_ids": ["AMD_Q4-2024__qa__006", "AMD_Q4-2024__qa__007", "AMD_Q4-2024__qa__021"], "wins": ["best TCO for customers", "continuing to drive server CPU business growth", "Data Center is our fastest growth driver"], "risks": [], "guidance": "maintained", "_cache_key": "ea10693037f9e9e4"}

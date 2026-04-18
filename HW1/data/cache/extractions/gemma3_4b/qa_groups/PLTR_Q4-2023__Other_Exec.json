@@ -1,0 +1,1 @@
+{"call_id": "PLTR_Q4-2023", "role": "Other_Exec", "model": "gemma3:4b", "n_answers": 4, "unit_ids": ["PLTR_Q4-2023__qa__005", "PLTR_Q4-2023__qa__006", "PLTR_Q4-2023__qa__014", "PLTR_Q4-2023__qa__016"], "wins": ["bootcamps", "AIP deals", "customer growth"], "risks": [], "guidance": "none", "_cache_key": "0067eda25f7c1ed6"}

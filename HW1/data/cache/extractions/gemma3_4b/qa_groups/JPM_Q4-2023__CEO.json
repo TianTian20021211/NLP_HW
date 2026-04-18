@@ -1,0 +1,1 @@
+{"call_id": "JPM_Q4-2023", "role": "CEO", "model": "gemma3:4b", "n_answers": 2, "unit_ids": ["JPM_Q4-2023__qa__006", "JPM_Q4-2023__qa__007"], "wins": ["soft landing", "consumer resilience", "robust portfolio"], "risks": [], "guidance": "none", "_cache_key": "0067eda25f7c1ed6"}

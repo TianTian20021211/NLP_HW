@@ -1,0 +1,1 @@
+{"call_id": "PLTR_Q3-2024", "role": "Other_Exec", "model": "llama3.1:8b", "n_answers": 2, "unit_ids": ["PLTR_Q3-2024__qa__009", "PLTR_Q3-2024__qa__015"], "wins": ["44% year-over-year growth in U.S.", "54% year-over-year growth in U.S. commercial", "7-figure ACV deals within a matter of less than 2 months"], "risks": [], "guidance": "none", "_cache_key": "ea10693037f9e9e4"}

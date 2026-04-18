@@ -1,0 +1,299 @@
+{
+  "ticker": "BLK",
+  "quarter": "Q3-2024",
+  "call_date": "2024-10-11",
+  "variant": "lm",
+  "n_units": {
+    "total": 16,
+    "presenter": 3,
+    "qa": 13
+  },
+  "models": [
+    "gemma3:4b",
+    "llama3.1:8b"
+  ],
+  "consensus": {
+    "sentiment_call": 0.8824740892754587,
+    "sentiment_qa": 0.7154917036207428,
+    "wins_top5": [
+      [
+        "forward-looking statements",
+        1
+      ],
+      [
+        "BlackRock has filed reports with the SEC",
+        1
+      ],
+      [
+        "private markets",
+        1
+      ],
+      [
+        "Aladdin technology",
+        1
+      ],
+      [
+        "GIP portfolios",
+        1
+      ]
+    ],
+    "risks_top5": [
+      [
+        "material differences",
+        1
+      ],
+      [
+        "results may differ from these statements",
+        1
+      ],
+      [
+        "results of BlackRock to differ materially",
+        1
+      ],
+      [
+        "discrete tax expense",
+        1
+      ],
+      [
+        "technology services revenue",
+        1
+      ]
+    ],
+    "guidance_call": "raised",
+    "guidance_by_model": {
+      "gemma3:4b": "raised",
+      "llama3.1:8b": "none"
+    }
+  },
+  "dispersion": {
+    "sentiment_dispersion": 0.07936592592141098,
+    "guidance_disagree": 0,
+    "wins_overlap": 0.0,
+    "risks_overlap": 0.0,
+    "qa_minus_pres_risks": [
+      "market movement",
+      "regulatory issues",
+      "uncertainty"
+    ],
+    "qa_minus_pres_risks_count": 3,
+    "role_sent_means": {
+      "Other_Exec": 1.0,
+      "CFO": 0.92,
+      "CEO": 0.8412698412698413
+    }
+  },
+  "by_role": {
+    "CEO": {
+      "n_units": 7,
+      "sentiment": 0.7947478122120963,
+      "wins_top5": [
+        [
+          "record inflows",
+          1
+        ],
+        [
+          "high operating margin",
+          1
+        ],
+        [
+          "accelerating organic growth",
+          1
+        ],
+        [
+          "25th anniversary of BlackRock becoming a public company",
+          1
+        ],
+        [
+          "$11.5 trillion in assets under management (AUM)",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "higher rates",
+          1
+        ],
+        [
+          "market complexities",
+          1
+        ],
+        [
+          "private market volatility",
+          1
+        ],
+        [
+          "regulatory issues",
+          1
+        ],
+        [
+          "market movement",
+          1
+        ]
+      ],
+      "guidance_vote": "none"
+    },
+    "CFO": {
+      "n_units": 8,
+      "sentiment": 0.8316387530312949,
+      "wins_top5": [
+        [
+          "private markets",
+          1
+        ],
+        [
+          "Aladdin technology",
+          1
+        ],
+        [
+          "GIP portfolios",
+          1
+        ],
+        [
+          "large mandate wins",
+          1
+        ],
+        [
+          "key wins with growing clients",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "discrete tax expense",
+          1
+        ],
+        [
+          "technology services revenue",
+          1
+        ],
+        [
+          "Preqin acquisition",
+          1
+        ]
+      ],
+      "guidance_vote": "raised"
+    },
+    "Other_Exec": {
+      "n_units": 1,
+      "sentiment": 1.0,
+      "wins_top5": [
+        [
+          "forward-looking statements",
+          1
+        ],
+        [
+          "BlackRock has filed reports with the SEC",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "material differences",
+          1
+        ],
+        [
+          "results may differ from these statements",
+          1
+        ],
+        [
+          "results of BlackRock to differ materially",
+          1
+        ]
+      ],
+      "guidance_vote": "none"
+    }
+  },
+  "by_section": {
+    "presenter": {
+      "n_units": 3,
+      "sentiment": 0.8824740892754587,
+      "wins_top5": [
+        [
+          "forward-looking statements",
+          1
+        ],
+        [
+          "BlackRock has filed reports with the SEC",
+          1
+        ],
+        [
+          "private markets",
+          1
+        ],
+        [
+          "Aladdin technology",
+          1
+        ],
+        [
+          "GIP portfolios",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "material differences",
+          1
+        ],
+        [
+          "results may differ from these statements",
+          1
+        ],
+        [
+          "results of BlackRock to differ materially",
+          1
+        ],
+        [
+          "discrete tax expense",
+          1
+        ],
+        [
+          "technology services revenue",
+          1
+        ]
+      ],
+      "guidance_vote": "raised"
+    },
+    "qa": {
+      "n_units": 13,
+      "sentiment": 0.7154917036207428,
+      "wins_top5": [
+        [
+          "strong inflows",
+          1
+        ],
+        [
+          "margin expansion",
+          1
+        ],
+        [
+          "organic growth",
+          1
+        ],
+        [
+          "Strong net inflows and healthy flow trajectory",
+          1
+        ],
+        [
+          "Accelerated re-risking activity post-election",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "regulatory issues",
+          1
+        ],
+        [
+          "market movement",
+          1
+        ],
+        [
+          "uncertainty",
+          1
+        ]
+      ],
+      "guidance_vote": "raised"
+    }
+  },
+  "_cache_key": "b9c11fa20978a9b0"
+}

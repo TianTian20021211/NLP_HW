@@ -1,0 +1,371 @@
+{
+  "ticker": "PLTR",
+  "quarter": "Q4-2024",
+  "call_date": "2025-02-03",
+  "variant": "lm",
+  "n_units": {
+    "total": 20,
+    "presenter": 4,
+    "qa": 16
+  },
+  "models": [
+    "gemma3:4b",
+    "llama3.1:8b"
+  ],
+  "consensus": {
+    "sentiment_call": 0.508159182907726,
+    "sentiment_qa": 0.030299016124953327,
+    "wins_top5": [
+      [
+        "earnings call",
+        1
+      ],
+      [
+        "press release",
+        1
+      ],
+      [
+        "investor presentation",
+        1
+      ],
+      [
+        "year-over-year comparisons",
+        1
+      ],
+      [
+        "record-setting deals",
+        1
+      ]
+    ],
+    "risks_top5": [
+      [
+        "AI arms race",
+        2
+      ],
+      [
+        "forward-looking statements",
+        1
+      ],
+      [
+        "risks and uncertainties",
+        1
+      ],
+      [
+        "non-GAAP measures",
+        1
+      ],
+      [
+        "ranks and uncertainties",
+        1
+      ]
+    ],
+    "guidance_call": "raised",
+    "guidance_by_model": {
+      "gemma3:4b": "raised",
+      "llama3.1:8b": "raised"
+    }
+  },
+  "dispersion": {
+    "sentiment_dispersion": 0.21595266463274296,
+    "guidance_disagree": 0,
+    "wins_overlap": 0.0,
+    "risks_overlap": 0.0,
+    "qa_minus_pres_risks": [
+      "ai arms race",
+      "china stealing ip through distillation of models",
+      "cultural differences in adoption",
+      "difficulty in building and recreating the ontology",
+      "disruption from change of administration",
+      "forever software projects",
+      "institutional barriers",
+      "ip theft",
+      "lack of accountability in government",
+      "partnership meetings",
+      "unexpected things"
+    ],
+    "qa_minus_pres_risks_count": 11,
+    "role_sent_means": {
+      "Other_Exec": 0.6304964539007092,
+      "CTO": 0.5483870967741935,
+      "CEO": 0.2222222222222222
+    }
+  },
+  "by_role": {
+    "CEO": {
+      "n_units": 9,
+      "sentiment": 0.1828028632413118,
+      "wins_top5": [
+        [
+          "54% growth in U.S. comm.",
+          1
+        ],
+        [
+          "USG reaccelerated",
+          1
+        ],
+        [
+          "Ontology value",
+          1
+        ],
+        [
+          "54% growth in U.S. commercial",
+          1
+        ],
+        [
+          "30% growth in USG, reaccelerated",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "anemic growth in Europe",
+          1
+        ],
+        [
+          "Rule of 81 may need revision",
+          1
+        ],
+        [
+          "LLM availability",
+          1
+        ],
+        [
+          "anemic growth in Continental Europe",
+          1
+        ],
+        [
+          "struggles with the idea that all valuable technology is built in America",
+          1
+        ]
+      ],
+      "guidance_vote": "raised"
+    },
+    "CFO": {
+      "n_units": 1,
+      "sentiment": null,
+      "wins_top5": [
+        [
+          "quality engineers",
+          2
+        ],
+        [
+          "comm programs",
+          1
+        ],
+        [
+          "numbers in Q1",
+          1
+        ],
+        [
+          "head count growth",
+          1
+        ],
+        [
+          "software modernization",
+          1
+        ]
+      ],
+      "risks_top5": [],
+      "guidance_vote": "none"
+    },
+    "CTO": {
+      "n_units": 5,
+      "sentiment": 0.3504248907054349,
+      "wins_top5": [
+        [
+          "AI adoption",
+          1
+        ],
+        [
+          "U.S. commercial growth",
+          1
+        ],
+        [
+          "Maven adoption",
+          1
+        ],
+        [
+          "meteoric rise",
+          1
+        ],
+        [
+          "acceleration of velocity in our U.S. business over the past year",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "AI arms race",
+          2
+        ],
+        [
+          "strategic commercial contracts decline",
+          1
+        ],
+        [
+          "international commercial growth slower",
+          1
+        ],
+        [
+          "increased expense investment",
+          1
+        ],
+        [
+          "forever software projects",
+          1
+        ]
+      ],
+      "guidance_vote": "raised"
+    },
+    "Other_Exec": {
+      "n_units": 5,
+      "sentiment": 0.6304964539007092,
+      "wins_top5": [
+        [
+          "earnings call",
+          1
+        ],
+        [
+          "press release",
+          1
+        ],
+        [
+          "investor presentation",
+          1
+        ],
+        [
+          "year-over-year comparisons",
+          1
+        ],
+        [
+          "record-setting deals",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "forward-looking statements",
+          1
+        ],
+        [
+          "risks and uncertainties",
+          1
+        ],
+        [
+          "non-GAAP measures",
+          1
+        ],
+        [
+          "ranks and uncertainties",
+          1
+        ],
+        [
+          "risks",
+          1
+        ]
+      ],
+      "guidance_vote": "none"
+    }
+  },
+  "by_section": {
+    "presenter": {
+      "n_units": 4,
+      "sentiment": 0.508159182907726,
+      "wins_top5": [
+        [
+          "earnings call",
+          1
+        ],
+        [
+          "press release",
+          1
+        ],
+        [
+          "investor presentation",
+          1
+        ],
+        [
+          "year-over-year comparisons",
+          1
+        ],
+        [
+          "record-setting deals",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "forward-looking statements",
+          1
+        ],
+        [
+          "risks and uncertainties",
+          1
+        ],
+        [
+          "non-GAAP measures",
+          1
+        ],
+        [
+          "ranks and uncertainties",
+          1
+        ],
+        [
+          "risks",
+          1
+        ]
+      ],
+      "guidance_vote": "raised"
+    },
+    "qa": {
+      "n_units": 16,
+      "sentiment": 0.030299016124953327,
+      "wins_top5": [
+        [
+          "quality engineers",
+          2
+        ],
+        [
+          "accountability",
+          1
+        ],
+        [
+          "meritocracy",
+          1
+        ],
+        [
+          "transparency",
+          1
+        ],
+        [
+          "superpowers when you show up to your customers",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "AI arms race",
+          2
+        ],
+        [
+          "forever software projects",
+          1
+        ],
+        [
+          "IP theft",
+          1
+        ],
+        [
+          "China stealing IP through distillation of models",
+          1
+        ],
+        [
+          "lack of accountability in government",
+          1
+        ]
+      ],
+      "guidance_vote": "raised"
+    }
+  },
+  "_cache_key": "b9c11fa20978a9b0"
+}

@@ -1,0 +1,348 @@
+{
+  "ticker": "INTC",
+  "quarter": "Q3-2024",
+  "call_date": "2024-10-31",
+  "variant": "finbert",
+  "n_units": {
+    "total": 34,
+    "presenter": 4,
+    "qa": 30
+  },
+  "models": [
+    "gemma3:4b",
+    "llama3.1:8b"
+  ],
+  "consensus": {
+    "sentiment_call": 0.3642220463592783,
+    "sentiment_qa": 0.3350937162752401,
+    "wins_top5": [
+      [
+        "earnings presentation",
+        2
+      ],
+      [
+        "sequential revenue growth",
+        2
+      ],
+      [
+        "earnings release",
+        1
+      ],
+      [
+        "Q3 earnings release",
+        1
+      ],
+      [
+        "x86 franchise",
+        1
+      ]
+    ],
+    "risks_top5": [
+      [
+        "forward-looking statements",
+        1
+      ],
+      [
+        "risks and uncertainties",
+        1
+      ],
+      [
+        "various risks and uncertainties",
+        1
+      ],
+      [
+        "Gaudi 3 uptake slower than anticipated",
+        1
+      ],
+      [
+        "Intel 7 equipment impairment",
+        1
+      ]
+    ],
+    "guidance_call": "raised",
+    "guidance_by_model": {
+      "gemma3:4b": "raised",
+      "llama3.1:8b": "none"
+    }
+  },
+  "dispersion": {
+    "sentiment_dispersion": 0.3103360591214645,
+    "guidance_disagree": 1,
+    "wins_overlap": 0.0,
+    "risks_overlap": 0.0,
+    "qa_minus_pres_risks": [
+      "complexity",
+      "delayed 18a transition",
+      "geopolitical factors affecting market conditions",
+      "hard to tie it to financials",
+      "headwinds in second half 25",
+      "headwinds in the second half of 25",
+      "headwinds in the second half of 25 due to lunar lake s increasing volume",
+      "lunar lake headwinds",
+      "memory packaging impact",
+      "muted expansion",
+      "potential 18a delay",
+      "potential delay of 18a technology",
+      "pressure on gross margins from memory packaging in lunar lake",
+      "second half headwind",
+      "uncertainty",
+      "uncertainty around market conditions affecting capex and opex plans",
+      "uncertainty in the marketplace"
+    ],
+    "qa_minus_pres_risks_count": 17,
+    "role_sent_means": {
+      "CEO": 0.5495275903287475,
+      "CFO": 0.11064612662575378
+    }
+  },
+  "by_role": {
+    "CEO": {
+      "n_units": 16,
+      "sentiment": 0.4450276338906032,
+      "wins_top5": [
+        [
+          "x86 franchise",
+          1
+        ],
+        [
+          "Lunar Lake processors",
+          1
+        ],
+        [
+          "Xeon 6 performance",
+          1
+        ],
+        [
+          "2 additional 18A wafer design wins",
+          1
+        ],
+        [
+          "multiyear, multibillion dollar commitment by AWS to expand existing partnership",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "Gaudi 3 uptake slower than anticipated",
+          1
+        ],
+        [
+          "Intel 7 equipment impairment",
+          1
+        ],
+        [
+          "portfolio simplification delays",
+          1
+        ],
+        [
+          "hard to tie it to financials",
+          1
+        ],
+        [
+          "uncertainty",
+          1
+        ]
+      ],
+      "guidance_vote": "raised"
+    },
+    "CFO": {
+      "n_units": 7,
+      "sentiment": 0.17819629783977495,
+      "wins_top5": [
+        [
+          "sequential revenue growth",
+          2
+        ],
+        [
+          "reduced operating expenses",
+          1
+        ],
+        [
+          "improved lead times",
+          1
+        ],
+        [
+          "Intel Products and Intel Foundry delivered sequential revenue growth",
+          1
+        ],
+        [
+          "revenue per NEX was up double digits sequentially",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "accelerated depreciation charges",
+          1
+        ],
+        [
+          "impairment charges",
+          1
+        ],
+        [
+          "negative free cash flow",
+          1
+        ],
+        [
+          "inventory normalization will continue through the first half of next year",
+          1
+        ],
+        [
+          "continuing client customer inventory reductions in Q4",
+          1
+        ]
+      ],
+      "guidance_vote": "lowered"
+    },
+    "IR": {
+      "n_units": 11,
+      "sentiment": -0.0147142788153729,
+      "wins_top5": [
+        [
+          "earnings presentation",
+          2
+        ],
+        [
+          "new design wins",
+          2
+        ],
+        [
+          "earnings release",
+          1
+        ],
+        [
+          "Q3 earnings release",
+          1
+        ],
+        [
+          "18A transition",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "forward-looking statements",
+          1
+        ],
+        [
+          "risks and uncertainties",
+          1
+        ],
+        [
+          "various risks and uncertainties",
+          1
+        ],
+        [
+          "headwinds in second half '25",
+          1
+        ],
+        [
+          "potential 18A delay",
+          1
+        ]
+      ],
+      "guidance_vote": "none"
+    }
+  },
+  "by_section": {
+    "presenter": {
+      "n_units": 4,
+      "sentiment": 0.3642220463592783,
+      "wins_top5": [
+        [
+          "earnings presentation",
+          2
+        ],
+        [
+          "sequential revenue growth",
+          2
+        ],
+        [
+          "earnings release",
+          1
+        ],
+        [
+          "Q3 earnings release",
+          1
+        ],
+        [
+          "x86 franchise",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "forward-looking statements",
+          1
+        ],
+        [
+          "risks and uncertainties",
+          1
+        ],
+        [
+          "various risks and uncertainties",
+          1
+        ],
+        [
+          "Gaudi 3 uptake slower than anticipated",
+          1
+        ],
+        [
+          "Intel 7 equipment impairment",
+          1
+        ]
+      ],
+      "guidance_vote": "raised"
+    },
+    "qa": {
+      "n_units": 30,
+      "sentiment": 0.3350937162752401,
+      "wins_top5": [
+        [
+          "new design wins",
+          3
+        ],
+        [
+          "solid progress",
+          1
+        ],
+        [
+          "margin structure",
+          1
+        ],
+        [
+          "3 new customers, Amazon, Panther Lake and Clearwater Forest",
+          1
+        ],
+        [
+          "solid progress on the 18A transition",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "hard to tie it to financials",
+          1
+        ],
+        [
+          "uncertainty",
+          1
+        ],
+        [
+          "complexity",
+          1
+        ],
+        [
+          "geopolitical factors affecting market conditions",
+          1
+        ],
+        [
+          "uncertainty in the marketplace",
+          1
+        ]
+      ],
+      "guidance_vote": "lowered"
+    }
+  },
+  "_cache_key": "12c5a6764b1a9ff3"
+}

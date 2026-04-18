@@ -1,0 +1,1 @@
+{"call_id": "NVDA_Q2-2025", "role": "CFO", "model": "gemma3:4b", "n_answers": 3, "unit_ids": ["NVDA_Q2-2025__qa__004", "NVDA_Q2-2025__qa__008", "NVDA_Q2-2025__qa__009"], "wins": ["Hopper growth", "Blackwell ramp", "China performance"], "risks": ["sequential declines", "margin uncertainty", "no Q4 guidance"], "guidance": "raised", "_cache_key": "0067eda25f7c1ed6"}

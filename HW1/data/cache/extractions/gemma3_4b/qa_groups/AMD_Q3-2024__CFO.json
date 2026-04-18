@@ -1,0 +1,1 @@
+{"call_id": "AMD_Q3-2024", "role": "CFO", "model": "gemma3:4b", "n_answers": 4, "unit_ids": ["AMD_Q3-2024__qa__005", "AMD_Q3-2024__qa__009", "AMD_Q3-2024__qa__021", "AMD_Q3-2024__qa__025"], "wins": ["Data Center growth", "Operational efficiency", "Revenue ramp"], "risks": ["MI300 margins", "Client business", "China market"], "guidance": "raised", "_cache_key": "0067eda25f7c1ed6"}

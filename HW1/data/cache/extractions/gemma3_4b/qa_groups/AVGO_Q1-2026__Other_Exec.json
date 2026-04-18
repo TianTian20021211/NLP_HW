@@ -1,0 +1,1 @@
+{"call_id": "AVGO_Q1-2026", "role": "Other_Exec", "model": "gemma3:4b", "n_answers": 4, "unit_ids": ["AVGO_Q1-2026__qa__005", "AVGO_Q1-2026__qa__013", "AVGO_Q1-2026__qa__014", "AVGO_Q1-2026__qa__018"], "wins": ["strategic partnerships", "supply visibility", "Ethernet standard"], "risks": [], "guidance": "maintained", "_cache_key": "0067eda25f7c1ed6"}

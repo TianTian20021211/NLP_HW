@@ -1,0 +1,338 @@
+{
+  "ticker": "AVGO",
+  "quarter": "Q4-2025",
+  "call_date": "2025-12-11",
+  "variant": "finbert",
+  "n_units": {
+    "total": 17,
+    "presenter": 3,
+    "qa": 14
+  },
+  "models": [
+    "gemma3:4b",
+    "llama3.1:8b"
+  ],
+  "consensus": {
+    "sentiment_call": 0.41705814508688915,
+    "sentiment_qa": 0.14337448187570467,
+    "wins_top5": [
+      [
+        "financial performance",
+        1
+      ],
+      [
+        "fourth quarter results",
+        1
+      ],
+      [
+        "fiscal year 2025 results",
+        1
+      ],
+      [
+        "provided details of our fourth quarter and fiscal year 2025 results",
+        1
+      ],
+      [
+        "provided guidance for our first quarter of fiscal year 2026",
+        1
+      ]
+    ],
+    "risks_top5": [
+      [
+        "risk factors",
+        1
+      ],
+      [
+        "actual results",
+        1
+      ],
+      [
+        "forward-looking statements",
+        1
+      ],
+      [
+        "specific risk factors that could cause our actual results to differ materially from the forward-looking statements made on this call",
+        1
+      ],
+      [
+        "wireless seasonality",
+        1
+      ]
+    ],
+    "guidance_call": "raised",
+    "guidance_by_model": {
+      "gemma3:4b": "raised",
+      "llama3.1:8b": "none"
+    }
+  },
+  "dispersion": {
+    "sentiment_dispersion": 0.08623267814055144,
+    "guidance_disagree": 0,
+    "wins_overlap": 0.0,
+    "risks_overlap": 0.0,
+    "qa_minus_pres_risks": [
+      "dependence on a few large customers",
+      "dilutive gross margins",
+      "future guidance delay",
+      "gross margin deterioration",
+      "lower gross margins",
+      "margin percentage decline",
+      "operating margin percentage will come down a bit",
+      "potential decline in non ai semiconductor revenue",
+      "supply chain bottlenecks and lead times",
+      "supply chain challenges",
+      "uncertain 26 revenue"
+    ],
+    "qa_minus_pres_risks_count": 11,
+    "role_sent_means": {
+      "CEO": 0.5400316279574253,
+      "CFO": 0.41808020501130355
+    }
+  },
+  "by_role": {
+    "CEO": {
+      "n_units": 13,
+      "sentiment": 0.2626412859363649,
+      "wins_top5": [
+        [
+          "AI revenue growth",
+          1
+        ],
+        [
+          "TPU Ironwood orders",
+          1
+        ],
+        [
+          "XPU customer acquisition",
+          1
+        ],
+        [
+          "record $64 billion in consolidated revenue",
+          1
+        ],
+        [
+          "AI semiconductor revenue of $6.5 billion, up 74% year-on-year",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "wireless seasonality",
+          1
+        ],
+        [
+          "enterprise spending limited recovery",
+          1
+        ],
+        [
+          "non-AI semiconductor revenue down",
+          1
+        ],
+        [
+          "supply chain challenges",
+          1
+        ],
+        [
+          "gross margin deterioration",
+          1
+        ]
+      ],
+      "guidance_vote": "raised"
+    },
+    "CFO": {
+      "n_units": 2,
+      "sentiment": 0.3395192598839692,
+      "wins_top5": [
+        [
+          "record revenue",
+          1
+        ],
+        [
+          "operating margin increase",
+          1
+        ],
+        [
+          "AI semiconductor revenue",
+          1
+        ],
+        [
+          "record $18 billion revenue",
+          1
+        ],
+        [
+          "35% year-on-year growth in semiconductor solutions segment",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "gross margin down",
+          1
+        ],
+        [
+          "tax rate increase",
+          1
+        ],
+        [
+          "revenue mix impact",
+          1
+        ],
+        [
+          "dilutive gross margins",
+          1
+        ],
+        [
+          "margin percentage decline",
+          1
+        ]
+      ],
+      "guidance_vote": "none"
+    },
+    "IR": {
+      "n_units": 2,
+      "sentiment": -0.003071167707672172,
+      "wins_top5": [
+        [
+          "financial performance",
+          1
+        ],
+        [
+          "fourth quarter results",
+          1
+        ],
+        [
+          "fiscal year 2025 results",
+          1
+        ],
+        [
+          "provided details of our fourth quarter and fiscal year 2025 results",
+          1
+        ],
+        [
+          "provided guidance for our first quarter of fiscal year 2026",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "risk factors",
+          1
+        ],
+        [
+          "actual results",
+          1
+        ],
+        [
+          "forward-looking statements",
+          1
+        ],
+        [
+          "specific risk factors that could cause our actual results to differ materially from the forward-looking statements made on this call",
+          1
+        ]
+      ],
+      "guidance_vote": "raised"
+    }
+  },
+  "by_section": {
+    "presenter": {
+      "n_units": 3,
+      "sentiment": 0.41705814508688915,
+      "wins_top5": [
+        [
+          "financial performance",
+          1
+        ],
+        [
+          "fourth quarter results",
+          1
+        ],
+        [
+          "fiscal year 2025 results",
+          1
+        ],
+        [
+          "provided details of our fourth quarter and fiscal year 2025 results",
+          1
+        ],
+        [
+          "provided guidance for our first quarter of fiscal year 2026",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "risk factors",
+          1
+        ],
+        [
+          "actual results",
+          1
+        ],
+        [
+          "forward-looking statements",
+          1
+        ],
+        [
+          "specific risk factors that could cause our actual results to differ materially from the forward-looking statements made on this call",
+          1
+        ],
+        [
+          "wireless seasonality",
+          1
+        ]
+      ],
+      "guidance_vote": "raised"
+    },
+    "qa": {
+      "n_units": 14,
+      "sentiment": 0.14337448187570467,
+      "wins_top5": [
+        [
+          "system sales",
+          2
+        ],
+        [
+          "accelerating bookings",
+          1
+        ],
+        [
+          "strong demand",
+          1
+        ],
+        [
+          "Accelerating AI revenue growth",
+          1
+        ],
+        [
+          "Strong demand for XPU and switch products",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "supply chain challenges",
+          1
+        ],
+        [
+          "gross margin deterioration",
+          1
+        ],
+        [
+          "uncertain '26 revenue",
+          1
+        ],
+        [
+          "Supply chain bottlenecks and lead times",
+          1
+        ],
+        [
+          "Potential decline in non-AI semiconductor revenue",
+          1
+        ]
+      ],
+      "guidance_vote": "none"
+    }
+  },
+  "_cache_key": "12c5a6764b1a9ff3"
+}

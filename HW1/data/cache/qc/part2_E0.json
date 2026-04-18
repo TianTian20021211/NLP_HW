@@ -1,0 +1,21 @@
+{
+  "labels": {
+    "n_rows": 8,
+    "horizons": [
+      "1d",
+      "5d",
+      "21d",
+      "63d"
+    ],
+    "nan_rate_by_horizon": {
+      "1d": 0.0,
+      "5d": 0.0,
+      "21d": 0.0,
+      "63d": 0.0
+    }
+  },
+  "features_momentum": {
+    "ret_21d_prior_nan_count": 0,
+    "n_rows": 8
+  }
+}

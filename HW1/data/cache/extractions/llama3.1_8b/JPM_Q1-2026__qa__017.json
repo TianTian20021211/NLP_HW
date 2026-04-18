@@ -1,0 +1,1 @@
+{"unit_id": "JPM_Q1-2026__qa__017", "model": "llama3.1:8b", "wins": ["implied internal offset between volume and revenue-related and other expenses"], "risks": ["failure to revise the guidance", "elevated expense levels"], "guidance": "maintained", "_cache_key": "4e3fac7c17838d34"}

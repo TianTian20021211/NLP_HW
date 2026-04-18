@@ -1,0 +1,293 @@
+{
+  "ticker": "JPM",
+  "quarter": "Q2-2025",
+  "call_date": "2025-07-15",
+  "variant": "lm",
+  "n_units": {
+    "total": 74,
+    "presenter": 1,
+    "qa": 73
+  },
+  "models": [
+    "gemma3:4b",
+    "llama3.1:8b"
+  ],
+  "consensus": {
+    "sentiment_call": 0.2631578947368421,
+    "sentiment_qa": -0.14816824539335605,
+    "wins_top5": [
+      [
+        "CCB revenue growth",
+        1
+      ],
+      [
+        "Markets revenue increase",
+        1
+      ],
+      [
+        "AWM net inflows",
+        1
+      ],
+      [
+        "net income of $15 billion",
+        1
+      ],
+      [
+        "EPS of $5.24 on revenue of $45.7 billion",
+        1
+      ]
+    ],
+    "risks_top5": [
+      [
+        "CET1 ratio decline",
+        1
+      ],
+      [
+        "Wholesale lending increase",
+        1
+      ],
+      [
+        "NII down year-on-year",
+        1
+      ],
+      [
+        "deposit margin compression",
+        1
+      ],
+      [
+        "higher losses on hedges",
+        1
+      ]
+    ],
+    "guidance_call": "raised",
+    "guidance_by_model": {
+      "gemma3:4b": "raised",
+      "llama3.1:8b": "raised"
+    }
+  },
+  "dispersion": {
+    "sentiment_dispersion": null,
+    "guidance_disagree": 0,
+    "wins_overlap": null,
+    "risks_overlap": null,
+    "qa_minus_pres_risks": [
+      "competitive landscape",
+      "competitive pressures",
+      "complacency and arrogance in a competitive market",
+      "late balance sheet assets",
+      "macroeconomic uncertainty",
+      "market volatility",
+      "potential normalization of sales and trading revenue",
+      "regulatory complexity",
+      "regulatory complexity and risk",
+      "tariff linked deposit pricing pressure",
+      "tariff policy uncertainty",
+      "uncertainty around sustainability of current business performance"
+    ],
+    "qa_minus_pres_risks_count": 12,
+    "role_sent_means": {
+      "CFO": 0.2631578947368421
+    }
+  },
+  "by_role": {
+    "CEO": {
+      "n_units": 34,
+      "sentiment": -0.04065934065934065,
+      "wins_top5": [
+        [
+          "regulatory simplification",
+          1
+        ],
+        [
+          "mid-market growth",
+          1
+        ],
+        [
+          "private credit",
+          1
+        ],
+        [
+          "Simplifying the regulatory construct",
+          1
+        ],
+        [
+          "Growing middle market business",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "regulatory complexity",
+          1
+        ],
+        [
+          "competitive pressures",
+          1
+        ],
+        [
+          "macroeconomic uncertainty",
+          1
+        ],
+        [
+          "Tariff policy uncertainty",
+          1
+        ],
+        [
+          "Regulatory complexity and risk",
+          1
+        ]
+      ],
+      "guidance_vote": "raised"
+    },
+    "CFO": {
+      "n_units": 40,
+      "sentiment": -0.08343400289450072,
+      "wins_top5": [
+        [
+          "strong loan growth",
+          2
+        ],
+        [
+          "CCB revenue growth",
+          1
+        ],
+        [
+          "Markets revenue increase",
+          1
+        ],
+        [
+          "AWM net inflows",
+          1
+        ],
+        [
+          "net income of $15 billion",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "CET1 ratio decline",
+          1
+        ],
+        [
+          "Wholesale lending increase",
+          1
+        ],
+        [
+          "NII down year-on-year",
+          1
+        ],
+        [
+          "deposit margin compression",
+          1
+        ],
+        [
+          "higher losses on hedges",
+          1
+        ]
+      ],
+      "guidance_vote": "none"
+    }
+  },
+  "by_section": {
+    "presenter": {
+      "n_units": 1,
+      "sentiment": 0.2631578947368421,
+      "wins_top5": [
+        [
+          "CCB revenue growth",
+          1
+        ],
+        [
+          "Markets revenue increase",
+          1
+        ],
+        [
+          "AWM net inflows",
+          1
+        ],
+        [
+          "net income of $15 billion",
+          1
+        ],
+        [
+          "EPS of $5.24 on revenue of $45.7 billion",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "CET1 ratio decline",
+          1
+        ],
+        [
+          "Wholesale lending increase",
+          1
+        ],
+        [
+          "NII down year-on-year",
+          1
+        ],
+        [
+          "deposit margin compression",
+          1
+        ],
+        [
+          "higher losses on hedges",
+          1
+        ]
+      ],
+      "guidance_vote": "raised"
+    },
+    "qa": {
+      "n_units": 73,
+      "sentiment": -0.14816824539335605,
+      "wins_top5": [
+        [
+          "strong loan growth",
+          2
+        ],
+        [
+          "markets revenues",
+          1
+        ],
+        [
+          "CET1 drop",
+          1
+        ],
+        [
+          "High returns on capital",
+          1
+        ],
+        [
+          "Good market conditions",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "market volatility",
+          1
+        ],
+        [
+          "competitive landscape",
+          1
+        ],
+        [
+          "late balance sheet assets",
+          1
+        ],
+        [
+          "Tariff-linked deposit pricing pressure",
+          1
+        ],
+        [
+          "Potential normalization of sales and trading revenue",
+          1
+        ]
+      ],
+      "guidance_vote": "raised"
+    }
+  },
+  "_cache_key": "b9c11fa20978a9b0"
+}

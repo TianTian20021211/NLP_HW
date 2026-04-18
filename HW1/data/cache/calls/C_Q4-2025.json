@@ -1,0 +1,286 @@
+{
+  "ticker": "C",
+  "quarter": "Q4-2025",
+  "call_date": "2026-01-13",
+  "variant": "finbert",
+  "n_units": {
+    "total": 46,
+    "presenter": 3,
+    "qa": 43
+  },
+  "models": [
+    "gemma3:4b",
+    "llama3.1:8b"
+  ],
+  "consensus": {
+    "sentiment_call": 0.4992068224023064,
+    "sentiment_qa": 0.37878769114407446,
+    "wins_top5": [
+      [
+        "record revenues",
+        3
+      ],
+      [
+        "earnings call",
+        1
+      ],
+      [
+        "fourth quarter 2025 earnings call",
+        1
+      ],
+      [
+        "improved returns",
+        1
+      ],
+      [
+        "capital return",
+        1
+      ]
+    ],
+    "risks_top5": [
+      [
+        "uncertainty",
+        2
+      ],
+      [
+        "changes in circumstances",
+        2
+      ],
+      [
+        "forward-looking statements",
+        1
+      ],
+      [
+        "challenging year for commodities",
+        1
+      ],
+      [
+        "retail services revenue softness",
+        1
+      ]
+    ],
+    "guidance_call": "raised",
+    "guidance_by_model": {
+      "gemma3:4b": "raised",
+      "llama3.1:8b": "none"
+    }
+  },
+  "dispersion": {
+    "sentiment_dispersion": null,
+    "guidance_disagree": 1,
+    "wins_overlap": null,
+    "risks_overlap": null,
+    "qa_minus_pres_risks": [
+      "macro uncertainty",
+      "macro uncertainty affecting card ncls",
+      "market conditions",
+      "market conditions affecting the ipo of mexican business",
+      "ncls",
+      "potential impact of delinquency roll rates on card losses"
+    ],
+    "qa_minus_pres_risks_count": 6,
+    "role_sent_means": {
+      "CEO": 0.5092577084580816
+    }
+  },
+  "by_role": {
+    "CEO": {
+      "n_units": 43,
+      "sentiment": 0.44227577863429185,
+      "wins_top5": [
+        [
+          "record revenues",
+          3
+        ],
+        [
+          "improved returns",
+          1
+        ],
+        [
+          "capital return",
+          1
+        ],
+        [
+          "positive operating leverage for the second straight year",
+          1
+        ],
+        [
+          "returns improved to 8.8%",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "challenging year for commodities",
+          1
+        ],
+        [
+          "retail services revenue softness",
+          1
+        ],
+        [
+          "China's reliance on exports",
+          1
+        ],
+        [
+          "declining U.S. and non-U.S. short-end rates",
+          1
+        ],
+        [
+          "NII ex-Markets to be up between 5% and 6%",
+          1
+        ]
+      ],
+      "guidance_vote": "raised"
+    },
+    "IR": {
+      "n_units": 2,
+      "sentiment": 0.206588376147091,
+      "wins_top5": [
+        [
+          "transparency",
+          2
+        ],
+        [
+          "performance",
+          2
+        ],
+        [
+          "earnings call",
+          1
+        ],
+        [
+          "fourth quarter 2025 earnings call",
+          1
+        ],
+        [
+          "value creation",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "uncertainty",
+          2
+        ],
+        [
+          "changes in circumstances",
+          2
+        ],
+        [
+          "forward-looking statements",
+          1
+        ]
+      ],
+      "guidance_vote": "none"
+    },
+    "Unknown": {
+      "n_units": 1,
+      "sentiment": null,
+      "wins_top5": [],
+      "risks_top5": [],
+      "guidance_vote": "none"
+    }
+  },
+  "by_section": {
+    "presenter": {
+      "n_units": 3,
+      "sentiment": 0.4992068224023064,
+      "wins_top5": [
+        [
+          "record revenues",
+          3
+        ],
+        [
+          "earnings call",
+          1
+        ],
+        [
+          "fourth quarter 2025 earnings call",
+          1
+        ],
+        [
+          "improved returns",
+          1
+        ],
+        [
+          "capital return",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "uncertainty",
+          2
+        ],
+        [
+          "changes in circumstances",
+          2
+        ],
+        [
+          "forward-looking statements",
+          1
+        ],
+        [
+          "challenging year for commodities",
+          1
+        ],
+        [
+          "retail services revenue softness",
+          1
+        ]
+      ],
+      "guidance_vote": "raised"
+    },
+    "qa": {
+      "n_units": 43,
+      "sentiment": 0.37878769114407446,
+      "wins_top5": [
+        [
+          "transparency",
+          2
+        ],
+        [
+          "performance",
+          2
+        ],
+        [
+          "revenue growth",
+          1
+        ],
+        [
+          "margin improvement",
+          1
+        ],
+        [
+          "client acquisition",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "macro uncertainty",
+          1
+        ],
+        [
+          "NCLs",
+          1
+        ],
+        [
+          "market conditions",
+          1
+        ],
+        [
+          "Macro uncertainty affecting card NCLs",
+          1
+        ],
+        [
+          "Potential impact of delinquency roll rates on card losses",
+          1
+        ]
+      ],
+      "guidance_vote": "raised"
+    }
+  },
+  "_cache_key": "12c5a6764b1a9ff3"
+}

@@ -1,0 +1,393 @@
+{
+  "ticker": "FDX",
+  "quarter": "Q1-2026",
+  "call_date": "2025-09-18",
+  "variant": "finbert",
+  "n_units": {
+    "total": 25,
+    "presenter": 4,
+    "qa": 21
+  },
+  "models": [
+    "gemma3:4b",
+    "llama3.1:8b"
+  ],
+  "consensus": {
+    "sentiment_call": 0.4157493253051355,
+    "sentiment_qa": 0.23914484931042093,
+    "wins_top5": [
+      [
+        "earnings release",
+        1
+      ],
+      [
+        "slides",
+        1
+      ],
+      [
+        "Q&A session",
+        1
+      ],
+      [
+        "accommodate all those who would like to participate",
+        1
+      ],
+      [
+        "new business",
+        1
+      ]
+    ],
+    "risks_top5": [
+      [
+        "uncertainties",
+        2
+      ],
+      [
+        "U.S. Postal Service contract expiration",
+        2
+      ],
+      [
+        "trade headwinds",
+        2
+      ],
+      [
+        "global trade headwind",
+        2
+      ],
+      [
+        "forward-looking statements",
+        1
+      ]
+    ],
+    "guidance_call": "raised",
+    "guidance_by_model": {
+      "gemma3:4b": "raised",
+      "llama3.1:8b": "maintained"
+    }
+  },
+  "dispersion": {
+    "sentiment_dispersion": 0.22360074394842325,
+    "guidance_disagree": 0,
+    "wins_overlap": 0.0,
+    "risks_overlap": 0.0,
+    "qa_minus_pres_risks": [
+      "china lane headwinds",
+      "complex trade environment",
+      "dynamic environment",
+      "genai nascent",
+      "global trade headwind",
+      "headwinds from 1 billion cost 300 million headwind on trade expenses",
+      "industrial economy pressure on fedex freight",
+      "mix shift",
+      "mix shift to lower yielding traffic",
+      "peak season uncertainty",
+      "peak volume pressure",
+      "pressure from 1 billion headwind",
+      "small exporters stress due to de minimis expiry",
+      "supply constraints in the global fleet",
+      "trade environment uncertainty",
+      "trade headwinds"
+    ],
+    "qa_minus_pres_risks_count": 16,
+    "role_sent_means": {
+      "CEO": 0.5959889012578395,
+      "Other_Exec": 0.5678155987463636,
+      "CFO": 0.19538371635583165
+    }
+  },
+  "by_role": {
+    "CEO": {
+      "n_units": 6,
+      "sentiment": 0.5339934198136649,
+      "wins_top5": [
+        [
+          "new business",
+          1
+        ],
+        [
+          "transformation-related savings",
+          1
+        ],
+        [
+          "profit improvement",
+          1
+        ],
+        [
+          "3% year-over-year revenue growth",
+          1
+        ],
+        [
+          "7% adjusted operating income growth",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "U.S. Postal Service contract expiration",
+          2
+        ],
+        [
+          "trade environment",
+          1
+        ],
+        [
+          "industrial economy weakness",
+          1
+        ],
+        [
+          "headwinds from the trade environment",
+          1
+        ],
+        [
+          "industrial economic weakness",
+          1
+        ]
+      ],
+      "guidance_vote": "maintained"
+    },
+    "CFO": {
+      "n_units": 8,
+      "sentiment": 0.09584666154015398,
+      "wins_top5": [
+        [
+          "adjusted EPS outlook",
+          1
+        ],
+        [
+          "margin expansion",
+          1
+        ],
+        [
+          "stockholder returns",
+          1
+        ],
+        [
+          "adjusted EPS above the midpoint of our adjusted EPS outlook range",
+          1
+        ],
+        [
+          "repurchased $500 million worth of stock",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "global trade environment",
+          1
+        ],
+        [
+          "international export demand",
+          1
+        ],
+        [
+          "FedEx Freight operating income",
+          1
+        ],
+        [
+          "global trade environment headwind",
+          1
+        ],
+        [
+          "expiration of the U.S. Postal Service contract",
+          1
+        ]
+      ],
+      "guidance_vote": "maintained"
+    },
+    "IR": {
+      "n_units": 1,
+      "sentiment": -0.004429700794849503,
+      "wins_top5": [
+        [
+          "earnings release",
+          1
+        ],
+        [
+          "slides",
+          1
+        ],
+        [
+          "Q&A session",
+          1
+        ],
+        [
+          "accommodate all those who would like to participate",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "uncertainties",
+          2
+        ],
+        [
+          "forward-looking statements",
+          1
+        ],
+        [
+          "SEC filings",
+          1
+        ],
+        [
+          "risky situations",
+          1
+        ],
+        [
+          "factors that could cause actual results to differ",
+          1
+        ]
+      ],
+      "guidance_vote": "none"
+    },
+    "Other_Exec": {
+      "n_units": 10,
+      "sentiment": 0.42804377808157973,
+      "wins_top5": [
+        [
+          "revenue growth",
+          1
+        ],
+        [
+          "share growth",
+          1
+        ],
+        [
+          "yield increase",
+          1
+        ],
+        [
+          "3% year-over-year revenue growth across the enterprise",
+          1
+        ],
+        [
+          "4% revenue growth at FEC, driven by U.S. domestic package revenue strength",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "continued weakness",
+          1
+        ],
+        [
+          "excess capacity",
+          1
+        ],
+        [
+          "international pressures",
+          1
+        ],
+        [
+          "continued weakness at FedEx Freight due to the continued pressure for the industrial economy",
+          1
+        ],
+        [
+          "international export volumes declined, particularly on the China to U.S. lane",
+          1
+        ]
+      ],
+      "guidance_vote": "raised"
+    }
+  },
+  "by_section": {
+    "presenter": {
+      "n_units": 4,
+      "sentiment": 0.4157493253051355,
+      "wins_top5": [
+        [
+          "earnings release",
+          1
+        ],
+        [
+          "slides",
+          1
+        ],
+        [
+          "Q&A session",
+          1
+        ],
+        [
+          "accommodate all those who would like to participate",
+          1
+        ],
+        [
+          "new business",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "uncertainties",
+          2
+        ],
+        [
+          "U.S. Postal Service contract expiration",
+          2
+        ],
+        [
+          "forward-looking statements",
+          1
+        ],
+        [
+          "SEC filings",
+          1
+        ],
+        [
+          "risky situations",
+          1
+        ]
+      ],
+      "guidance_vote": "raised"
+    },
+    "qa": {
+      "n_units": 21,
+      "sentiment": 0.23914484931042093,
+      "wins_top5": [
+        [
+          "peak season demand",
+          1
+        ],
+        [
+          "transformation savings",
+          1
+        ],
+        [
+          "trade environment",
+          1
+        ],
+        [
+          "revenue growth of 5%",
+          1
+        ],
+        [
+          "cost reduction and buyback",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "trade headwinds",
+          2
+        ],
+        [
+          "global trade headwind",
+          2
+        ],
+        [
+          "mix shift",
+          1
+        ],
+        [
+          "dynamic environment",
+          1
+        ],
+        [
+          "pressure from $1 billion headwind",
+          1
+        ]
+      ],
+      "guidance_vote": "maintained"
+    }
+  },
+  "_cache_key": "12c5a6764b1a9ff3"
+}

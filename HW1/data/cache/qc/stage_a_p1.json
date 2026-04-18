@@ -1,0 +1,15 @@
+{
+  "metrics": {
+    "n_presenter": 14,
+    "n_qa": 77,
+    "executive_unknown_rate": 0.0,
+    "qa_orphan_rate": 0.0,
+    "parse_failures": 0
+  },
+  "calls": [
+    "AMD_Q1-2024",
+    "NVDA_Q1-2025",
+    "PLTR_Q1-2024",
+    "JPM_Q1-2024"
+  ]
+}

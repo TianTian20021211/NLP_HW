@@ -1,0 +1,341 @@
+{
+  "ticker": "AVGO",
+  "quarter": "Q4-2024",
+  "call_date": "2024-12-12",
+  "variant": "finbert",
+  "n_units": {
+    "total": 20,
+    "presenter": 3,
+    "qa": 17
+  },
+  "models": [
+    "gemma3:4b",
+    "llama3.1:8b"
+  ],
+  "consensus": {
+    "sentiment_call": 0.35757915003688207,
+    "sentiment_qa": 0.13290881381176545,
+    "wins_top5": [
+      [
+        "financial performance",
+        1
+      ],
+      [
+        "fourth quarter results",
+        1
+      ],
+      [
+        "fiscal year 2024 results",
+        1
+      ],
+      [
+        "provided details of our fourth quarter and fiscal year 2024 results",
+        1
+      ],
+      [
+        "provided guidance for our first quarter of fiscal year 2025",
+        1
+      ]
+    ],
+    "risks_top5": [
+      [
+        "risk factors",
+        1
+      ],
+      [
+        "actual results",
+        1
+      ],
+      [
+        "forward-looking statements",
+        1
+      ],
+      [
+        "specific risk factors that could cause our actual results to differ materially from the forward-looking statements made on this call",
+        1
+      ],
+      [
+        "non-AI semiconductor decline",
+        1
+      ]
+    ],
+    "guidance_call": "raised",
+    "guidance_by_model": {
+      "gemma3:4b": "raised",
+      "llama3.1:8b": "raised"
+    }
+  },
+  "dispersion": {
+    "sentiment_dispersion": 0.0718003598722243,
+    "guidance_disagree": 0,
+    "wins_overlap": 0.0,
+    "risks_overlap": 0.0,
+    "qa_minus_pres_risks": [
+      "broadcom s earnings conference call will follow at 2 00 p m pacific time",
+      "debt",
+      "dependence on only three hyperscale customers for ai revenue",
+      "margin dilution",
+      "no clear tam",
+      "potential for market share erosion if other players enter the market",
+      "quarter to quarter variability in ai revenue growth due to customer adoption rates",
+      "regulatory issues",
+      "term loans",
+      "uncertain market share"
+    ],
+    "qa_minus_pres_risks_count": 10,
+    "role_sent_means": {
+      "CEO": 0.44486265068462366,
+      "CFO": 0.3433216079700551
+    }
+  },
+  "by_role": {
+    "CEO": {
+      "n_units": 16,
+      "sentiment": 0.2646510165474515,
+      "wins_top5": [
+        [
+          "VMware integration",
+          1
+        ],
+        [
+          "AI revenue growth",
+          1
+        ],
+        [
+          "broadband recovery",
+          1
+        ],
+        [
+          "record $51.6 billion in consolidated revenue",
+          1
+        ],
+        [
+          "operating profit, excluding transition costs, grew 42% year-over-year",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "non-AI semiconductor decline",
+          1
+        ],
+        [
+          "industrial recovery delayed",
+          1
+        ],
+        [
+          "seasonal wireless revenue",
+          1
+        ],
+        [
+          "uncertain market share",
+          1
+        ],
+        [
+          "margin dilution",
+          1
+        ]
+      ],
+      "guidance_vote": "raised"
+    },
+    "CFO": {
+      "n_units": 2,
+      "sentiment": 0.33993920050704285,
+      "wins_top5": [
+        [
+          "dividend increase",
+          2
+        ],
+        [
+          "record revenue",
+          1
+        ],
+        [
+          "record adjusted EBITDA",
+          1
+        ],
+        [
+          "increased dividend",
+          1
+        ],
+        [
+          "record $51.6 billion revenue",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "higher cash interest expense",
+          1
+        ],
+        [
+          "continued delay in Section 174 reenactment",
+          1
+        ],
+        [
+          "proposed regulations on corporate AMT",
+          1
+        ],
+        [
+          "higher cash interest expense from debt related to the VMware acquisition",
+          1
+        ],
+        [
+          "higher cash taxes due to a higher mix of U.S. taxable income",
+          1
+        ]
+      ],
+      "guidance_vote": "none"
+    },
+    "IR": {
+      "n_units": 2,
+      "sentiment": -0.010293568556126995,
+      "wins_top5": [
+        [
+          "financial performance",
+          1
+        ],
+        [
+          "fourth quarter results",
+          1
+        ],
+        [
+          "fiscal year 2024 results",
+          1
+        ],
+        [
+          "provided details of our fourth quarter and fiscal year 2024 results",
+          1
+        ],
+        [
+          "provided guidance for our first quarter of fiscal year 2025",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "risk factors",
+          1
+        ],
+        [
+          "actual results",
+          1
+        ],
+        [
+          "forward-looking statements",
+          1
+        ],
+        [
+          "specific risk factors that could cause our actual results to differ materially from the forward-looking statements made on this call",
+          1
+        ],
+        [
+          "Broadcom's earnings conference call will follow at 2:00 p.m. Pacific Time",
+          1
+        ]
+      ],
+      "guidance_vote": "raised"
+    }
+  },
+  "by_section": {
+    "presenter": {
+      "n_units": 3,
+      "sentiment": 0.35757915003688207,
+      "wins_top5": [
+        [
+          "financial performance",
+          1
+        ],
+        [
+          "fourth quarter results",
+          1
+        ],
+        [
+          "fiscal year 2024 results",
+          1
+        ],
+        [
+          "provided details of our fourth quarter and fiscal year 2024 results",
+          1
+        ],
+        [
+          "provided guidance for our first quarter of fiscal year 2025",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "risk factors",
+          1
+        ],
+        [
+          "actual results",
+          1
+        ],
+        [
+          "forward-looking statements",
+          1
+        ],
+        [
+          "specific risk factors that could cause our actual results to differ materially from the forward-looking statements made on this call",
+          1
+        ],
+        [
+          "non-AI semiconductor decline",
+          1
+        ]
+      ],
+      "guidance_vote": "raised"
+    },
+    "qa": {
+      "n_units": 17,
+      "sentiment": 0.13290881381176545,
+      "wins_top5": [
+        [
+          "dividend increase",
+          2
+        ],
+        [
+          "technology leadership",
+          1
+        ],
+        [
+          "market opportunity",
+          1
+        ],
+        [
+          "strong customer relationships",
+          1
+        ],
+        [
+          "Successfully integrating VMware ahead of time frame",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "uncertain market share",
+          1
+        ],
+        [
+          "margin dilution",
+          1
+        ],
+        [
+          "no clear TAM",
+          1
+        ],
+        [
+          "Quarter-to-quarter variability in AI revenue growth due to customer adoption rates",
+          1
+        ],
+        [
+          "Dependence on only three hyperscale customers for AI revenue",
+          1
+        ]
+      ],
+      "guidance_vote": "none"
+    }
+  },
+  "_cache_key": "12c5a6764b1a9ff3"
+}

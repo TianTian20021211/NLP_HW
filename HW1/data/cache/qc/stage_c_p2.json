@@ -1,0 +1,12 @@
+{
+  "gemma3:4b": {
+    "n_seen": 471,
+    "n_failed": 0,
+    "failure_rate": 0.0
+  },
+  "llama3.1:8b": {
+    "n_seen": 463,
+    "n_failed": 0,
+    "failure_rate": 0.0
+  }
+}

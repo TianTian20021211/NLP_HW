@@ -1,0 +1,345 @@
+{
+  "ticker": "INTC",
+  "quarter": "Q3-2025",
+  "call_date": "2025-10-23",
+  "variant": "lm",
+  "n_units": {
+    "total": 34,
+    "presenter": 4,
+    "qa": 30
+  },
+  "models": [
+    "gemma3:4b",
+    "llama3.1:8b"
+  ],
+  "consensus": {
+    "sentiment_call": 0.7199151252943822,
+    "sentiment_qa": 0.4226741349545898,
+    "wins_top5": [
+      [
+        "third quarter results",
+        1
+      ],
+      [
+        "strategic priorities",
+        1
+      ],
+      [
+        "financial results",
+        1
+      ],
+      [
+        "progress implementing strategic priorities",
+        1
+      ],
+      [
+        "solid Q3",
+        1
+      ]
+    ],
+    "risks_top5": [
+      [
+        "various risks and uncertainties",
+        2
+      ],
+      [
+        "macroeconomic volatility",
+        2
+      ],
+      [
+        "forward-looking statements",
+        1
+      ],
+      [
+        "non-GAAP financial measures",
+        1
+      ],
+      [
+        "specific risk factors that could cause actual results to differ materially from our expectations",
+        1
+      ]
+    ],
+    "guidance_call": "none",
+    "guidance_by_model": {
+      "gemma3:4b": "none",
+      "llama3.1:8b": "maintained"
+    }
+  },
+  "dispersion": {
+    "sentiment_dispersion": 0.18608073189119675,
+    "guidance_disagree": 0,
+    "wins_overlap": 0.0,
+    "risks_overlap": 0.0,
+    "qa_minus_pres_risks": [
+      "14a abandonment",
+      "altera impact",
+      "customer commitments",
+      "customer demand",
+      "customer desire for older products",
+      "high cost of older processes intel 10 and 7",
+      "low yields",
+      "low yields on 18a node",
+      "nci expense",
+      "shortage of substrates",
+      "supply constraints",
+      "wafer costs",
+      "yield challenges",
+      "yield uncertainty"
+    ],
+    "qa_minus_pres_risks_count": 14,
+    "role_sent_means": {
+      "CEO": 0.8947368421052632,
+      "CFO": 0.631578947368421
+    }
+  },
+  "by_role": {
+    "CEO": {
+      "n_units": 10,
+      "sentiment": 0.8396853976633882,
+      "wins_top5": [
+        [
+          "solid Q3",
+          1
+        ],
+        [
+          "accelerated funding",
+          1
+        ],
+        [
+          "tangible progress",
+          1
+        ],
+        [
+          "fourth consecutive quarter of improved execution",
+          1
+        ],
+        [
+          "significantly improved our cash position and liquidity",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "long way to go",
+          1
+        ],
+        [
+          "intense competition",
+          1
+        ],
+        [
+          "gap and work to regain shares",
+          1
+        ],
+        [
+          "14A abandonment",
+          1
+        ],
+        [
+          "yield uncertainty",
+          1
+        ]
+      ],
+      "guidance_vote": "none"
+    },
+    "CFO": {
+      "n_units": 13,
+      "sentiment": 0.43571532832268695,
+      "wins_top5": [
+        [
+          "strong demand",
+          1
+        ],
+        [
+          "favorable mix",
+          1
+        ],
+        [
+          "lower inventory reserves",
+          1
+        ],
+        [
+          "delivered fourth consecutive quarter of revenue above guidance",
+          1
+        ],
+        [
+          "revenue was $13.7 billion, coming in above the high end of our guidance range",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "macroeconomic volatility",
+          2
+        ],
+        [
+          "capacity constraints",
+          1
+        ],
+        [
+          "competitive position",
+          1
+        ],
+        [
+          "supply constraints, especially on Intel 10 and Intel 7",
+          1
+        ],
+        [
+          "need to improve competitive position",
+          1
+        ]
+      ],
+      "guidance_vote": "raised"
+    },
+    "IR": {
+      "n_units": 11,
+      "sentiment": 0.0764319248826291,
+      "wins_top5": [
+        [
+          "third quarter results",
+          1
+        ],
+        [
+          "strategic priorities",
+          1
+        ],
+        [
+          "financial results",
+          1
+        ],
+        [
+          "progress implementing strategic priorities",
+          1
+        ],
+        [
+          "Q&A portion",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "various risks and uncertainties",
+          2
+        ],
+        [
+          "forward-looking statements",
+          1
+        ],
+        [
+          "non-GAAP financial measures",
+          1
+        ],
+        [
+          "specific risk factors that could cause actual results to differ materially from our expectations",
+          1
+        ],
+        [
+          "low yields",
+          1
+        ]
+      ],
+      "guidance_vote": "maintained"
+    }
+  },
+  "by_section": {
+    "presenter": {
+      "n_units": 4,
+      "sentiment": 0.7199151252943822,
+      "wins_top5": [
+        [
+          "third quarter results",
+          1
+        ],
+        [
+          "strategic priorities",
+          1
+        ],
+        [
+          "financial results",
+          1
+        ],
+        [
+          "progress implementing strategic priorities",
+          1
+        ],
+        [
+          "solid Q3",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "various risks and uncertainties",
+          2
+        ],
+        [
+          "macroeconomic volatility",
+          2
+        ],
+        [
+          "forward-looking statements",
+          1
+        ],
+        [
+          "non-GAAP financial measures",
+          1
+        ],
+        [
+          "specific risk factors that could cause actual results to differ materially from our expectations",
+          1
+        ]
+      ],
+      "guidance_vote": "none"
+    },
+    "qa": {
+      "n_units": 30,
+      "sentiment": 0.4226741349545898,
+      "wins_top5": [
+        [
+          "increased confidence",
+          2
+        ],
+        [
+          "strong progress",
+          1
+        ],
+        [
+          "customer commitment",
+          1
+        ],
+        [
+          "Strong progress on 18A",
+          1
+        ],
+        [
+          "Increased customer commitments for foundry investments",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "14A abandonment",
+          1
+        ],
+        [
+          "yield uncertainty",
+          1
+        ],
+        [
+          "NCI expense",
+          1
+        ],
+        [
+          "low yields",
+          1
+        ],
+        [
+          "wafer costs",
+          1
+        ]
+      ],
+      "guidance_vote": "raised"
+    }
+  },
+  "_cache_key": "b9c11fa20978a9b0"
+}

@@ -1,0 +1,313 @@
+{
+  "ticker": "NVDA",
+  "quarter": "Q4-2025",
+  "call_date": "2025-02-26",
+  "variant": "finbert",
+  "n_units": {
+    "total": 16,
+    "presenter": 2,
+    "qa": 14
+  },
+  "models": [
+    "gemma3:4b",
+    "llama3.1:8b"
+  ],
+  "consensus": {
+    "sentiment_call": 0.3995692735663085,
+    "sentiment_qa": 0.1364785465432952,
+    "wins_top5": [
+      [
+        "conference call",
+        1
+      ],
+      [
+        "earnings release",
+        1
+      ],
+      [
+        "Forms 10-K and 10-Q",
+        1
+      ],
+      [
+        "Blackwell ramp",
+        1
+      ],
+      [
+        "massive post-training demand",
+        1
+      ]
+    ],
+    "risks_top5": [
+      [
+        "significant risks and uncertainties",
+        2
+      ],
+      [
+        "tariff impact",
+        2
+      ],
+      [
+        "forward-looking statements",
+        1
+      ],
+      [
+        "materially differ",
+        1
+      ],
+      [
+        "supply constraints",
+        1
+      ]
+    ],
+    "guidance_call": "maintained",
+    "guidance_by_model": {
+      "gemma3:4b": "maintained",
+      "llama3.1:8b": "none"
+    }
+  },
+  "dispersion": {
+    "sentiment_dispersion": null,
+    "guidance_disagree": 0,
+    "wins_overlap": null,
+    "risks_overlap": null,
+    "qa_minus_pres_risks": [
+      "complexity of material and manufacturing process",
+      "complexity of systems",
+      "supply chain bottlenecks",
+      "system complexity",
+      "tariff impact",
+      "tariff impact on broader semiconductor",
+      "uncertainty in yields"
+    ],
+    "qa_minus_pres_risks_count": 7,
+    "role_sent_means": {
+      "CFO": 0.4419382666080723
+    }
+  },
+  "by_role": {
+    "CEO": {
+      "n_units": 10,
+      "sentiment": 0.12406357208557434,
+      "wins_top5": [
+        [
+          "Blackwell scaling",
+          1
+        ],
+        [
+          "NVLink 72 ramp",
+          1
+        ],
+        [
+          "revenue generation",
+          1
+        ],
+        [
+          "inference time scaling and reasoning capabilities",
+          1
+        ],
+        [
+          "Blackwell's performance and throughput",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "supply chain bottlenecks",
+          1
+        ],
+        [
+          "tariff impact",
+          1
+        ],
+        [
+          "system complexity",
+          1
+        ]
+      ],
+      "guidance_vote": "raised"
+    },
+    "CFO": {
+      "n_units": 5,
+      "sentiment": 0.41259838844415686,
+      "wins_top5": [
+        [
+          "Blackwell ramp",
+          2
+        ],
+        [
+          "massive post-training demand",
+          1
+        ],
+        [
+          "spectrum-X success",
+          1
+        ],
+        [
+          "record quarter",
+          1
+        ],
+        [
+          "Blackwell ramp commenced and Hopper 200 continued sequential growth",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "supply constraints",
+          1
+        ],
+        [
+          "competitive market in China",
+          1
+        ],
+        [
+          "networking decline",
+          1
+        ],
+        [
+          "Tariff impact",
+          1
+        ],
+        [
+          "Uncertainty in yields",
+          1
+        ]
+      ],
+      "guidance_vote": "raised"
+    },
+    "IR": {
+      "n_units": 1,
+      "sentiment": 0.0089623524119517,
+      "wins_top5": [
+        [
+          "conference call",
+          1
+        ],
+        [
+          "earnings release",
+          1
+        ],
+        [
+          "Forms 10-K and 10-Q",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "significant risks and uncertainties",
+          2
+        ],
+        [
+          "forward-looking statements",
+          1
+        ],
+        [
+          "materially differ",
+          1
+        ]
+      ],
+      "guidance_vote": "none"
+    }
+  },
+  "by_section": {
+    "presenter": {
+      "n_units": 2,
+      "sentiment": 0.3995692735663085,
+      "wins_top5": [
+        [
+          "conference call",
+          1
+        ],
+        [
+          "earnings release",
+          1
+        ],
+        [
+          "Forms 10-K and 10-Q",
+          1
+        ],
+        [
+          "Blackwell ramp",
+          1
+        ],
+        [
+          "massive post-training demand",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "significant risks and uncertainties",
+          2
+        ],
+        [
+          "forward-looking statements",
+          1
+        ],
+        [
+          "materially differ",
+          1
+        ],
+        [
+          "supply constraints",
+          1
+        ],
+        [
+          "competitive market in China",
+          1
+        ]
+      ],
+      "guidance_vote": "maintained"
+    },
+    "qa": {
+      "n_units": 14,
+      "sentiment": 0.1364785465432952,
+      "wins_top5": [
+        [
+          "Blackwell scaling",
+          1
+        ],
+        [
+          "NVLink 72 ramp",
+          1
+        ],
+        [
+          "revenue generation",
+          1
+        ],
+        [
+          "inference time scaling and reasoning capabilities",
+          1
+        ],
+        [
+          "Blackwell's performance and throughput",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "tariff impact",
+          2
+        ],
+        [
+          "supply chain bottlenecks",
+          1
+        ],
+        [
+          "system complexity",
+          1
+        ],
+        [
+          "Uncertainty in yields",
+          1
+        ],
+        [
+          "Complexity of systems",
+          1
+        ]
+      ],
+      "guidance_vote": "raised"
+    }
+  },
+  "_cache_key": "12c5a6764b1a9ff3"
+}

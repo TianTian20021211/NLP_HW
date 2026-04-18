@@ -1,0 +1,1 @@
+{"call_id": "AVGO_Q2-2024", "role": "IR", "model": "gemma3:4b", "n_answers": 1, "unit_ids": ["AVGO_Q2-2024__qa__020"], "wins": ["channel conflict elimination", "earnings report", "VMware webcast"], "risks": [], "guidance": "none", "_cache_key": "0067eda25f7c1ed6"}

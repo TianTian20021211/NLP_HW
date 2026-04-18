@@ -1,0 +1,292 @@
+{
+  "ticker": "JPM",
+  "quarter": "Q1-2024",
+  "call_date": "2024-04-12",
+  "variant": "lm",
+  "n_units": {
+    "total": 28,
+    "presenter": 1,
+    "qa": 27
+  },
+  "models": [
+    "gemma3:4b",
+    "llama3.1:8b"
+  ],
+  "consensus": {
+    "sentiment_call": 0.3333333333333333,
+    "sentiment_qa": -0.11205761558898554,
+    "wins_top5": [
+      [
+        "IB fees",
+        1
+      ],
+      [
+        "AWM inflows",
+        1
+      ],
+      [
+        "Home Lending revenue",
+        1
+      ],
+      [
+        "up 18% year-on-year in IB fees",
+        1
+      ],
+      [
+        "strong net inflows across AWM as well as in the CCB and Wealth Management business",
+        1
+      ]
+    ],
+    "risks_top5": [
+      [
+        "stagflation",
+        2
+      ],
+      [
+        "regulatory headwinds",
+        1
+      ],
+      [
+        "market activity pullback",
+        1
+      ],
+      [
+        "deposit margin compression",
+        1
+      ],
+      [
+        "economic, geopolitical and regulatory uncertainties",
+        1
+      ]
+    ],
+    "guidance_call": "lowered",
+    "guidance_by_model": {
+      "gemma3:4b": "lowered",
+      "llama3.1:8b": "lowered"
+    }
+  },
+  "dispersion": {
+    "sentiment_dispersion": null,
+    "guidance_disagree": 0,
+    "wins_overlap": null,
+    "risks_overlap": null,
+    "qa_minus_pres_risks": [
+      "basel iii uncertainty",
+      "credit spread tightening",
+      "first republic accretion",
+      "geopolitical effects",
+      "higher rates with recession",
+      "inflection point in the economy",
+      "loosening of terms in leveraged lending space",
+      "stagflation",
+      "tight credit spreads",
+      "uncertainty about the basel iii endgame",
+      "unchanged outlook"
+    ],
+    "qa_minus_pres_risks_count": 11,
+    "role_sent_means": {
+      "CFO": 0.3333333333333333
+    }
+  },
+  "by_role": {
+    "CEO": {
+      "n_units": 5,
+      "sentiment": -0.36160094418217165,
+      "wins_top5": [
+        [
+          "excess capital",
+          1
+        ],
+        [
+          "good shape",
+          1
+        ],
+        [
+          "patient",
+          1
+        ],
+        [
+          "increased dividend payout",
+          1
+        ],
+        [
+          "capital position is strong",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "stagflation",
+          2
+        ],
+        [
+          "geopolitical effects",
+          1
+        ],
+        [
+          "unchanged outlook",
+          1
+        ],
+        [
+          "higher rates with recession",
+          1
+        ],
+        [
+          "inflection point in the economy",
+          1
+        ]
+      ],
+      "guidance_vote": "raised"
+    },
+    "CFO": {
+      "n_units": 23,
+      "sentiment": 0.07021371776455822,
+      "wins_top5": [
+        [
+          "IB fees",
+          1
+        ],
+        [
+          "AWM inflows",
+          1
+        ],
+        [
+          "Home Lending revenue",
+          1
+        ],
+        [
+          "up 18% year-on-year in IB fees",
+          1
+        ],
+        [
+          "strong net inflows across AWM as well as in the CCB and Wealth Management business",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "regulatory headwinds",
+          1
+        ],
+        [
+          "market activity pullback",
+          1
+        ],
+        [
+          "deposit margin compression",
+          1
+        ],
+        [
+          "economic, geopolitical and regulatory uncertainties",
+          1
+        ],
+        [
+          "pulling forward from later in the year",
+          1
+        ]
+      ],
+      "guidance_vote": "maintained"
+    }
+  },
+  "by_section": {
+    "presenter": {
+      "n_units": 1,
+      "sentiment": 0.3333333333333333,
+      "wins_top5": [
+        [
+          "IB fees",
+          1
+        ],
+        [
+          "AWM inflows",
+          1
+        ],
+        [
+          "Home Lending revenue",
+          1
+        ],
+        [
+          "up 18% year-on-year in IB fees",
+          1
+        ],
+        [
+          "strong net inflows across AWM as well as in the CCB and Wealth Management business",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "regulatory headwinds",
+          1
+        ],
+        [
+          "market activity pullback",
+          1
+        ],
+        [
+          "deposit margin compression",
+          1
+        ],
+        [
+          "economic, geopolitical and regulatory uncertainties",
+          1
+        ],
+        [
+          "pulling forward from later in the year",
+          1
+        ]
+      ],
+      "guidance_vote": "lowered"
+    },
+    "qa": {
+      "n_units": 27,
+      "sentiment": -0.11205761558898554,
+      "wins_top5": [
+        [
+          "excess capital",
+          1
+        ],
+        [
+          "good shape",
+          1
+        ],
+        [
+          "patient",
+          1
+        ],
+        [
+          "increased dividend payout",
+          1
+        ],
+        [
+          "capital position is strong",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "stagflation",
+          2
+        ],
+        [
+          "geopolitical effects",
+          1
+        ],
+        [
+          "unchanged outlook",
+          1
+        ],
+        [
+          "higher rates with recession",
+          1
+        ],
+        [
+          "inflection point in the economy",
+          1
+        ]
+      ],
+      "guidance_vote": "raised"
+    }
+  },
+  "_cache_key": "b9c11fa20978a9b0"
+}

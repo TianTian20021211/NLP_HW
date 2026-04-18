@@ -1,0 +1,1 @@
+{"unit_id": "NVDA_Q2-2026__qa__005", "model": "gemma3:4b", "wins": ["AI infrastructure", "GPU", "performance per watt"], "risks": ["power limitations", "AI building limitations"], "guidance": "raised", "_cache_key": "ec72f2e9b51b1d31"}

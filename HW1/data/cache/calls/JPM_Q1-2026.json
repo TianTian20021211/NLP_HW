@@ -1,0 +1,290 @@
+{
+  "ticker": "JPM",
+  "quarter": "Q1-2026",
+  "call_date": "2026-04-14",
+  "variant": "finbert",
+  "n_units": {
+    "total": 44,
+    "presenter": 1,
+    "qa": 43
+  },
+  "models": [
+    "gemma3:4b",
+    "llama3.1:8b"
+  ],
+  "consensus": {
+    "sentiment_call": 0.4291522883967091,
+    "sentiment_qa": 0.02325853627403752,
+    "wins_top5": [
+      [
+        "higher markets revenue",
+        1
+      ],
+      [
+        "client investment assets",
+        1
+      ],
+      [
+        "Home Lending originations",
+        1
+      ],
+      [
+        "10% year-on-year revenue growth",
+        1
+      ],
+      [
+        "$5.2 billion CET1 capital increase",
+        1
+      ]
+    ],
+    "risks_top5": [
+      [
+        "cyber risk",
+        3
+      ],
+      [
+        "G-SIB surcharge",
+        2
+      ],
+      [
+        "increased RWA",
+        1
+      ],
+      [
+        "market decreasing",
+        1
+      ],
+      [
+        "Higher RWA due to balance sheet growth and lower rates",
+        1
+      ]
+    ],
+    "guidance_call": "raised",
+    "guidance_by_model": {
+      "gemma3:4b": "raised",
+      "llama3.1:8b": "none"
+    }
+  },
+  "dispersion": {
+    "sentiment_dispersion": null,
+    "guidance_disagree": 0,
+    "wins_overlap": null,
+    "risks_overlap": null,
+    "qa_minus_pres_risks": [
+      "credit cycle",
+      "credit cycle and potential losses in private credit",
+      "cyber risk",
+      "cyber risk associated with ai and generative models",
+      "impact of higher rates on leveraged companies and refinancing",
+      "potential impact of g sib surcharge on markets business",
+      "private market exposure",
+      "systemic risk",
+      "systemic risk in private credit market if capital expenditures continue with poor yield outlook"
+    ],
+    "qa_minus_pres_risks_count": 9,
+    "role_sent_means": {
+      "CFO": 0.4291522883967091
+    }
+  },
+  "by_role": {
+    "CEO": {
+      "n_units": 20,
+      "sentiment": -0.03560758587913551,
+      "wins_top5": [
+        [
+          "serving clients",
+          1
+        ],
+        [
+          "creative capital",
+          1
+        ],
+        [
+          "good business",
+          1
+        ],
+        [
+          "Strong trading performance",
+          1
+        ],
+        [
+          "Ability to serve large clients with complex capital needs",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "cyber risk",
+          2
+        ],
+        [
+          "credit cycle",
+          1
+        ],
+        [
+          "systemic risk",
+          1
+        ],
+        [
+          "Credit cycle and potential losses in private credit",
+          1
+        ],
+        [
+          "Impact of higher rates on leveraged companies and refinancing",
+          1
+        ]
+      ],
+      "guidance_vote": "none"
+    },
+    "CFO": {
+      "n_units": 24,
+      "sentiment": 0.15981103405470065,
+      "wins_top5": [
+        [
+          "higher markets revenue",
+          1
+        ],
+        [
+          "client investment assets",
+          1
+        ],
+        [
+          "Home Lending originations",
+          1
+        ],
+        [
+          "10% year-on-year revenue growth",
+          1
+        ],
+        [
+          "$5.2 billion CET1 capital increase",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "G-SIB surcharge",
+          2
+        ],
+        [
+          "increased RWA",
+          1
+        ],
+        [
+          "market decreasing",
+          1
+        ],
+        [
+          "Higher RWA due to balance sheet growth and lower rates",
+          1
+        ],
+        [
+          "G-SIB surcharge increase of $20 billion",
+          1
+        ]
+      ],
+      "guidance_vote": "maintained"
+    }
+  },
+  "by_section": {
+    "presenter": {
+      "n_units": 1,
+      "sentiment": 0.4291522883967091,
+      "wins_top5": [
+        [
+          "higher markets revenue",
+          1
+        ],
+        [
+          "client investment assets",
+          1
+        ],
+        [
+          "Home Lending originations",
+          1
+        ],
+        [
+          "10% year-on-year revenue growth",
+          1
+        ],
+        [
+          "$5.2 billion CET1 capital increase",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "increased RWA",
+          1
+        ],
+        [
+          "G-SIB surcharge",
+          1
+        ],
+        [
+          "market decreasing",
+          1
+        ],
+        [
+          "Higher RWA due to balance sheet growth and lower rates",
+          1
+        ],
+        [
+          "G-SIB surcharge increase of $20 billion",
+          1
+        ]
+      ],
+      "guidance_vote": "raised"
+    },
+    "qa": {
+      "n_units": 43,
+      "sentiment": 0.02325853627403752,
+      "wins_top5": [
+        [
+          "serving clients",
+          1
+        ],
+        [
+          "creative capital",
+          1
+        ],
+        [
+          "good business",
+          1
+        ],
+        [
+          "Strong trading performance",
+          1
+        ],
+        [
+          "Ability to serve large clients with complex capital needs",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "cyber risk",
+          3
+        ],
+        [
+          "credit cycle",
+          1
+        ],
+        [
+          "systemic risk",
+          1
+        ],
+        [
+          "Credit cycle and potential losses in private credit",
+          1
+        ],
+        [
+          "Impact of higher rates on leveraged companies and refinancing",
+          1
+        ]
+      ],
+      "guidance_vote": "maintained"
+    }
+  },
+  "_cache_key": "12c5a6764b1a9ff3"
+}

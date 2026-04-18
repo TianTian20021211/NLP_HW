@@ -1,0 +1,1 @@
+{"call_id": "PLTR_Q3-2025", "role": "CTO", "model": "gemma3:4b", "n_answers": 3, "unit_ids": ["PLTR_Q3-2025__qa__006", "PLTR_Q3-2025__qa__014", "PLTR_Q3-2025__qa__017"], "wins": ["FDE productivity", "customer productivity", "accelerated adoption"], "risks": [], "guidance": "none", "_cache_key": "0067eda25f7c1ed6"}

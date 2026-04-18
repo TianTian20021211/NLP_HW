@@ -1,0 +1,1 @@
+{"call_id": "AMD_Q3-2024", "role": "IR", "model": "gemma3:4b", "n_answers": 1, "unit_ids": ["AMD_Q3-2024__qa__027"], "wins": ["MI300 platform", "MI325 series", "Embedded for Xilinx"], "risks": [], "guidance": "none", "_cache_key": "0067eda25f7c1ed6"}

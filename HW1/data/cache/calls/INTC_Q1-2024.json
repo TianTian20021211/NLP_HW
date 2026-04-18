@@ -1,0 +1,348 @@
+{
+  "ticker": "INTC",
+  "quarter": "Q1-2024",
+  "call_date": "2024-04-25",
+  "variant": "finbert",
+  "n_units": {
+    "total": 33,
+    "presenter": 4,
+    "qa": 29
+  },
+  "models": [
+    "gemma3:4b",
+    "llama3.1:8b"
+  ],
+  "consensus": {
+    "sentiment_call": 0.4633207066089395,
+    "sentiment_qa": 0.4403710204502962,
+    "wins_top5": [
+      [
+        "earnings release",
+        1
+      ],
+      [
+        "earnings presentation",
+        1
+      ],
+      [
+        "received a copy of the Q1 earnings release and earnings presentation",
+        1
+      ],
+      [
+        "Intel 18A ramp",
+        1
+      ],
+      [
+        "Gaudi 3 launch",
+        1
+      ]
+    ],
+    "risks_top5": [
+      [
+        "supply constraints",
+        2
+      ],
+      [
+        "forward-looking statements",
+        1
+      ],
+      [
+        "risk factors",
+        1
+      ],
+      [
+        "various risks",
+        1
+      ],
+      [
+        "uncertainties",
+        1
+      ]
+    ],
+    "guidance_call": "maintained",
+    "guidance_by_model": {
+      "gemma3:4b": "maintained",
+      "llama3.1:8b": "none"
+    }
+  },
+  "dispersion": {
+    "sentiment_dispersion": 0.37422868825567296,
+    "guidance_disagree": 0,
+    "wins_overlap": 0.0,
+    "risks_overlap": 0.0,
+    "qa_minus_pres_risks": [
+      "cpu tam shift",
+      "external foundry constraints",
+      "flexibility to bring back external volume earlier is limited",
+      "foundry operating loss",
+      "inventory volatility",
+      "limited flexibility to bring back external volume earlier",
+      "near term demand weaker",
+      "potential operating loss in foundry business",
+      "server ramp delays",
+      "start up costs",
+      "start up costs next year",
+      "supply constraints impacting 2q outlook",
+      "supply constraints impacting client business",
+      "telecom weakness",
+      "telecom weakness affecting altera s growth",
+      "telecom weakness impacting altera business",
+      "volatility of gross margin due to reserving material up until prq date"
+    ],
+    "qa_minus_pres_risks_count": 17,
+    "role_sent_means": {
+      "CEO": 0.6765746637075274,
+      "CFO": 0.1473353773472617
+    }
+  },
+  "by_role": {
+    "CEO": {
+      "n_units": 15,
+      "sentiment": 0.5537138487170267,
+      "wins_top5": [
+        [
+          "Intel 18A ramp",
+          1
+        ],
+        [
+          "Gaudi 3 launch",
+          1
+        ],
+        [
+          "CHIPS Act award",
+          1
+        ],
+        [
+          "announced Microsoft as our fifth Intel 18A customer",
+          1
+        ],
+        [
+          "signed another meaningful customer on Intel 18A, bringing our total to 6",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "modestly weaker first half trends",
+          1
+        ],
+        [
+          "supply constraints",
+          1
+        ],
+        [
+          "foundry profitability",
+          1
+        ],
+        [
+          "near-term demand weaker",
+          1
+        ],
+        [
+          "server ramp delays",
+          1
+        ]
+      ],
+      "guidance_vote": "raised"
+    },
+    "CFO": {
+      "n_units": 6,
+      "sentiment": 0.22366400832952213,
+      "wins_top5": [
+        [
+          "margin stacking advantage",
+          1
+        ],
+        [
+          "IDM 2.0 vision",
+          1
+        ],
+        [
+          "encouraging market signals",
+          1
+        ],
+        [
+          "rapid profitability improvement",
+          1
+        ],
+        [
+          "recovery of Mobileye and Altera financial results",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "5 node and 4-year driven factory start-up costs",
+          1
+        ],
+        [
+          "majority of our volume on pre-EUV process nodes",
+          1
+        ],
+        [
+          "uncompetitive economics",
+          1
+        ],
+        [
+          "5 node and 4-year start-up costs peaking",
+          1
+        ],
+        [
+          "inventory positions not normalizing for Altera",
+          1
+        ]
+      ],
+      "guidance_vote": "raised"
+    },
+    "IR": {
+      "n_units": 12,
+      "sentiment": -0.013159426657966823,
+      "wins_top5": [
+        [
+          "earnings release",
+          1
+        ],
+        [
+          "earnings presentation",
+          1
+        ],
+        [
+          "received a copy of the Q1 earnings release and earnings presentation",
+          1
+        ],
+        [
+          "second half ramp",
+          1
+        ],
+        [
+          "margin improvement",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "forward-looking statements",
+          1
+        ],
+        [
+          "risk factors",
+          1
+        ],
+        [
+          "various risks",
+          1
+        ],
+        [
+          "uncertainties",
+          1
+        ],
+        [
+          "specific risk factors",
+          1
+        ]
+      ],
+      "guidance_vote": "none"
+    }
+  },
+  "by_section": {
+    "presenter": {
+      "n_units": 4,
+      "sentiment": 0.4633207066089395,
+      "wins_top5": [
+        [
+          "earnings release",
+          1
+        ],
+        [
+          "earnings presentation",
+          1
+        ],
+        [
+          "received a copy of the Q1 earnings release and earnings presentation",
+          1
+        ],
+        [
+          "Intel 18A ramp",
+          1
+        ],
+        [
+          "Gaudi 3 launch",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "forward-looking statements",
+          1
+        ],
+        [
+          "risk factors",
+          1
+        ],
+        [
+          "various risks",
+          1
+        ],
+        [
+          "uncertainties",
+          1
+        ],
+        [
+          "specific risk factors",
+          1
+        ]
+      ],
+      "guidance_vote": "maintained"
+    },
+    "qa": {
+      "n_units": 29,
+      "sentiment": 0.4403710204502962,
+      "wins_top5": [
+        [
+          "strong AI PC outlook",
+          1
+        ],
+        [
+          "improving ASPs",
+          1
+        ],
+        [
+          "Gaudi 2/3 customer adoption",
+          1
+        ],
+        [
+          "regaining server share",
+          1
+        ],
+        [
+          "strong AI PC outlook with Core Ultra and $40 million shipment target",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "near-term demand weaker",
+          1
+        ],
+        [
+          "server ramp delays",
+          1
+        ],
+        [
+          "external foundry constraints",
+          1
+        ],
+        [
+          "supply constraints impacting client business",
+          1
+        ],
+        [
+          "telecom weakness affecting Altera's growth",
+          1
+        ]
+      ],
+      "guidance_vote": "raised"
+    }
+  },
+  "_cache_key": "12c5a6764b1a9ff3"
+}

@@ -1,0 +1,19 @@
+{
+  "extraction": "ext_finbert_llm",
+  "model": "logreg",
+  "horizon": "21d",
+  "score_kind": "binary",
+  "n_rows": 54,
+  "n_trades": 54,
+  "n_long": 54,
+  "n_short": 0,
+  "directional_accuracy": 0.5,
+  "hit_rate": 0.48148148148148145,
+  "IC_spearman": -0.03838383838383838,
+  "pnl_sum": 0.018693336906921765,
+  "pnl_mean_per_trade": 0.0003461729056837364,
+  "sharpe_annualized": 0.03420588333582873,
+  "avg_win": 0.0600159153337889,
+  "avg_loss": -0.05506144506327105,
+  "final_equity": 0.8783759059481774
+}

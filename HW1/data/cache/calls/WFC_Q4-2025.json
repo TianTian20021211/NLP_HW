@@ -1,0 +1,330 @@
+{
+  "ticker": "WFC",
+  "quarter": "Q4-2025",
+  "call_date": "2026-01-15",
+  "variant": "finbert",
+  "n_units": {
+    "total": 38,
+    "presenter": 3,
+    "qa": 35
+  },
+  "models": [
+    "gemma3:4b",
+    "llama3.1:8b"
+  ],
+  "consensus": {
+    "sentiment_call": 0.4072552091353266,
+    "sentiment_qa": 0.2430661556409123,
+    "wins_top5": [
+      [
+        "fourth quarter results",
+        2
+      ],
+      [
+        "earnings materials",
+        1
+      ],
+      [
+        "SEC filings",
+        1
+      ],
+      [
+        "credit card accounts",
+        1
+      ],
+      [
+        "auto business growth",
+        1
+      ]
+    ],
+    "risks_top5": [
+      [
+        "risks and uncertainties",
+        2
+      ],
+      [
+        "market volatility",
+        2
+      ],
+      [
+        "forward-looking statements",
+        1
+      ],
+      [
+        "SEC filings",
+        1
+      ],
+      [
+        "factors that may cause actual results to differ materially from expectations",
+        1
+      ]
+    ],
+    "guidance_call": "raised",
+    "guidance_by_model": {
+      "gemma3:4b": "raised",
+      "llama3.1:8b": "raised"
+    }
+  },
+  "dispersion": {
+    "sentiment_dispersion": 0.23589824322345368,
+    "guidance_disagree": 1,
+    "wins_overlap": 0.0,
+    "risks_overlap": 0.0,
+    "qa_minus_pres_risks": [
+      "cre uncertainty",
+      "negative impact on rotce from lower roa in markets business",
+      "nii headwinds",
+      "potential negative impact on rotce due to lower roa business",
+      "risk of loan losses particularly in commercial real estate",
+      "risk of taking on too much risk in lending book",
+      "uncertain regulatory landscape",
+      "uncertainty around credit environment and interest rate curve",
+      "uncertainty around market conditions and fee line growth",
+      "unpredictable trading volumes",
+      "volatile market conditions"
+    ],
+    "qa_minus_pres_risks_count": 11,
+    "role_sent_means": {
+      "CEO": 0.6373508744294359,
+      "CFO": 0.30374037952284066
+    }
+  },
+  "by_role": {
+    "CEO": {
+      "n_units": 15,
+      "sentiment": 0.37870239639888587,
+      "wins_top5": [
+        [
+          "credit card accounts",
+          1
+        ],
+        [
+          "auto business growth",
+          1
+        ],
+        [
+          "wealth and investment management",
+          1
+        ],
+        [
+          "increased net income to $21.3 billion",
+          1
+        ],
+        [
+          "grew diluted earnings per share by 17%",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "economy and customers resilient",
+          1
+        ],
+        [
+          "monitor portfolios for weakness",
+          1
+        ],
+        [
+          "market conditions can always change",
+          1
+        ],
+        [
+          "signs of weakness in the economy and customer portfolios",
+          1
+        ],
+        [
+          "lower margin assets with lower risk and less capital intensity",
+          1
+        ]
+      ],
+      "guidance_vote": "none"
+    },
+    "CFO": {
+      "n_units": 22,
+      "sentiment": 0.2949877487319071,
+      "wins_top5": [
+        [
+          "net interest income",
+          1
+        ],
+        [
+          "loan growth",
+          1
+        ],
+        [
+          "fee-based revenue growth",
+          1
+        ],
+        [
+          "Net interest income increased $381 million or 3% from the third quarter",
+          1
+        ],
+        [
+          "Noninterest income increased $419 million or 5% from a year ago",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "market volatility",
+          2
+        ],
+        [
+          "rate cuts",
+          1
+        ],
+        [
+          "office valuations",
+          1
+        ],
+        [
+          "Office valuations continue to stabilize, although we expect additional losses which could be lumpy",
+          1
+        ],
+        [
+          "The ultimate performance of the market is uncertain",
+          1
+        ]
+      ],
+      "guidance_vote": "maintained"
+    },
+    "IR": {
+      "n_units": 1,
+      "sentiment": -0.0017756472280876122,
+      "wins_top5": [
+        [
+          "fourth quarter results",
+          2
+        ],
+        [
+          "earnings materials",
+          1
+        ],
+        [
+          "SEC filings",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "risks and uncertainties",
+          2
+        ],
+        [
+          "forward-looking statements",
+          1
+        ],
+        [
+          "SEC filings",
+          1
+        ],
+        [
+          "factors that may cause actual results to differ materially from expectations",
+          1
+        ]
+      ],
+      "guidance_vote": "none"
+    }
+  },
+  "by_section": {
+    "presenter": {
+      "n_units": 3,
+      "sentiment": 0.4072552091353266,
+      "wins_top5": [
+        [
+          "fourth quarter results",
+          2
+        ],
+        [
+          "earnings materials",
+          1
+        ],
+        [
+          "SEC filings",
+          1
+        ],
+        [
+          "credit card accounts",
+          1
+        ],
+        [
+          "auto business growth",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "risks and uncertainties",
+          2
+        ],
+        [
+          "forward-looking statements",
+          1
+        ],
+        [
+          "SEC filings",
+          1
+        ],
+        [
+          "factors that may cause actual results to differ materially from expectations",
+          1
+        ],
+        [
+          "economy and customers resilient",
+          1
+        ]
+      ],
+      "guidance_vote": "raised"
+    },
+    "qa": {
+      "n_units": 35,
+      "sentiment": 0.2430661556409123,
+      "wins_top5": [
+        [
+          "efficiency initiatives",
+          2
+        ],
+        [
+          "rate outlook",
+          1
+        ],
+        [
+          "market growth",
+          1
+        ],
+        [
+          "Continued growth in loans",
+          1
+        ],
+        [
+          "Improved efficiency and cost savings through various initiatives",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "NII headwinds",
+          1
+        ],
+        [
+          "CRE uncertainty",
+          1
+        ],
+        [
+          "market volatility",
+          1
+        ],
+        [
+          "Potential negative impact on ROTCE due to lower ROA business",
+          1
+        ],
+        [
+          "Risk of loan losses, particularly in commercial real estate",
+          1
+        ]
+      ],
+      "guidance_vote": "maintained"
+    }
+  },
+  "_cache_key": "12c5a6764b1a9ff3"
+}

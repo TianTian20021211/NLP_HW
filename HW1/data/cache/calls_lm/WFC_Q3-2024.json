@@ -1,0 +1,338 @@
+{
+  "ticker": "WFC",
+  "quarter": "Q3-2024",
+  "call_date": "2024-10-11",
+  "variant": "lm",
+  "n_units": {
+    "total": 28,
+    "presenter": 3,
+    "qa": 25
+  },
+  "models": [
+    "gemma3:4b",
+    "llama3.1:8b"
+  ],
+  "consensus": {
+    "sentiment_call": -0.0976144450345194,
+    "sentiment_qa": 0.4928301348362703,
+    "wins_top5": [
+      [
+        "third quarter results",
+        2
+      ],
+      [
+        "earnings materials",
+        1
+      ],
+      [
+        "SEC filings",
+        1
+      ],
+      [
+        "strong credit discipline",
+        1
+      ],
+      [
+        "operating efficiencies",
+        1
+      ]
+    ],
+    "risks_top5": [
+      [
+        "risks and uncertainties",
+        2
+      ],
+      [
+        "forward-looking statements",
+        1
+      ],
+      [
+        "materially from expectations",
+        1
+      ],
+      [
+        "factors that may cause actual results to differ materially from expectations",
+        1
+      ],
+      [
+        "weak commercial loan demand",
+        1
+      ]
+    ],
+    "guidance_call": "lowered",
+    "guidance_by_model": {
+      "gemma3:4b": "lowered",
+      "llama3.1:8b": "none"
+    }
+  },
+  "dispersion": {
+    "sentiment_dispersion": 0.06464976285134148,
+    "guidance_disagree": 1,
+    "wins_overlap": 0.0,
+    "risks_overlap": 0.0,
+    "qa_minus_pres_risks": [
+      "asset cap",
+      "commercial real estate office portfolio credit quality issues",
+      "consent order",
+      "expense base",
+      "impact of asset cap removal on wholesale deposits and markets business",
+      "loan demand",
+      "macro backdrop uncertainty",
+      "macro uncertainty",
+      "market volatility",
+      "potential for increased expenses related to consent order work",
+      "regulatory scrutiny around anti money laundering and kyc",
+      "uncertainty around the election"
+    ],
+    "qa_minus_pres_risks_count": 12,
+    "role_sent_means": {
+      "CEO": -0.02857142857142857,
+      "CFO": -0.12
+    }
+  },
+  "by_role": {
+    "CEO": {
+      "n_units": 12,
+      "sentiment": 0.09529030617026119,
+      "wins_top5": [
+        [
+          "strong credit discipline",
+          1
+        ],
+        [
+          "operating efficiencies",
+          1
+        ],
+        [
+          "credit card portfolio growth",
+          1
+        ],
+        [
+          "net income up from the second quarter",
+          1
+        ],
+        [
+          "diluted earnings per share of $1.42 and ROE of 11.7% and an ROTCE of 13.9%, all were up from the second quarter",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "weak commercial loan demand",
+          1
+        ],
+        [
+          "office market weakness",
+          1
+        ],
+        [
+          "deposit declines",
+          1
+        ],
+        [
+          "commercial loan demand remains weak, reflecting economic uncertainty and the expectation that rates will be lower in the future",
+          1
+        ],
+        [
+          "the office market remains weak",
+          1
+        ]
+      ],
+      "guidance_vote": "none"
+    },
+    "CFO": {
+      "n_units": 14,
+      "sentiment": 0.1864926451273969,
+      "wins_top5": [
+        [
+          "strong growth in noninterest income",
+          1
+        ],
+        [
+          "lower commercial real estate losses",
+          1
+        ],
+        [
+          "stable allowance coverage",
+          1
+        ],
+        [
+          "12% growth in noninterest income",
+          1
+        ],
+        [
+          "reduction in corporate treasury deposits is a positive for net interest income",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "decline in net interest income",
+          1
+        ],
+        [
+          "continued loan balance declines",
+          1
+        ],
+        [
+          "uncertain economic conditions",
+          1
+        ],
+        [
+          "economic uncertainty, high borrowing costs",
+          1
+        ],
+        [
+          "commercial real estate office losses to be lumpy",
+          1
+        ]
+      ],
+      "guidance_vote": "raised"
+    },
+    "IR": {
+      "n_units": 1,
+      "sentiment": -0.3333333333333333,
+      "wins_top5": [
+        [
+          "third quarter results",
+          2
+        ],
+        [
+          "earnings materials",
+          1
+        ],
+        [
+          "SEC filings",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "risks and uncertainties",
+          2
+        ],
+        [
+          "forward-looking statements",
+          1
+        ],
+        [
+          "materially from expectations",
+          1
+        ],
+        [
+          "factors that may cause actual results to differ materially from expectations",
+          1
+        ]
+      ],
+      "guidance_vote": "none"
+    },
+    "Unknown": {
+      "n_units": 1,
+      "sentiment": null,
+      "wins_top5": [],
+      "risks_top5": [],
+      "guidance_vote": "none"
+    }
+  },
+  "by_section": {
+    "presenter": {
+      "n_units": 3,
+      "sentiment": -0.0976144450345194,
+      "wins_top5": [
+        [
+          "third quarter results",
+          2
+        ],
+        [
+          "earnings materials",
+          1
+        ],
+        [
+          "SEC filings",
+          1
+        ],
+        [
+          "strong credit discipline",
+          1
+        ],
+        [
+          "operating efficiencies",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "risks and uncertainties",
+          2
+        ],
+        [
+          "forward-looking statements",
+          1
+        ],
+        [
+          "materially from expectations",
+          1
+        ],
+        [
+          "factors that may cause actual results to differ materially from expectations",
+          1
+        ],
+        [
+          "weak commercial loan demand",
+          1
+        ]
+      ],
+      "guidance_vote": "lowered"
+    },
+    "qa": {
+      "n_units": 25,
+      "sentiment": 0.4928301348362703,
+      "wins_top5": [
+        [
+          "deposit mix",
+          1
+        ],
+        [
+          "efficiency agenda",
+          1
+        ],
+        [
+          "capital position",
+          1
+        ],
+        [
+          "efficiency coming through on salaries and other items",
+          1
+        ],
+        [
+          "good stabilization of deposits across the businesses",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "macro uncertainty",
+          1
+        ],
+        [
+          "loan demand",
+          1
+        ],
+        [
+          "market volatility",
+          1
+        ],
+        [
+          "uncertainty around the election",
+          1
+        ],
+        [
+          "macro backdrop uncertainty",
+          1
+        ]
+      ],
+      "guidance_vote": "raised"
+    }
+  },
+  "_cache_key": "b9c11fa20978a9b0"
+}

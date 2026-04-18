@@ -1,0 +1,331 @@
+{
+  "ticker": "FAST",
+  "quarter": "Q3-2024",
+  "call_date": "2024-10-11",
+  "variant": "finbert",
+  "n_units": {
+    "total": 28,
+    "presenter": 3,
+    "qa": 25
+  },
+  "models": [
+    "gemma3:4b",
+    "llama3.1:8b"
+  ],
+  "consensus": {
+    "sentiment_call": 0.15418030757336282,
+    "sentiment_qa": 0.11776108109716957,
+    "wins_top5": [
+      [
+        "quarterly results",
+        1
+      ],
+      [
+        "operations",
+        1
+      ],
+      [
+        "proprietary presentation",
+        1
+      ],
+      [
+        "up to 1 hour of Q&A time",
+        1
+      ],
+      [
+        "stronger quarter",
+        1
+      ]
+    ],
+    "risks_top5": [
+      [
+        "Mexico duties",
+        2
+      ],
+      [
+        "future plans",
+        1
+      ],
+      [
+        "prospects",
+        1
+      ],
+      [
+        "actual results",
+        1
+      ],
+      [
+        "challenging aspects",
+        1
+      ]
+    ],
+    "guidance_call": "none",
+    "guidance_by_model": {
+      "gemma3:4b": "none",
+      "llama3.1:8b": "none"
+    }
+  },
+  "dispersion": {
+    "sentiment_dispersion": 0.1269999429610572,
+    "guidance_disagree": 0,
+    "wins_overlap": 0.0,
+    "risks_overlap": 0.0,
+    "qa_minus_pres_risks": [
+      "ag weakness",
+      "boeing strike",
+      "canada duties on gloves",
+      "channel visibility",
+      "contraction in spend per customer wiping out 31 of growth",
+      "economic headwinds",
+      "federal authorities raising the cost of moving product across borders",
+      "lingering effect in the western u s",
+      "margin pressure",
+      "mexico duties",
+      "probability of business taking another step down and creating headwinds"
+    ],
+    "qa_minus_pres_risks_count": 11,
+    "role_sent_means": {
+      "Other_Exec": -0.03650638337353332,
+      "CEO": 0.21741071714099433,
+      "CFO": 0.0960678668451601
+    }
+  },
+  "by_role": {
+    "CEO": {
+      "n_units": 13,
+      "sentiment": 0.14114700638801844,
+      "wins_top5": [
+        [
+          "stronger quarter",
+          1
+        ],
+        [
+          "flexibility in transportation",
+          1
+        ],
+        [
+          "increased digital footprint",
+          1
+        ],
+        [
+          "added 93 onsites in the quarter",
+          1
+        ],
+        [
+          "finished the quarter stronger than it started, despite hurricane impact",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "challenging aspects",
+          1
+        ],
+        [
+          "customer business off",
+          1
+        ],
+        [
+          "e-commerce single digits",
+          1
+        ],
+        [
+          "challenging aspects of established customer locations with declining business",
+          1
+        ],
+        [
+          "impact of hurricanes on sales",
+          1
+        ]
+      ],
+      "guidance_vote": "raised"
+    },
+    "CFO": {
+      "n_units": 14,
+      "sentiment": 0.13136101501008438,
+      "wins_top5": [
+        [
+          "strong signings momentum",
+          1
+        ],
+        [
+          "improved tone",
+          1
+        ],
+        [
+          "strong year-to-date signings",
+          1
+        ],
+        [
+          "improved September daily sales rate",
+          1
+        ],
+        [
+          "strong year-to-date signings momentum",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "Mexico duties",
+          2
+        ],
+        [
+          "sluggish end markets",
+          1
+        ],
+        [
+          "channel destocking",
+          1
+        ],
+        [
+          "uncertainty over plant shutdowns",
+          1
+        ],
+        [
+          "weak end markets",
+          1
+        ]
+      ],
+      "guidance_vote": "raised"
+    },
+    "Other_Exec": {
+      "n_units": 1,
+      "sentiment": -0.03650638337353332,
+      "wins_top5": [
+        [
+          "quarterly results",
+          1
+        ],
+        [
+          "operations",
+          1
+        ],
+        [
+          "proprietary presentation",
+          1
+        ],
+        [
+          "up to 1 hour of Q&A time",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "future plans",
+          1
+        ],
+        [
+          "prospects",
+          1
+        ],
+        [
+          "actual results",
+          1
+        ]
+      ],
+      "guidance_vote": "none"
+    }
+  },
+  "by_section": {
+    "presenter": {
+      "n_units": 3,
+      "sentiment": 0.15418030757336282,
+      "wins_top5": [
+        [
+          "quarterly results",
+          1
+        ],
+        [
+          "operations",
+          1
+        ],
+        [
+          "proprietary presentation",
+          1
+        ],
+        [
+          "up to 1 hour of Q&A time",
+          1
+        ],
+        [
+          "stronger quarter",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "future plans",
+          1
+        ],
+        [
+          "prospects",
+          1
+        ],
+        [
+          "actual results",
+          1
+        ],
+        [
+          "challenging aspects",
+          1
+        ],
+        [
+          "customer business off",
+          1
+        ]
+      ],
+      "guidance_vote": "none"
+    },
+    "qa": {
+      "n_units": 25,
+      "sentiment": 0.11776108109716957,
+      "wins_top5": [
+        [
+          "turnaround",
+          1
+        ],
+        [
+          "margin improvement",
+          1
+        ],
+        [
+          "customer growth",
+          1
+        ],
+        [
+          "turned a corner",
+          1
+        ],
+        [
+          "expect outgrowth to improve going forward",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "Mexico duties",
+          2
+        ],
+        [
+          "channel visibility",
+          1
+        ],
+        [
+          "economic headwinds",
+          1
+        ],
+        [
+          "margin pressure",
+          1
+        ],
+        [
+          "probability of business taking another step down and creating headwinds",
+          1
+        ]
+      ],
+      "guidance_vote": "raised"
+    }
+  },
+  "_cache_key": "12c5a6764b1a9ff3"
+}

@@ -1,0 +1,348 @@
+{
+  "ticker": "INTC",
+  "quarter": "Q4-2023",
+  "call_date": "2024-01-25",
+  "variant": "lm",
+  "n_units": {
+    "total": 22,
+    "presenter": 4,
+    "qa": 18
+  },
+  "models": [
+    "gemma3:4b",
+    "llama3.1:8b"
+  ],
+  "consensus": {
+    "sentiment_call": 0.7570152352003559,
+    "sentiment_qa": 0.7613989612255269,
+    "wins_top5": [
+      [
+        "earnings presentation",
+        2
+      ],
+      [
+        "record revenue",
+        2
+      ],
+      [
+        "earnings release",
+        1
+      ],
+      [
+        "Q4 earnings release",
+        1
+      ],
+      [
+        "Gaudi2 AI accelerators",
+        1
+      ]
+    ],
+    "risks_top5": [
+      [
+        "capacity utilization",
+        2
+      ],
+      [
+        "forward-looking statements",
+        1
+      ],
+      [
+        "risks and uncertainties",
+        1
+      ],
+      [
+        "various risks and uncertainties",
+        1
+      ],
+      [
+        "Mobileye inventory correction",
+        1
+      ]
+    ],
+    "guidance_call": "none",
+    "guidance_by_model": {
+      "gemma3:4b": "none",
+      "llama3.1:8b": "none"
+    }
+  },
+  "dispersion": {
+    "sentiment_dispersion": 0.23570226039551578,
+    "guidance_disagree": 0,
+    "wins_overlap": 0.0,
+    "risks_overlap": 0.0,
+    "qa_minus_pres_risks": [
+      "backside power gate all around and high na",
+      "capacity utilization",
+      "capacity utilization headwinds",
+      "data center decline",
+      "discrete events",
+      "euv tools",
+      "euv tools not yet fully derisked for 18a",
+      "incremental capex",
+      "limited room for cpu business growth beyond seasonal variations",
+      "persistent headwinds in terms of capacity utilization",
+      "quarter to quarter volatility",
+      "quarter to quarter volatility around fall through",
+      "start up costs",
+      "start up costs associated with 5 nodes in 4 years",
+      "volatility",
+      "volatility in gross margins",
+      "weakness in fpga market"
+    ],
+    "qa_minus_pres_risks_count": 17,
+    "role_sent_means": {
+      "CEO": 0.8888888888888888,
+      "CFO": 0.5555555555555556
+    }
+  },
+  "by_role": {
+    "CEO": {
+      "n_units": 10,
+      "sentiment": 0.8681911817597322,
+      "wins_top5": [
+        [
+          "Gaudi2 AI accelerators",
+          1
+        ],
+        [
+          "Core Ultra launch",
+          1
+        ],
+        [
+          "foundry ecosystem growth",
+          1
+        ],
+        [
+          "50 test chips in the pipeline across 2024 and 2025",
+          1
+        ],
+        [
+          "75% of which are on Intel 18A",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "Mobileye inventory correction",
+          1
+        ],
+        [
+          "Discrete headwinds",
+          1
+        ],
+        [
+          "PSG cyclical correction",
+          1
+        ],
+        [
+          "discrete headwinds, including Mobileye, PSG and business exits, among others",
+          1
+        ],
+        [
+          "industry-wide cyclical correction for FPGAs",
+          1
+        ]
+      ],
+      "guidance_vote": "raised"
+    },
+    "CFO": {
+      "n_units": 6,
+      "sentiment": 0.5395604746618115,
+      "wins_top5": [
+        [
+          "record revenue",
+          2
+        ],
+        [
+          "strong execution",
+          1
+        ],
+        [
+          "significant progress",
+          1
+        ],
+        [
+          "record operating profit",
+          1
+        ],
+        [
+          "$7 billion of future revenue",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "double-digit decline",
+          1
+        ],
+        [
+          "accelerated purchasing",
+          1
+        ],
+        [
+          "significant increase in variable factory start-up costs",
+          1
+        ],
+        [
+          "macro headwinds throughout the year",
+          1
+        ],
+        [
+          "cyclical weakness in wafer equipment buying in the first half of the year, impacting the IMS business",
+          1
+        ]
+      ],
+      "guidance_vote": "raised"
+    },
+    "IR": {
+      "n_units": 6,
+      "sentiment": -1.0,
+      "wins_top5": [
+        [
+          "earnings presentation",
+          2
+        ],
+        [
+          "earnings release",
+          1
+        ],
+        [
+          "Q4 earnings release",
+          1
+        ],
+        [
+          "Q&A portion",
+          1
+        ],
+        [
+          "gross margin",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "forward-looking statements",
+          1
+        ],
+        [
+          "risks and uncertainties",
+          1
+        ],
+        [
+          "various risks and uncertainties",
+          1
+        ],
+        [
+          "volatility",
+          1
+        ],
+        [
+          "data center decline",
+          1
+        ]
+      ],
+      "guidance_vote": "none"
+    }
+  },
+  "by_section": {
+    "presenter": {
+      "n_units": 4,
+      "sentiment": 0.7570152352003559,
+      "wins_top5": [
+        [
+          "earnings presentation",
+          2
+        ],
+        [
+          "record revenue",
+          2
+        ],
+        [
+          "earnings release",
+          1
+        ],
+        [
+          "Q4 earnings release",
+          1
+        ],
+        [
+          "Gaudi2 AI accelerators",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "forward-looking statements",
+          1
+        ],
+        [
+          "risks and uncertainties",
+          1
+        ],
+        [
+          "various risks and uncertainties",
+          1
+        ],
+        [
+          "Mobileye inventory correction",
+          1
+        ],
+        [
+          "Discrete headwinds",
+          1
+        ]
+      ],
+      "guidance_vote": "none"
+    },
+    "qa": {
+      "n_units": 18,
+      "sentiment": 0.7613989612255269,
+      "wins_top5": [
+        [
+          "strong product lines",
+          1
+        ],
+        [
+          "healthy inventory",
+          1
+        ],
+        [
+          "momentum across it",
+          1
+        ],
+        [
+          "4 18A foundry customers",
+          1
+        ],
+        [
+          "Clearwater Forest taping out on 18A",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "capacity utilization",
+          2
+        ],
+        [
+          "discrete events",
+          1
+        ],
+        [
+          "EUV tools",
+          1
+        ],
+        [
+          "backside power gate all around and high NA",
+          1
+        ],
+        [
+          "EUV tools not yet fully derisked for 18A",
+          1
+        ]
+      ],
+      "guidance_vote": "raised"
+    }
+  },
+  "_cache_key": "b9c11fa20978a9b0"
+}

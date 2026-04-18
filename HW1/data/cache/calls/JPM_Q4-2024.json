@@ -1,0 +1,293 @@
+{
+  "ticker": "JPM",
+  "quarter": "Q4-2024",
+  "call_date": "2025-01-15",
+  "variant": "finbert",
+  "n_units": {
+    "total": 34,
+    "presenter": 3,
+    "qa": 31
+  },
+  "models": [
+    "gemma3:4b",
+    "llama3.1:8b"
+  ],
+  "consensus": {
+    "sentiment_call": 0.2884196933355552,
+    "sentiment_qa": 0.10188345324542347,
+    "wins_top5": [
+      [
+        "record inflows",
+        1
+      ],
+      [
+        "IB fees",
+        1
+      ],
+      [
+        "card loan growth",
+        1
+      ],
+      [
+        "record revenue and net income",
+        1
+      ],
+      [
+        "healthy card loan growth",
+        1
+      ]
+    ],
+    "risks_top5": [
+      [
+        "stagflation",
+        2
+      ],
+      [
+        "NII normalization",
+        1
+      ],
+      [
+        "deposit margin compression",
+        1
+      ],
+      [
+        "market volatility",
+        1
+      ],
+      [
+        "tension in the environment",
+        1
+      ]
+    ],
+    "guidance_call": "none",
+    "guidance_by_model": {
+      "gemma3:4b": "none",
+      "llama3.1:8b": "none"
+    }
+  },
+  "dispersion": {
+    "sentiment_dispersion": 0.11968461126597041,
+    "guidance_disagree": 0,
+    "wins_overlap": 0.0,
+    "risks_overlap": null,
+    "qa_minus_pres_risks": [
+      "deposit growth",
+      "execution risk of expanding consumer banking globally",
+      "g sib surcharge",
+      "higher rates with higher unemployment driving higher credit losses",
+      "policy uncertainty",
+      "regulatory uncertainty",
+      "regulatory uncertainty and potential changes to the framework",
+      "special dividends",
+      "stagflation",
+      "unemployment as a driver of credit quality",
+      "wholesale credit normalization to a slightly more reasonable level"
+    ],
+    "qa_minus_pres_risks_count": 11,
+    "role_sent_means": {
+      "CFO": 0.2999564277028875,
+      "CEO": 0.13069682724320042
+    }
+  },
+  "by_role": {
+    "CEO": {
+      "n_units": 13,
+      "sentiment": -0.04899251284107333,
+      "wins_top5": [
+        [
+          "great investment bank",
+          1
+        ],
+        [
+          "trusted by everyone",
+          1
+        ],
+        [
+          "skills and talents",
+          1
+        ],
+        [
+          "built one of the great investment banks in the world",
+          1
+        ],
+        [
+          "helped build one of the great investment banks in the world",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "stagflation",
+          2
+        ],
+        [
+          "regulatory uncertainty",
+          1
+        ],
+        [
+          "special dividends",
+          1
+        ],
+        [
+          "higher rates with higher unemployment driving higher credit losses",
+          1
+        ],
+        [
+          "unemployment as a driver of credit quality",
+          1
+        ]
+      ],
+      "guidance_vote": "none"
+    },
+    "CFO": {
+      "n_units": 21,
+      "sentiment": 0.20219019077980524,
+      "wins_top5": [
+        [
+          "record inflows",
+          1
+        ],
+        [
+          "IB fees",
+          1
+        ],
+        [
+          "card loan growth",
+          1
+        ],
+        [
+          "record revenue and net income",
+          1
+        ],
+        [
+          "healthy card loan growth",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "NII normalization",
+          1
+        ],
+        [
+          "deposit margin compression",
+          1
+        ],
+        [
+          "market volatility",
+          1
+        ],
+        [
+          "tension in the environment",
+          1
+        ],
+        [
+          "degree of optimism embedded in asset prices and expectations",
+          1
+        ]
+      ],
+      "guidance_vote": "maintained"
+    }
+  },
+  "by_section": {
+    "presenter": {
+      "n_units": 3,
+      "sentiment": 0.2884196933355552,
+      "wins_top5": [
+        [
+          "record inflows",
+          1
+        ],
+        [
+          "IB fees",
+          1
+        ],
+        [
+          "card loan growth",
+          1
+        ],
+        [
+          "record revenue and net income",
+          1
+        ],
+        [
+          "healthy card loan growth",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "NII normalization",
+          1
+        ],
+        [
+          "deposit margin compression",
+          1
+        ],
+        [
+          "market volatility",
+          1
+        ],
+        [
+          "tension in the environment",
+          1
+        ],
+        [
+          "degree of optimism embedded in asset prices and expectations",
+          1
+        ]
+      ],
+      "guidance_vote": "none"
+    },
+    "qa": {
+      "n_units": 31,
+      "sentiment": 0.10188345324542347,
+      "wins_top5": [
+        [
+          "strategic decision",
+          1
+        ],
+        [
+          "excess capital",
+          1
+        ],
+        [
+          "branch expansion",
+          1
+        ],
+        [
+          "arresting the growth of excess capital",
+          1
+        ],
+        [
+          "improving efficiency through organic means",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "stagflation",
+          2
+        ],
+        [
+          "G-SIB surcharge",
+          1
+        ],
+        [
+          "policy uncertainty",
+          1
+        ],
+        [
+          "deposit growth",
+          1
+        ],
+        [
+          "wholesale credit normalization to a slightly more reasonable level",
+          1
+        ]
+      ],
+      "guidance_vote": "maintained"
+    }
+  },
+  "_cache_key": "12c5a6764b1a9ff3"
+}

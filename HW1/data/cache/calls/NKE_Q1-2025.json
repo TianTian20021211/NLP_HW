@@ -1,0 +1,237 @@
+{
+  "ticker": "NKE",
+  "quarter": "Q1-2025",
+  "call_date": "2024-10-01",
+  "variant": "finbert",
+  "n_units": {
+    "total": 9,
+    "presenter": 2,
+    "qa": 7
+  },
+  "models": [
+    "gemma3:4b",
+    "llama3.1:8b"
+  ],
+  "consensus": {
+    "sentiment_call": 0.2318491249443066,
+    "sentiment_qa": 0.2703671012163502,
+    "wins_top5": [
+      [
+        "earnings call",
+        1
+      ],
+      [
+        "prepared remarks",
+        1
+      ],
+      [
+        "discuss NIKE's fiscal 2025 first quarter results",
+        1
+      ],
+      [
+        "Running momentum",
+        1
+      ],
+      [
+        "New product pipeline",
+        1
+      ]
+    ],
+    "risks_top5": [
+      [
+        "East Coast port strike",
+        2
+      ],
+      [
+        "forward-looking statements",
+        1
+      ],
+      [
+        "risks and uncertainties",
+        1
+      ],
+      [
+        "certain risks and uncertainties",
+        1
+      ],
+      [
+        "certain risks",
+        1
+      ]
+    ],
+    "guidance_call": "lowered",
+    "guidance_by_model": {
+      "gemma3:4b": "raised",
+      "llama3.1:8b": "lowered"
+    }
+  },
+  "dispersion": {
+    "sentiment_dispersion": null,
+    "guidance_disagree": 0,
+    "wins_overlap": null,
+    "risks_overlap": null,
+    "qa_minus_pres_risks": [
+      "channel mix headwinds",
+      "east coast port strike",
+      "elevated inventory",
+      "headwind on revenue from proactively managing classic franchises",
+      "inventory levels in china"
+    ],
+    "qa_minus_pres_risks_count": 5,
+    "role_sent_means": {
+      "CFO": 0.2318491249443066
+    }
+  },
+  "by_role": {
+    "CFO": {
+      "n_units": 9,
+      "sentiment": 0.25063601582781786,
+      "wins_top5": [
+        [
+          "earnings call",
+          1
+        ],
+        [
+          "prepared remarks",
+          1
+        ],
+        [
+          "discuss NIKE's fiscal 2025 first quarter results",
+          1
+        ],
+        [
+          "Running momentum",
+          1
+        ],
+        [
+          "New product pipeline",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "East Coast port strike",
+          2
+        ],
+        [
+          "forward-looking statements",
+          1
+        ],
+        [
+          "risks and uncertainties",
+          1
+        ],
+        [
+          "certain risks and uncertainties",
+          1
+        ],
+        [
+          "certain risks",
+          1
+        ]
+      ],
+      "guidance_vote": "lowered"
+    }
+  },
+  "by_section": {
+    "presenter": {
+      "n_units": 2,
+      "sentiment": 0.2318491249443066,
+      "wins_top5": [
+        [
+          "earnings call",
+          1
+        ],
+        [
+          "prepared remarks",
+          1
+        ],
+        [
+          "discuss NIKE's fiscal 2025 first quarter results",
+          1
+        ],
+        [
+          "Running momentum",
+          1
+        ],
+        [
+          "New product pipeline",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "forward-looking statements",
+          1
+        ],
+        [
+          "risks and uncertainties",
+          1
+        ],
+        [
+          "certain risks and uncertainties",
+          1
+        ],
+        [
+          "certain risks",
+          1
+        ],
+        [
+          "Traffic declines",
+          1
+        ]
+      ],
+      "guidance_vote": "lowered"
+    },
+    "qa": {
+      "n_units": 7,
+      "sentiment": 0.2703671012163502,
+      "wins_top5": [
+        [
+          "momentum building",
+          1
+        ],
+        [
+          "newness and innovation",
+          1
+        ],
+        [
+          "sport opportunities",
+          1
+        ],
+        [
+          "Momentum building in Running",
+          1
+        ],
+        [
+          "Newness and innovation scaling in the second half",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "East Coast port strike",
+          2
+        ],
+        [
+          "elevated inventory",
+          1
+        ],
+        [
+          "channel mix headwinds",
+          1
+        ],
+        [
+          "Inventory levels in China",
+          1
+        ],
+        [
+          "Headwind on revenue from proactively managing classic franchises",
+          1
+        ]
+      ],
+      "guidance_vote": "lowered"
+    }
+  },
+  "_cache_key": "12c5a6764b1a9ff3"
+}

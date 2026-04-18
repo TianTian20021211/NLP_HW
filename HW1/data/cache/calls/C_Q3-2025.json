@@ -1,0 +1,279 @@
+{
+  "ticker": "C",
+  "quarter": "Q3-2025",
+  "call_date": "2025-10-14",
+  "variant": "finbert",
+  "n_units": {
+    "total": 29,
+    "presenter": 3,
+    "qa": 26
+  },
+  "models": [
+    "gemma3:4b",
+    "llama3.1:8b"
+  ],
+  "consensus": {
+    "sentiment_call": 0.5385322438639281,
+    "sentiment_qa": 0.31935587735228244,
+    "wins_top5": [
+      [
+        "earnings call",
+        1
+      ],
+      [
+        "third quarter 2025 earnings call",
+        1
+      ],
+      [
+        "record third quarter revenue",
+        1
+      ],
+      [
+        "investment in talent",
+        1
+      ],
+      [
+        "new partnership with BlackRock",
+        1
+      ]
+    ],
+    "risks_top5": [
+      [
+        "uncertainty",
+        2
+      ],
+      [
+        "changes in circumstances",
+        2
+      ],
+      [
+        "forward-looking statements",
+        1
+      ],
+      [
+        "valuation frothiness",
+        1
+      ],
+      [
+        "labor market",
+        1
+      ]
+    ],
+    "guidance_call": "none",
+    "guidance_by_model": {
+      "gemma3:4b": "none",
+      "llama3.1:8b": "none"
+    }
+  },
+  "dispersion": {
+    "sentiment_dispersion": null,
+    "guidance_disagree": 0,
+    "wins_overlap": null,
+    "risks_overlap": null,
+    "qa_minus_pres_risks": [
+      "credit risk associated with lending to nbfi",
+      "fx impact",
+      "low hanging fruit picked",
+      "nbfi exposure",
+      "rapid loan growth to non depository financial institutions",
+      "softness in the economy"
+    ],
+    "qa_minus_pres_risks_count": 6,
+    "role_sent_means": {
+      "CEO": 0.550154739899835
+    }
+  },
+  "by_role": {
+    "CEO": {
+      "n_units": 27,
+      "sentiment": 0.426438217940361,
+      "wins_top5": [
+        [
+          "record third quarter revenue",
+          1
+        ],
+        [
+          "investment in talent",
+          1
+        ],
+        [
+          "new partnership with BlackRock",
+          1
+        ],
+        [
+          "new client wins",
+          1
+        ],
+        [
+          "share gains",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "valuation frothiness",
+          1
+        ],
+        [
+          "labor market",
+          1
+        ],
+        [
+          "structural challenges",
+          1
+        ],
+        [
+          "uncertainty from Federal Reserve",
+          1
+        ],
+        [
+          "sequential decline in markets revenues",
+          1
+        ]
+      ],
+      "guidance_vote": "raised"
+    },
+    "IR": {
+      "n_units": 2,
+      "sentiment": 0.0932685436048653,
+      "wins_top5": [
+        [
+          "earnings call",
+          1
+        ],
+        [
+          "third quarter 2025 earnings call",
+          1
+        ],
+        [
+          "targets",
+          1
+        ],
+        [
+          "transformation",
+          1
+        ],
+        [
+          "new team",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "uncertainty",
+          2
+        ],
+        [
+          "changes in circumstances",
+          2
+        ],
+        [
+          "forward-looking statements",
+          1
+        ]
+      ],
+      "guidance_vote": "none"
+    }
+  },
+  "by_section": {
+    "presenter": {
+      "n_units": 3,
+      "sentiment": 0.5385322438639281,
+      "wins_top5": [
+        [
+          "earnings call",
+          1
+        ],
+        [
+          "third quarter 2025 earnings call",
+          1
+        ],
+        [
+          "record third quarter revenue",
+          1
+        ],
+        [
+          "investment in talent",
+          1
+        ],
+        [
+          "new partnership with BlackRock",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "uncertainty",
+          2
+        ],
+        [
+          "changes in circumstances",
+          2
+        ],
+        [
+          "forward-looking statements",
+          1
+        ],
+        [
+          "valuation frothiness",
+          1
+        ],
+        [
+          "labor market",
+          1
+        ]
+      ],
+      "guidance_vote": "none"
+    },
+    "qa": {
+      "n_units": 26,
+      "sentiment": 0.31935587735228244,
+      "wins_top5": [
+        [
+          "revenue growth",
+          1
+        ],
+        [
+          "operating leverage",
+          1
+        ],
+        [
+          "customer engagement",
+          1
+        ],
+        [
+          "reached a sub-64% efficiency ratio for the year",
+          1
+        ],
+        [
+          "made progress with the transformation",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "FX impact",
+          1
+        ],
+        [
+          "NBFI exposure",
+          1
+        ],
+        [
+          "low-hanging fruit picked",
+          1
+        ],
+        [
+          "softness in the economy",
+          1
+        ],
+        [
+          "rapid loan growth to non-depository financial institutions",
+          1
+        ]
+      ],
+      "guidance_vote": "raised"
+    }
+  },
+  "_cache_key": "12c5a6764b1a9ff3"
+}

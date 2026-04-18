@@ -1,0 +1,316 @@
+{
+  "ticker": "JNJ",
+  "quarter": "Q3-2024",
+  "call_date": "2024-10-15",
+  "variant": "lm",
+  "n_units": {
+    "total": 19,
+    "presenter": 4,
+    "qa": 15
+  },
+  "models": [
+    "gemma3:4b",
+    "llama3.1:8b"
+  ],
+  "consensus": {
+    "sentiment_call": 0.3566799800117831,
+    "sentiment_qa": 0.40407422550787886,
+    "wins_top5": [
+      [
+        "full year financial outlook",
+        1
+      ],
+      [
+        "key catalysts",
+        1
+      ],
+      [
+        "presentation materials",
+        1
+      ],
+      [
+        "key catalysts within the segments",
+        1
+      ],
+      [
+        "DARZALEX sales",
+        1
+      ]
+    ],
+    "risks_top5": [
+      [
+        "biosimilar competition",
+        2
+      ],
+      [
+        "forward-looking statements",
+        1
+      ],
+      [
+        "risks and uncertainties",
+        1
+      ],
+      [
+        "SEC filings",
+        1
+      ],
+      [
+        "certain risks",
+        1
+      ]
+    ],
+    "guidance_call": "raised",
+    "guidance_by_model": {
+      "gemma3:4b": "raised",
+      "llama3.1:8b": "raised"
+    }
+  },
+  "dispersion": {
+    "sentiment_dispersion": 0.44929868286537616,
+    "guidance_disagree": 0,
+    "wins_overlap": 0.0,
+    "risks_overlap": null,
+    "qa_minus_pres_risks": [
+      "disproportionate impact of vbp on medtech business in china",
+      "headwinds from macroeconomic pressures in japan and korea",
+      "impact of iv saline shortages on surgical procedures",
+      "patient mix issues",
+      "unfavorable patient mix impact",
+      "vbp headwinds"
+    ],
+    "qa_minus_pres_risks_count": 6,
+    "role_sent_means": {
+      "CFO": 0.2776391873962864,
+      "CEO": 0.9130434782608695
+    }
+  },
+  "by_role": {
+    "CEO": {
+      "n_units": 3,
+      "sentiment": 0.806297071351937,
+      "wins_top5": [
+        [
+          "DARZALEX sales",
+          1
+        ],
+        [
+          "FDA approvals",
+          1
+        ],
+        [
+          "Cardiovascular growth",
+          1
+        ],
+        [
+          "6.3% operational sales growth",
+          1
+        ],
+        [
+          "5 major U.S. and EC approvals in the quarter",
+          1
+        ]
+      ],
+      "risks_top5": [],
+      "guidance_vote": "none"
+    },
+    "CFO": {
+      "n_units": 6,
+      "sentiment": 0.2493280115201603,
+      "wins_top5": [
+        [
+          "full year financial outlook",
+          1
+        ],
+        [
+          "key catalysts",
+          1
+        ],
+        [
+          "presentation materials",
+          1
+        ],
+        [
+          "key catalysts within the segments",
+          1
+        ],
+        [
+          "DARZALEX growth",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "forward-looking statements",
+          1
+        ],
+        [
+          "risks and uncertainties",
+          1
+        ],
+        [
+          "SEC filings",
+          1
+        ],
+        [
+          "certain risks",
+          1
+        ],
+        [
+          "uncertainties",
+          1
+        ]
+      ],
+      "guidance_vote": "none"
+    },
+    "Other_Exec": {
+      "n_units": 10,
+      "sentiment": 0.44792636456961,
+      "wins_top5": [
+        [
+          "strong growth",
+          1
+        ],
+        [
+          "portfolio expansion",
+          1
+        ],
+        [
+          "market leadership",
+          1
+        ],
+        [
+          "robust growth in Cardiovascular business",
+          1
+        ],
+        [
+          "strong performance of CARVYKTI and TECVAYLI",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "VBP headwinds",
+          1
+        ],
+        [
+          "patient mix issues",
+          1
+        ],
+        [
+          "biosimilar competition",
+          1
+        ],
+        [
+          "impact of IV saline shortages on surgical procedures",
+          1
+        ],
+        [
+          "disproportionate impact of VBP on MedTech business in China",
+          1
+        ]
+      ],
+      "guidance_vote": "raised"
+    }
+  },
+  "by_section": {
+    "presenter": {
+      "n_units": 4,
+      "sentiment": 0.3566799800117831,
+      "wins_top5": [
+        [
+          "full year financial outlook",
+          1
+        ],
+        [
+          "key catalysts",
+          1
+        ],
+        [
+          "presentation materials",
+          1
+        ],
+        [
+          "key catalysts within the segments",
+          1
+        ],
+        [
+          "DARZALEX sales",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "forward-looking statements",
+          1
+        ],
+        [
+          "risks and uncertainties",
+          1
+        ],
+        [
+          "SEC filings",
+          1
+        ],
+        [
+          "certain risks",
+          1
+        ],
+        [
+          "uncertainties",
+          1
+        ]
+      ],
+      "guidance_vote": "raised"
+    },
+    "qa": {
+      "n_units": 15,
+      "sentiment": 0.40407422550787886,
+      "wins_top5": [
+        [
+          "litigation resolution",
+          1
+        ],
+        [
+          "portfolio pipelines",
+          1
+        ],
+        [
+          "2025 expectations",
+          1
+        ],
+        [
+          "meaningful progress to resolve talc litigation",
+          1
+        ],
+        [
+          "strong results in the third quarter",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "VBP headwinds",
+          1
+        ],
+        [
+          "patient mix issues",
+          1
+        ],
+        [
+          "biosimilar competition",
+          1
+        ],
+        [
+          "impact of IV saline shortages on surgical procedures",
+          1
+        ],
+        [
+          "disproportionate impact of VBP on MedTech business in China",
+          1
+        ]
+      ],
+      "guidance_vote": "none"
+    }
+  },
+  "_cache_key": "b9c11fa20978a9b0"
+}

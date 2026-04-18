@@ -1,0 +1,1 @@
+{"call_id": "JNJ_Q4-2025", "role": "CFO", "model": "gemma3:4b", "n_answers": 2, "unit_ids": ["JNJ_Q4-2025__qa__006", "JNJ_Q4-2025__qa__014"], "wins": ["margin expansion", "sales growth", "infrastructure improvement"], "risks": ["talc litigation", "STELARA erosion", "Rule 702"], "guidance": "none", "_cache_key": "0067eda25f7c1ed6"}

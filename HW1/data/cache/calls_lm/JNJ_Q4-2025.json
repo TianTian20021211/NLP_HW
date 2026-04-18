@@ -1,0 +1,380 @@
+{
+  "ticker": "JNJ",
+  "quarter": "Q4-2025",
+  "call_date": "2026-01-21",
+  "variant": "lm",
+  "n_units": {
+    "total": 21,
+    "presenter": 4,
+    "qa": 17
+  },
+  "models": [
+    "gemma3:4b",
+    "llama3.1:8b"
+  ],
+  "consensus": {
+    "sentiment_call": 0.5757374923532004,
+    "sentiment_qa": 0.4497308618379652,
+    "wins_top5": [
+      [
+        "DARZALEX growth",
+        2
+      ],
+      [
+        "business performance",
+        1
+      ],
+      [
+        "growth drivers",
+        1
+      ],
+      [
+        "financial outlook",
+        1
+      ],
+      [
+        "review of business results for the fourth quarter and full year 2025",
+        1
+      ]
+    ],
+    "risks_top5": [
+      [
+        "talc litigation",
+        5
+      ],
+      [
+        "forward-looking statements",
+        1
+      ],
+      [
+        "risks and uncertainties",
+        1
+      ],
+      [
+        "actual results",
+        1
+      ],
+      [
+        "certain risks and uncertainties that may cause the company's actual results to differ materially from those projected",
+        1
+      ]
+    ],
+    "guidance_call": "raised",
+    "guidance_by_model": {
+      "gemma3:4b": "raised",
+      "llama3.1:8b": "none"
+    }
+  },
+  "dispersion": {
+    "sentiment_dispersion": 0.2674946583093296,
+    "guidance_disagree": 0,
+    "wins_overlap": 0.0,
+    "risks_overlap": 0.0,
+    "qa_minus_pres_risks": [
+      "aca subsidies",
+      "daubert decision",
+      "ep business growth",
+      "meritless claims",
+      "modest top down",
+      "ortho separation distraction",
+      "risk mitigation",
+      "rule 702",
+      "steela erosion",
+      "stelara erosion",
+      "stranded costs in orthopaedics separation",
+      "talc litigation"
+    ],
+    "qa_minus_pres_risks_count": 12,
+    "role_sent_means": {
+      "CEO": 0.8666666666666667,
+      "CFO": 0.4883720930232558
+    }
+  },
+  "by_role": {
+    "CEO": {
+      "n_units": 4,
+      "sentiment": 0.826560087014966,
+      "wins_top5": [
+        [
+          "DARZALEX growth",
+          1
+        ],
+        [
+          "TREMFYA growth",
+          1
+        ],
+        [
+          "MONARCH robotics platform",
+          1
+        ],
+        [
+          "delivered 5.3% operational sales growth",
+          1
+        ],
+        [
+          "exceeded $60 billion in annual sales for the first time",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "talc litigation",
+          2
+        ],
+        [
+          "none",
+          1
+        ],
+        [
+          "meritless claims",
+          1
+        ],
+        [
+          "modest top-down",
+          1
+        ]
+      ],
+      "guidance_vote": "maintained"
+    },
+    "CFO": {
+      "n_units": 3,
+      "sentiment": 0.29406734847717736,
+      "wins_top5": [
+        [
+          "strong execution",
+          1
+        ],
+        [
+          "new product launches",
+          1
+        ],
+        [
+          "pipeline progress",
+          1
+        ],
+        [
+          "exceeded financial expectations",
+          1
+        ],
+        [
+          "delivered impressive results in 2025",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "talc litigation",
+          2
+        ],
+        [
+          "STELARA biosimilars",
+          1
+        ],
+        [
+          "generic impact",
+          1
+        ],
+        [
+          "tariffs",
+          1
+        ],
+        [
+          "meritless claims at trial and through the appeals courts",
+          1
+        ]
+      ],
+      "guidance_vote": "maintained"
+    },
+    "IR": {
+      "n_units": 4,
+      "sentiment": 0.37088587953166874,
+      "wins_top5": [
+        [
+          "business performance",
+          1
+        ],
+        [
+          "growth drivers",
+          1
+        ],
+        [
+          "financial outlook",
+          1
+        ],
+        [
+          "review of business results for the fourth quarter and full year 2025",
+          1
+        ],
+        [
+          "financial outlook for 2026",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "forward-looking statements",
+          1
+        ],
+        [
+          "risks and uncertainties",
+          1
+        ],
+        [
+          "actual results",
+          1
+        ],
+        [
+          "certain risks and uncertainties that may cause the company's actual results to differ materially from those projected",
+          1
+        ],
+        [
+          "biosimilar competition",
+          1
+        ]
+      ],
+      "guidance_vote": "none"
+    },
+    "Other_Exec": {
+      "n_units": 10,
+      "sentiment": 0.4681964412849204,
+      "wins_top5": [
+        [
+          "portfolio transformation",
+          1
+        ],
+        [
+          "accelerated growth",
+          1
+        ],
+        [
+          "CARVYKTI success",
+          1
+        ],
+        [
+          "accelerated operational growth",
+          1
+        ],
+        [
+          "portfolio transformation is working",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "ACA subsidies",
+          1
+        ],
+        [
+          "EP business growth",
+          1
+        ],
+        [
+          "ortho separation distraction",
+          1
+        ]
+      ],
+      "guidance_vote": "raised"
+    }
+  },
+  "by_section": {
+    "presenter": {
+      "n_units": 4,
+      "sentiment": 0.5757374923532004,
+      "wins_top5": [
+        [
+          "DARZALEX growth",
+          2
+        ],
+        [
+          "business performance",
+          1
+        ],
+        [
+          "growth drivers",
+          1
+        ],
+        [
+          "financial outlook",
+          1
+        ],
+        [
+          "review of business results for the fourth quarter and full year 2025",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "forward-looking statements",
+          1
+        ],
+        [
+          "risks and uncertainties",
+          1
+        ],
+        [
+          "actual results",
+          1
+        ],
+        [
+          "certain risks and uncertainties that may cause the company's actual results to differ materially from those projected",
+          1
+        ],
+        [
+          "none",
+          1
+        ]
+      ],
+      "guidance_vote": "raised"
+    },
+    "qa": {
+      "n_units": 17,
+      "sentiment": 0.4497308618379652,
+      "wins_top5": [
+        [
+          "strong portfolio",
+          1
+        ],
+        [
+          "double-digit growth",
+          1
+        ],
+        [
+          "clean story",
+          1
+        ],
+        [
+          "double-digit revenue growth by the latter part of the decade",
+          1
+        ],
+        [
+          "strong and ahead of expectations",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "talc litigation",
+          5
+        ],
+        [
+          "meritless claims",
+          1
+        ],
+        [
+          "modest top-down",
+          1
+        ],
+        [
+          "ACA subsidies",
+          1
+        ],
+        [
+          "EP business growth",
+          1
+        ]
+      ],
+      "guidance_vote": "maintained"
+    }
+  },
+  "_cache_key": "b9c11fa20978a9b0"
+}

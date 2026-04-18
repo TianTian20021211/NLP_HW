@@ -1,0 +1,349 @@
+{
+  "ticker": "INTC",
+  "quarter": "Q1-2025",
+  "call_date": "2025-04-24",
+  "variant": "lm",
+  "n_units": {
+    "total": 41,
+    "presenter": 4,
+    "qa": 37
+  },
+  "models": [
+    "gemma3:4b",
+    "llama3.1:8b"
+  ],
+  "consensus": {
+    "sentiment_call": 0.40798671078554044,
+    "sentiment_qa": 0.5418267876357373,
+    "wins_top5": [
+      [
+        "earnings release",
+        1
+      ],
+      [
+        "earnings presentation",
+        1
+      ],
+      [
+        "initial observations",
+        1
+      ],
+      [
+        "received a copy of the Q1 earnings release and earnings presentation",
+        1
+      ],
+      [
+        "revenue",
+        1
+      ]
+    ],
+    "risks_top5": [
+      [
+        "forward-looking statements",
+        1
+      ],
+      [
+        "risks and uncertainties",
+        1
+      ],
+      [
+        "non-GAAP financial measures",
+        1
+      ],
+      [
+        "various risks",
+        1
+      ],
+      [
+        "uncertainties",
+        1
+      ]
+    ],
+    "guidance_call": "lowered",
+    "guidance_by_model": {
+      "gemma3:4b": "lowered",
+      "llama3.1:8b": "lowered"
+    }
+  },
+  "dispersion": {
+    "sentiment_dispersion": 0.3789025016169424,
+    "guidance_disagree": 0,
+    "wins_overlap": 0.0,
+    "risks_overlap": 0.0,
+    "qa_minus_pres_risks": [
+      "7nm constraint",
+      "arm competition in head nodes",
+      "competition from arm in head nodes",
+      "foundry capacity constraints",
+      "headwinds from mix on the client side moving more to lunar lake",
+      "idm business viability",
+      "lunar lake margin pressure",
+      "macro catch up",
+      "macroeconomic concerns",
+      "macroeconomic concerns and tariffs affecting demand",
+      "margin pressure",
+      "market segment share challenge",
+      "negative gross margin",
+      "negative gross margin in manufacturing business",
+      "q2 guidance softness",
+      "start up costs associated with ramping 18a in arizona",
+      "tariff headwinds",
+      "tariffs impacting gross margins"
+    ],
+    "qa_minus_pres_risks_count": 18,
+    "role_sent_means": {
+      "CEO": 0.7358490566037735,
+      "CFO": 0.2
+    }
+  },
+  "by_role": {
+    "CEO": {
+      "n_units": 18,
+      "sentiment": 0.5808277812516506,
+      "wins_top5": [
+        [
+          "revenue",
+          1
+        ],
+        [
+          "gross margins",
+          1
+        ],
+        [
+          "EPS",
+          1
+        ],
+        [
+          "delivered revenue, gross margins, EPS above our guidance",
+          1
+        ],
+        [
+          "refocus our core franchise to start building best-in-class products again",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "many areas to improve",
+          1
+        ],
+        [
+          "no quick fixes",
+          1
+        ],
+        [
+          "complex bureaucracy",
+          1
+        ],
+        [
+          "organizational complexity and bureaucracies have been suffocating the innovation and agility we need to win",
+          1
+        ],
+        [
+          "there are many areas we need to improve, and there's no quick fixes",
+          1
+        ]
+      ],
+      "guidance_vote": "lowered"
+    },
+    "CFO": {
+      "n_units": 9,
+      "sentiment": 0.4384261994409516,
+      "wins_top5": [
+        [
+          "Xeon sales",
+          1
+        ],
+        [
+          "Raptor Lake demand",
+          1
+        ],
+        [
+          "Meteor Lake cost",
+          1
+        ],
+        [
+          "Q1 revenue was $12.7 billion, coming in at the high end of our guidance range",
+          1
+        ],
+        [
+          "Non-GAAP gross margin was 39.2%, approximately 3 percentage points above our guidance",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "economic slowdown",
+          1
+        ],
+        [
+          "potential pullback in investment",
+          1
+        ],
+        [
+          "tariff impact",
+          1
+        ],
+        [
+          "shifting trade policies, persistent inflation and increased regulatory risk",
+          1
+        ],
+        [
+          "potential tariffs, though it is difficult to quantify the magnitude",
+          1
+        ]
+      ],
+      "guidance_vote": "raised"
+    },
+    "IR": {
+      "n_units": 14,
+      "sentiment": -0.28521825396825395,
+      "wins_top5": [
+        [
+          "earnings release",
+          1
+        ],
+        [
+          "earnings presentation",
+          1
+        ],
+        [
+          "initial observations",
+          1
+        ],
+        [
+          "received a copy of the Q1 earnings release and earnings presentation",
+          1
+        ],
+        [
+          "Q&A portion",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "forward-looking statements",
+          1
+        ],
+        [
+          "risks and uncertainties",
+          1
+        ],
+        [
+          "non-GAAP financial measures",
+          1
+        ],
+        [
+          "various risks",
+          1
+        ],
+        [
+          "uncertainties",
+          1
+        ]
+      ],
+      "guidance_vote": "lowered"
+    }
+  },
+  "by_section": {
+    "presenter": {
+      "n_units": 4,
+      "sentiment": 0.40798671078554044,
+      "wins_top5": [
+        [
+          "earnings release",
+          1
+        ],
+        [
+          "earnings presentation",
+          1
+        ],
+        [
+          "initial observations",
+          1
+        ],
+        [
+          "received a copy of the Q1 earnings release and earnings presentation",
+          1
+        ],
+        [
+          "revenue",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "forward-looking statements",
+          1
+        ],
+        [
+          "risks and uncertainties",
+          1
+        ],
+        [
+          "non-GAAP financial measures",
+          1
+        ],
+        [
+          "various risks",
+          1
+        ],
+        [
+          "uncertainties",
+          1
+        ]
+      ],
+      "guidance_vote": "lowered"
+    },
+    "qa": {
+      "n_units": 37,
+      "sentiment": 0.5418267876357373,
+      "wins_top5": [
+        [
+          "product execution",
+          2
+        ],
+        [
+          "customer interest",
+          1
+        ],
+        [
+          "strong commercial demand",
+          1
+        ],
+        [
+          "Strong commercial demand for AI PC",
+          1
+        ],
+        [
+          "Panther Lake product looks quite good competitively and gets a lot of customer interest",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "macroeconomic concerns",
+          1
+        ],
+        [
+          "margin pressure",
+          1
+        ],
+        [
+          "market segment share challenge",
+          1
+        ],
+        [
+          "Macroeconomic concerns and tariffs affecting demand",
+          1
+        ],
+        [
+          "Competition from ARM in head nodes",
+          1
+        ]
+      ],
+      "guidance_vote": "lowered"
+    }
+  },
+  "_cache_key": "b9c11fa20978a9b0"
+}

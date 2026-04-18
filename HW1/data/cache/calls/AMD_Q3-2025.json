@@ -1,0 +1,328 @@
+{
+  "ticker": "AMD",
+  "quarter": "Q3-2025",
+  "call_date": "2025-11-04",
+  "variant": "finbert",
+  "n_units": {
+    "total": 26,
+    "presenter": 4,
+    "qa": 22
+  },
+  "models": [
+    "gemma3:4b",
+    "llama3.1:8b"
+  ],
+  "consensus": {
+    "sentiment_call": 0.6283669050609862,
+    "sentiment_qa": 0.4724295753218256,
+    "wins_top5": [
+      [
+        "earnings press release",
+        1
+      ],
+      [
+        "accompanying slides",
+        1
+      ],
+      [
+        "financial strategy",
+        1
+      ],
+      [
+        "present long-term financial strategy at Financial Analyst Day",
+        1
+      ],
+      [
+        "present at UBS Global Technology and AI Conference",
+        1
+      ]
+    ],
+    "risks_top5": [
+      [
+        "supply constraints",
+        3
+      ],
+      [
+        "forward-looking statements",
+        1
+      ],
+      [
+        "risks and uncertainties",
+        1
+      ],
+      [
+        "actual results differ",
+        1
+      ],
+      [
+        "risks and uncertainties that could cause results to differ materially from our current expectations",
+        1
+      ]
+    ],
+    "guidance_call": "none",
+    "guidance_by_model": {
+      "gemma3:4b": "none",
+      "llama3.1:8b": "none"
+    }
+  },
+  "dispersion": {
+    "sentiment_dispersion": 0.1773389171512702,
+    "guidance_disagree": 0,
+    "wins_overlap": 0.0,
+    "risks_overlap": 0.0,
+    "qa_minus_pres_risks": [
+      "component issues across interconnected memory",
+      "customer concentration",
+      "customer concentration risk due to openai s potential dominance in 2027 2028",
+      "ecosystem tightness",
+      "supply constraints"
+    ],
+    "qa_minus_pres_risks_count": 5,
+    "role_sent_means": {
+      "CEO": 0.7599347301981231,
+      "CFO": 0.5091396284262381
+    }
+  },
+  "by_role": {
+    "CEO": {
+      "n_units": 19,
+      "sentiment": 0.5985721553016907,
+      "wins_top5": [
+        [
+          "record sales",
+          1
+        ],
+        [
+          "accelerating enterprise adoption",
+          1
+        ],
+        [
+          "MI350 Series GPU sales",
+          1
+        ],
+        [
+          "large new wins in the quarter with leading Fortune 500 technology, telecom, financial services, retail, streaming, social and automotive companies",
+          1
+        ],
+        [
+          "comprehensive multiyear agreement with OpenAI to deploy 6 gigawatts of Instinct GPUs",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "supply constraints",
+          2
+        ],
+        [
+          "none",
+          1
+        ],
+        [
+          "ecosystem tightness",
+          1
+        ],
+        [
+          "customer concentration",
+          1
+        ],
+        [
+          "Component issues across interconnected memory",
+          1
+        ]
+      ],
+      "guidance_vote": "raised"
+    },
+    "CFO": {
+      "n_units": 5,
+      "sentiment": 0.5243038936942486,
+      "wins_top5": [
+        [
+          "record revenue",
+          1
+        ],
+        [
+          "strong momentum",
+          1
+        ],
+        [
+          "strong double-digit growth",
+          1
+        ],
+        [
+          "record revenue of $9.2 billion",
+          1
+        ],
+        [
+          "strong double-digit growth in our data center, and client and gaming segment",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "higher R&D investment",
+          1
+        ],
+        [
+          "decline in operating income",
+          1
+        ],
+        [
+          "client and gaming revenue down strong double digits",
+          1
+        ],
+        [
+          "supply constraints",
+          1
+        ]
+      ],
+      "guidance_vote": "raised"
+    },
+    "IR": {
+      "n_units": 2,
+      "sentiment": -0.015944965613396554,
+      "wins_top5": [
+        [
+          "earnings press release",
+          1
+        ],
+        [
+          "accompanying slides",
+          1
+        ],
+        [
+          "financial strategy",
+          1
+        ],
+        [
+          "present long-term financial strategy at Financial Analyst Day",
+          1
+        ],
+        [
+          "present at UBS Global Technology and AI Conference",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "forward-looking statements",
+          1
+        ],
+        [
+          "risks and uncertainties",
+          1
+        ],
+        [
+          "actual results differ",
+          1
+        ],
+        [
+          "risks and uncertainties that could cause results to differ materially from our current expectations",
+          1
+        ]
+      ],
+      "guidance_vote": "none"
+    }
+  },
+  "by_section": {
+    "presenter": {
+      "n_units": 4,
+      "sentiment": 0.6283669050609862,
+      "wins_top5": [
+        [
+          "earnings press release",
+          1
+        ],
+        [
+          "accompanying slides",
+          1
+        ],
+        [
+          "financial strategy",
+          1
+        ],
+        [
+          "present long-term financial strategy at Financial Analyst Day",
+          1
+        ],
+        [
+          "present at UBS Global Technology and AI Conference",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "forward-looking statements",
+          1
+        ],
+        [
+          "risks and uncertainties",
+          1
+        ],
+        [
+          "actual results differ",
+          1
+        ],
+        [
+          "risks and uncertainties that could cause results to differ materially from our current expectations",
+          1
+        ],
+        [
+          "none",
+          1
+        ]
+      ],
+      "guidance_vote": "none"
+    },
+    "qa": {
+      "n_units": 22,
+      "sentiment": 0.4724295753218256,
+      "wins_top5": [
+        [
+          "strong demand",
+          1
+        ],
+        [
+          "positive environment",
+          1
+        ],
+        [
+          "significant growth",
+          1
+        ],
+        [
+          "Strong demand environment into 2026",
+          1
+        ],
+        [
+          "Good visibility into the MI450 ramp",
+          1
+        ]
+      ],
+      "risks_top5": [
+        [
+          "supply constraints",
+          3
+        ],
+        [
+          "ecosystem tightness",
+          1
+        ],
+        [
+          "customer concentration",
+          1
+        ],
+        [
+          "Component issues across interconnected memory",
+          1
+        ],
+        [
+          "Customer concentration risk due to OpenAI's potential dominance in 2027-2028",
+          1
+        ]
+      ],
+      "guidance_vote": "raised"
+    }
+  },
+  "_cache_key": "12c5a6764b1a9ff3"
+}
