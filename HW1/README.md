@@ -16,16 +16,20 @@ HW1/
 │   └── cache/                every derived artifact (gitignored)
 ├── report.md                 final writeup
 ├── report.pdf                rendered writeup (from `python -m src.report_pdf`)
+├── requirements.yml          minimal conda spec (top-level deps for this repo only)
 └── README.md
 ```
 
 ## Setup
 
+Create and activate the conda environment (one-time):
+
 ```bash
+conda env create -f requirements.yml   # skip if env `nlp` already exists
 conda activate nlp
 ```
 
-Required packages (already installed in the `nlp` env): `transformers`, `torch`, `xgboost`, `yfinance`, `pyarrow`, `scikit-learn`, `pandas`, `numpy`, `scipy`, `jupyter`. For LLM extraction you also need a local [Ollama](https://ollama.com) daemon serving `gemma3:4b` and `llama3.1:8b`.
+`requirements.yml` lists only **direct** dependencies for running notebooks and `src/` (conda then installs everything else). It is not a full `conda env export` lockfile, so the solver may pick newer transitive versions over time. For LLM extraction you also need a local [Ollama](https://ollama.com) daemon serving `gemma3:4b` and `llama3.1:8b`.
 
 ### One-time: Loughran-McDonald dictionary
 

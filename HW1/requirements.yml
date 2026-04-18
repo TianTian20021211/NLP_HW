@@ -1,0 +1,24 @@
+name: nlp
+channels:
+  - conda-forge
+dependencies:
+  - python=3.10
+  - numpy
+  - scipy
+  - pandas
+  - requests
+  - tqdm
+  - pyarrow
+  - fastparquet
+  - matplotlib
+  - scikit-learn
+  - xgboost
+  - transformers
+  - pytorch
+  - jupyterlab
+  - ipykernel
+  - pip
+  - pip:
+      - yfinance
+      - markdown2
+      - weasyprint

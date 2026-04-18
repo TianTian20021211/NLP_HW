@@ -11,3 +11,6 @@ Thumbs.db
 # IPython
 profile_default/
 ipython_config.py
+
+# Local IDE
+.cursor/
