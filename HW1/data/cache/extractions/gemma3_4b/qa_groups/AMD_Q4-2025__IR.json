@@ -1,1 +1,0 @@
-{"call_id": "AMD_Q4-2025", "role": "IR", "model": "gemma3:4b", "n_answers": 3, "unit_ids": ["AMD_Q4-2025__qa__009", "AMD_Q4-2025__qa__025", "AMD_Q4-2025__qa__028"], "wins": ["positive surprise", "nice positive surprise", "incremental capacity"], "risks": [], "guidance": "none", "_cache_key": "0067eda25f7c1ed6"}

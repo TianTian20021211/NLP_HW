@@ -1,1 +1,0 @@
-{"call_id": "AMD_Q4-2023", "role": "Other_Exec", "model": "gemma3:4b", "n_answers": 2, "unit_ids": ["AMD_Q4-2023__qa__020", "AMD_Q4-2023__qa__027"], "wins": ["MI300 value proposition", "customer buying patterns", "TSMC roadmap familiarity"], "risks": [], "guidance": "none", "_cache_key": "0067eda25f7c1ed6"}

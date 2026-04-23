@@ -1,1 +1,0 @@
-{"call_id": "BLK_Q4-2023", "role": "CFO", "model": "gemma3:4b", "n_answers": 5, "unit_ids": ["BLK_Q4-2023__qa__008", "BLK_Q4-2023__qa__010", "BLK_Q4-2023__qa__012", "BLK_Q4-2023__qa__015", "BLK_Q4-2023__qa__018"], "wins": ["organic growth", "transformational transaction", "accelerated growth"], "risks": [], "guidance": "raised", "_cache_key": "0067eda25f7c1ed6"}

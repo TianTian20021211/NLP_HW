@@ -1,1 +1,0 @@
-{"call_id": "FAST_Q3-2025", "role": "Other_Exec", "model": "llama3.1:8b", "n_answers": 2, "unit_ids": ["FAST_Q3-2025__qa__008", "FAST_Q3-2025__qa__009"], "wins": ["increased standard inventory", "improved service levels"], "risks": ["policy uncertainty", "calendar issues in December"], "guidance": "none", "_cache_key": "ea10693037f9e9e4"}

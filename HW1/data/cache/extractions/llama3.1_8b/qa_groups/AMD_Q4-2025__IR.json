@@ -1,1 +1,0 @@
-{"call_id": "AMD_Q4-2025", "role": "IR", "model": "llama3.1:8b", "n_answers": 3, "unit_ids": ["AMD_Q4-2025__qa__009", "AMD_Q4-2025__qa__025", "AMD_Q4-2025__qa__028"], "wins": [], "risks": ["volatile business segment", "pricing implications"], "guidance": "none", "_cache_key": "ea10693037f9e9e4"}

@@ -1,1 +1,0 @@
-{"unit_id": "JPM_Q2-2025__qa__037", "model": "llama3.1:8b", "wins": ["decrease volatility", "add some duration", "balance out the tails"], "risks": ["recessionary type scenario with much lower rates", "higher rate scenarios", "constrained by other things"], "guidance": "none", "_cache_key": "4e3fac7c17838d34"}

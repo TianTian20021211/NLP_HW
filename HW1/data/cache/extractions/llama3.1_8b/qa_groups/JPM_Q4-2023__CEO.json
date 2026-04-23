@@ -1,1 +1,0 @@
-{"call_id": "JPM_Q4-2023", "role": "CEO", "model": "llama3.1:8b", "n_answers": 2, "unit_ids": ["JPM_Q4-2023__qa__006", "JPM_Q4-2023__qa__007"], "wins": ["consumer resilience", "robust multifamily performance"], "risks": ["tail scenarios", "bleed through of CRE pressure to other areas"], "guidance": "none", "_cache_key": "ea10693037f9e9e4"}

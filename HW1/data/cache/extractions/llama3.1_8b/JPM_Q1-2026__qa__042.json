@@ -1,1 +1,0 @@
-{"unit_id": "JPM_Q1-2026__qa__042", "model": "llama3.1:8b", "wins": ["staying away from bad loans", "selecting top-tier projects", "not making loans to companies with stretched credit"], "risks": ["credit getting stretched", "loans being irresponsible", "company-specific questions"], "guidance": "none", "_cache_key": "4e3fac7c17838d34"}

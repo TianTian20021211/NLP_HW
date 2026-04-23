@@ -1,1 +1,0 @@
-{"call_id": "JNJ_Q3-2024", "role": "CFO", "model": "llama3.1:8b", "n_answers": 3, "unit_ids": ["JNJ_Q3-2024__qa__013", "JNJ_Q3-2024__qa__015", "JNJ_Q3-2024__qa__017"], "wins": [], "risks": ["unfavorable patient mix impact"], "guidance": "none", "_cache_key": "ea10693037f9e9e4"}
