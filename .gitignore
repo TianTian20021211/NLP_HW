@@ -17,3 +17,6 @@ ipython_config.py
 
 # Cache
 **/cache/
+
+# data
+**/data
