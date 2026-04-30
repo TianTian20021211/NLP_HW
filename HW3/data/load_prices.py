@@ -145,7 +145,8 @@ def load_manifest() -> dict:
 
 
 def save_manifest(manifest: dict) -> None:
-    manifest["updated_at"] = dt.datetime.utcnow().isoformat() + "Z"
+    from data.config import utc_now_iso
+    manifest["updated_at"] = utc_now_iso()
     PRICE_MANIFEST.parent.mkdir(parents=True, exist_ok=True)
     with _MANIFEST_LOCK:
         PRICE_MANIFEST.write_text(json.dumps(manifest, indent=2, sort_keys=True))
@@ -359,6 +360,7 @@ def run(
     workers: int = MAX_WORKERS,
     limit: int | None = None,
 ) -> dict:
+    from data.config import utc_now_iso
     set_global_seed()
     ensure_dirs()
     PRICE_CACHE_DIR.mkdir(parents=True, exist_ok=True)
@@ -421,7 +423,7 @@ def run(
                     "first_date": r.first_date,
                     "last_date": r.last_date,
                     "error": r.error,
-                    "fetched_at": dt.datetime.utcnow().isoformat() + "Z",
+                    "fetched_at": utc_now_iso(),
                 }
                 counts[r.status] = counts.get(r.status, 0) + 1
             update_failed_log(batch_results)
@@ -447,7 +449,7 @@ def run(
                         "first_date": r.first_date,
                         "last_date": r.last_date,
                         "error": r.error,
-                        "fetched_at": dt.datetime.utcnow().isoformat() + "Z",
+                        "fetched_at": utc_now_iso(),
                     }
                     counts[r.status] = counts.get(r.status, 0) + 1
                 update_failed_log(batch_results)

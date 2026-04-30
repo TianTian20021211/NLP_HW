@@ -184,33 +184,51 @@ def build_sp500_pit(
 
     changes = _normalize_changes(changes)
 
-    # Walk changes from most recent to oldest, undoing each event so the
-    # reconstructed set matches the membership *before* that change.
+    # Walk changes from most recent to oldest.  At a given change date, the
+    # current reverse-replay state is the membership *after* all changes on
+    # that date, which is exactly the state that should be active from the
+    # effective date onward.  Only after recording that post-change snapshot do
+    # we undo the day's additions/removals to obtain the prior state.
     membership_history: list[tuple[pd.Timestamp, set[str]]] = []
-    today_ts = pd.Timestamp(end)
-    membership_history.append((today_ts, set(today_set)))
-
     state = set(today_set)
-    change_rows = list(changes.sort_values("date", ascending=False).iterrows())
-    for _, row in progress(change_rows, desc="sp500 changes", unit="change"):
-        d = pd.Timestamp(row["date"])
-        added = str(row.get("added_ticker", "")).strip()
-        removed = str(row.get("removed_ticker", "")).strip()
-        if added and added != "nan":
-            state.discard(added.replace(".", "-"))
-        if removed and removed != "nan":
-            state.add(removed.replace(".", "-"))
-        membership_history.append((d - pd.Timedelta(days=1), set(state)))
+    start_ts = pd.Timestamp(start)
+    end_ts = pd.Timestamp(end)
+
+    def _clean_ticker(value: object) -> str:
+        text = str(value).strip()
+        if not text or text.lower() == "nan":
+            return ""
+        return text.replace(".", "-")
+
+    changes = changes.sort_values("date", ascending=False)
+    change_dates = list(pd.DatetimeIndex(changes["date"].dropna().unique()).sort_values(ascending=False))
+    saw_start_snapshot = False
+
+    for d in progress(change_dates, desc="sp500 changes", unit="date"):
+        d = pd.Timestamp(d).normalize()
+        day_rows = changes[changes["date"] == d]
+
+        if d <= end_ts and d >= start_ts:
+            membership_history.append((d, set(state)))
+            saw_start_snapshot = saw_start_snapshot or d == start_ts
+
+        # Changes after *end* must still be undone so the state becomes
+        # correct as of *end*.  Changes before *start* are irrelevant.
+        if d < start_ts:
+            break
+
+        for _, row in day_rows.iterrows():
+            added = _clean_ticker(row.get("added_ticker", ""))
+            removed = _clean_ticker(row.get("removed_ticker", ""))
+            if added:
+                state.discard(added)
+            if removed:
+                state.add(removed)
+
+    if not saw_start_snapshot:
+        membership_history.append((start_ts, set(state)))
 
     membership_history.sort(key=lambda x: x[0])
-
-    if membership_history and membership_history[0][0].date() > start:
-        gaps.append(CoverageGap(
-            universe="sp500",
-            period_start=str(start),
-            period_end=str(membership_history[0][0].date()),
-            reason="Wikipedia changes table does not extend back this far",
-        ))
 
     rows: list[tuple[dt.date, str]] = []
     bdates = pd.bdate_range(start=start, end=end)
@@ -420,18 +438,26 @@ def build_sp1500(raw_dir: Path) -> list[CoverageGap]:
     if not sp500_path.exists():
         raise RuntimeError("sp500 PIT must exist before building sp1500")
     sp500 = pd.read_parquet(sp500_path)
-    sp500["snapshot_date"] = (
-        pd.to_datetime(sp500["date"]) + pd.offsets.MonthEnd(0)
-    ).dt.date
-    sp500_monthly = (
-        sp500[["snapshot_date", "ticker"]]
-        .rename(columns={"snapshot_date": "date"})
-        .drop_duplicates()
-    )
-    sp500_monthly = sp500_monthly[
-        (sp500_monthly["date"] >= monthly_start)
-        & (sp500_monthly["date"] <= dt.date.today())
-    ]
+    sp500["date"] = pd.to_datetime(sp500["date"]).dt.date
+
+    # For each month-end, use the latest SP500 daily snapshot on or before that date.
+    # This avoids the union-of-all-members-during-the-month problem that the previous
+    # per-row MonthEnd(0) + drop_duplicates approach produced: a stock added mid-month
+    # and removed later the same month would still appear in the month-end snapshot.
+    month_end_grid = pd.date_range(
+        start=monthly_start, end=dt.date.today(), freq="ME"
+    ).date
+    sp500_dates = sorted(sp500["date"].unique())
+    sp500_monthly_rows: list[tuple[dt.date, str]] = []
+    for me_date in month_end_grid:
+        eligible = [d for d in sp500_dates if d <= me_date]
+        if not eligible:
+            continue
+        latest_snap = eligible[-1]
+        members = sp500.loc[sp500["date"] == latest_snap, "ticker"].unique()
+        sp500_monthly_rows.extend((me_date, t) for t in members)
+
+    sp500_monthly = pd.DataFrame(sp500_monthly_rows, columns=["date", "ticker"])
 
     pit = pd.concat([ijh_pit, ijr_pit, sp500_monthly], ignore_index=True)
     pit = pit.drop_duplicates()

@@ -38,6 +38,7 @@ Backtest the ProntoNLP ATC earnings-call signals on three universes (S&P 500 / S
 - **SP500**: Wikipedia historical constituent changes + current constituents -> add/remove ledger with effective dates -> **daily** PIT
   - Wikipedia is preferred over ETF data because the S&P 500 historical change table is public, well maintained, and can recover daily add/remove events
 - **SP1500**: iShares `IJH` (SP400) + `IJR` (SP600) monthly holdings + SP500 PIT -> **monthly**
+  - SP500 month-end component uses the **latest SP500 daily PIT snapshot on or before each month-end date**, not the union of all tickers that appeared in SP500 on any trading day that month. This prevents a stock added and removed mid-month from remaining in the month-end snapshot.
 - **RU3K**: iShares `IWV` monthly holdings -> **monthly**
   - Russell 3000 reconstitutes only once per year in June, so monthly granularity is much finer than the index update frequency
 - **Fallback discipline**: when iShares historical holdings cannot be downloaded automatically or coverage is insufficient, the one-command README path first consumes frozen snapshots stored in the repository; if those are also missing, mark the universe as `coverage_constrained` and **never** silently replace it with the current constituent snapshot
@@ -95,7 +96,7 @@ All Phase 2 features are implemented and the full Enhanced artifact has been reb
 | Timestamps | `compute_timestamps(df)` | PASS: business-day `call_entry_date`, `ingest_entry_date`, `availability_date`; `availability_date >= call_entry_date` holds for all rows |
 | Row features | `compute_row_features(df)` | PASS: 60 columns — 1 headline + 4 EventScore + 15 per-Aspect + 27 per-Theme + 2 call-length + 11 sector one-hot |
 | Time-series | `compute_timeseries_features(base)` | PASS: 16 columns — grouped by `(BESTTICKER, SignalType)` with strict prior availability date; same-day rows do not chain |
-| PIT percentiles | `compute_pit_percentiles(base)` | PASS: 6 columns — exact historical percentiles inside `(SECTOR, SignalType)` with `availability_date < call_entry_date`; values are `NaN` or in [0, 1] |
+| PIT percentiles | `compute_pit_percentiles(base)` | PASS: 6 columns — exact historical percentiles inside `(SECTOR, SignalType)` with `availability_date < call_entry_date`; values are `NaN` or in [0, 1]; optional Numba fast path uses the same Fenwick-tree logic |
 | Momentum (vectorized) | `compute_momentum_features(base)` | PASS: 3 columns — 21d pre-event return / sector-relative / 5d idiosyncratic residual; sector returns use median; rolling beta is shifted to end at T-5; per-ticker `merge_asof` with 10-day tolerance |
 | Stretch tier | `build_features(df, tier="stretch")` | PASS: 405 `AspectTheme_*` columns correctly aligned via `_row_id` join; zero row duplication |
 | Exclusion list | Assertion check | PASS: `QTR_YEAR`, `INGESTDATEUTC`, `Return_*d` absent from feature columns |
@@ -111,6 +112,8 @@ All Phase 2 features are implemented and the full Enhanced artifact has been reb
 
 **Full-dataset runtime.** The corrected full Enhanced rebuild took 85.1s: timestamps 3.0s, row features 15.7s, time-series 3.4s, strict PIT percentiles 54.4s, momentum 6.8s. Strict PIT percentiles are now the dominant Phase 2 cost.
 
+**Post-audit PIT acceleration.** After the full Phase 3 audit exposed PIT percentiles as a single-core bottleneck, `_strict_historical_percentile()` was given an optional `numba.njit(cache=True)` fast path. The compiled implementation keeps the same strict Fenwick-tree algorithm and falls back to the original Python implementation when Numba is unavailable. The Numba path was validated against a naive O(n^2) strict-history percentile implementation on randomized timestamp/value fixtures; the full-run timing table above should be refreshed after the next complete rebuild.
+
 **Performance fixes applied after initial full-run hang (2026-04-29).** The first full-dataset attempt hung at the sector-returns step. Seven algorithmic/correctness issues were identified and fixed:
 
 | # | Issue | Fix |
@@ -122,8 +125,19 @@ All Phase 2 features are implemented and the full Enhanced artifact has been reb
 | 5 | 15-column QoQ diff loop with repeated groupby re-indexing | One strict date-block calculation across all QoQ columns |
 | 6 | `merge_asof` dtype mismatch (`datetime64[ns]` vs `[s]`) | `astype("datetime64[ns]")` on both keys |
 | 7 | Self-inclusive PIT expanding rank | Exact strict-history Fenwick percentile by `(SECTOR, SignalType)` |
+| 8 | PIT percentile Python hot loop | Optional Numba-compiled Fenwick core with exact Python fallback |
 
 These fixes eliminated the O(n²) and O(n×m) patterns that caused the full run to hang while preserving the strict no-look-ahead rules.
+
+### 2.8 Reproducibility entry point — `run_all.py`
+
+The full pipeline is orchestrated by `python run_all.py`, which runs Phase 1 → 5 sequentially for the selected tier(s). `run_all.py` no longer skips a phase just because one representative artifact exists; this avoids stale or missing tier/model/universe outputs. Network-heavy Phase 1 loaders still use their own resumable manifests and freshness checks. Key options:
+- `--tier enhanced|stretch|both` — select feature tier(s); default `enhanced`
+- `--from-phase N` / `--stop-at-phase N` — partial reruns for development
+- `--force` — accepted for backward compatibility; the orchestrator already runs selected phases by default
+- `--dry-run` — preview without executing
+
+Phase 1 price/shares loaders are self-resuming through their manifests, so interrupted downloads can resume without re-fetching fresh successful tickers. Later phases are rerun by the orchestrator so outputs stay complete across tiers, models, cadences, and universes.
 
 ---
 
@@ -143,7 +157,7 @@ These fixes eliminated the O(n²) and O(n×m) patterns that caused the full run 
   - Ridge is usually stable on clean engineered linear signals
   - LightGBM / XGBoost are better suited to the Stretch tier's 405-dimensional sparse interaction features and can capture nonlinearities
   - Running two GBDT implementations is useful because their splitting and regularization defaults differ substantially; after freezing hyperparameters, the grader can see whether conclusions are consistent
-- **Cross-universe hyperparameter discipline**: the same `feature tier x model x horizon` freezes one hparam set and shares it across all three universes. **Never** tune separately to improve one universe, especially RU3K; that would overfit the test set and is explicitly prohibited by audit item 10 in section 3.
+- **Cross-universe hyperparameter discipline**: the same `feature tier x model x horizon` freezes one hparam set and shares it across all three universes. Hparam files are stored at ``results/hparams/{tier}/h{horizon}d/frozen_hparams_{model}.json`` with a manifest at ``results/hparams/hparams_manifest.json`` that records tuning metadata (tier, horizon, CV IC, git hash). **Never** tune separately to improve one universe, especially RU3K; that would overfit the test set and is explicitly prohibited by audit item 10 in section 3.
 
 ### 3.3 Feature-engineering tradeoffs: 85-column Enhanced design
 - **85-column upper bound**: enough to cover 7 information dimensions - Aspect / Theme / sentiment / magnitude / time-series / cross-sectional / pre-event momentum - while staying far below the ~405-column Stretch tier; the linear model is less likely to explode and tree models can still handle it
@@ -180,9 +194,10 @@ These fixes eliminated the O(n²) and O(n×m) patterns that caused the full run 
 
 ### 3.8 Hyperparameter tuning split principles
 - **2010-2019 tuning / 2020Q1+ walk-forward**: the tuning sample is pooled PIT training and never touches 2020Q1+
+- **Availability column**: uses ``availability_date`` (unified operational rule). For events before ProntoNLP's 2023-07-06 launch date, ``availability_date = call_entry_date + 2 business days`` (simulating the operational processing delay that would have existed if the NLP system had been running historically). For events on or after 2023-07-06, ``availability_date = max(call_entry_date, ingest_entry_date)`` (reflecting the actual ProntoNLP ingest timestamp). This is the strategy-facing availability timestamp used for fold construction, tuning sample filtering, G11 label purge, forward-return entry timing, portfolio signal dates, and rebalance eligibility. The pre-2023 ``+2 business days`` assumption is an operational simulation; the raw ``call_entry_date`` (derived from ``MOSTIMPORTANTDATEUTC``, the actual earnings call publication time) is preserved in the feature output and can be used via ``--availability-col call_entry_date`` for backward compatibility.
 - **Inner loop must use `TimeSeriesSplit(n_splits=5)`**; **never use `KFold` / `StratifiedKFold`** because random CV can use 2018 data to predict 2015, leaking inside the inner loop
-- **Share one frozen hparam set across universes**: reuse the same `feature tier x model x horizon` hparams across all three universes. Per-universe tuning equals test-set overfitting
-- **Write frozen hparams to `frozen_hparams_<model>.json`**: the main walk-forward reads these files and does not tune again
+- **Share one frozen hparam set across universes**: reuse the same `feature tier x model x horizon` hparams across all three universes. Per-universe tuning equals test-set overfitting. Hparam files are stored in tier/horizon-specific directories: ``results/hparams/{tier}/h{horizon}d/frozen_hparams_{model}.json``.
+- **Write frozen hparams to tier/horizon-specific paths**: the main walk-forward reads ``frozen_hparams_{model}.json`` from the appropriate ``{tier}/h{horizon}d`` subdirectory and does not tune again. A manifest at ``results/hparams/hparams_manifest.json`` records tuning metadata.
 
 ### 3.9 Freeze the IC short list before experiments to avoid cherry-picking
 - Fix the 14-column IC short list before experiments start; see Phase 5.1 in `plan.md`
@@ -201,6 +216,14 @@ These fixes eliminated the O(n²) and O(n×m) patterns that caused the full run 
 
 ### 4.1 Signed delivery of the official 10-item checklist
 The final PDF includes a 1-page audit checklist from `results/audit/lookahead_checklist_onepager.md`. Each item states "rule / code location / evidence file".
+
+All 10 assertion classes are fully wired:
+
+- **Items 1-6, 10**: Automated in ``features/audit.py`` via ``run_all_audits()``; evidence in ``feature_parity_summary.json``.
+- **Item 7 (Fold boundary + label purge)**: ``assert_fold_boundaries()`` is called per fold in ``backtest/model.py _run_one_fold()``, checking ``max(train_feature_date) < test_start`` and ``max(train_target_available_date_h) < test_start``. Fold metadata with per-horizon target dates is persisted to ``results/audit/fold_manifest.parquet``, which also records ``model`` and ``tier``.
+- **Item 8 (fit() call-stack monitoring)**: ``monitor_fit_calls()`` context manager monkey-patches ``StandardScaler.fit / SimpleImputer.fit / LassoCV.fit / model.fit`` inside every fold. After the context exits, ``assert_fit_callstack()`` validates that all fit calls used training-fold data. The full log (390 entries across 3 enhanced models) is persisted to ``results/audit/fit_audit_log_*.jsonl``.
+- **Item 9 (Trade execution log validation)**: ``validate_trade_log()`` runs after each portfolio simulation in ``backtest/portfolio.py``, checking date ordering and skip-reason consistency. Violations are persisted to ``results/audit/trade_execution_violations.parquet`` with summary counts by violation type logged at WARNING level.
+- ``validation_summary.json`` records per-check status (pass/fail/pending) with evidence file paths.
 
 ### 4.2 Simplified binary BMO/AMC rule for gray-zone times
 - **Rule**: `hour < 13 UTC` -> same business-day close entry (BMO); `hour >= 13 UTC` -> next business-day close entry (AMC, with gray-zone times always treated conservatively as AMC)
@@ -221,11 +244,25 @@ Implementation note: timestamp features roll weekends forward with a business-da
 - One-shot full-sample fit and per-day streaming fit must produce feature matrices satisfying `np.allclose(rtol=1e-9, atol=1e-12)`
 - Per-day granularity catches most day-level leakage; per-event is too slow, and per-month is not strict enough
 - Eight assertion classes (feature parity / fold boundary + label purge / fit call-stack monitoring / PIT universe / forward-return isolation / timestamp boundary fixtures / rebalance eligibility / trade execution log); any failure turns CI red
+- Full-data audit uses all rows in `data/cache/signals.parquet`; `--full-dates N` samples N availability dates for streaming replay. The default final run is `--full-dates 15`.
+- Full-regression optimization: after computing the full batch feature matrix, `features.audit` switches the no-momentum full regression to a target-only streaming path. Row-level features are reused because they are row-local; QoQ deltas, 4Q trend, and strict PIT percentiles are recomputed only for sampled-date rows from the row-level history. The strict PIT query still enforces `history_date < cutoff_date`, so future rows cannot enter a sampled-date result.
+- Validation after the target-only audit optimization passed on the small subset, an equivalence check against the old full-prefix streaming path on sampled small-subset dates, and the final full-data command with `--full-dates 15` (`110,592` rows compared, zero strict mismatches). In the measured run, the full no-momentum batch took 39.9s and the target-only streaming comparison took about 3.6s for all 15 sampled dates.
 
 ### 4.5 Corporate-action / delisting handling
 - **Entry**: planned entry uses `next_valid_close_on_or_after(planned_entry_date)`; if there is still no valid quote after 3 consecutive trading days, mark `skip_no_entry_quote` and do not open the position
 - **Exit**: after a position is opened, planned exit uses `next_valid_close_on_or_after(planned_exit_date)`; if there is still no quote after 3 consecutive trading days, do not delete the whole trade. First mark `right_censored_no_exit_quote` and exclude it from ordinary horizon-return statistics, while summarizing it separately in the delisting / no-exit audit table. If the data source provides a final delisting/merger transaction price, exit at that price and mark `delisting_exit_used`
-- **Never** use backfill, fake forward-fill, or price=0. All states go into `trade_execution_log.parquet` and are reported by universe x year
+- **Never** use backfill, fake forward-fill, or price=0 for entry/exit. All states go into `trade_execution_log.parquet` and are reported by universe x year
+- **Trade log columns**: ``trade_execution_log.parquet`` contains ``planned_entry_date`` / ``actual_entry_date`` / ``entry_price`` / ``planned_exit_date`` / ``actual_exit_date`` / ``exit_price`` / ``skip_reason`` (``None`` for normal trades, ``skip_no_entry_quote`` for missing entry, ``right_censored_no_exit_quote`` for missing exit). After each portfolio run, ``validate_trade_log()`` checks date ordering and skip-reason consistency; any violations are persisted to ``trade_execution_violations.parquet``.
+- **Daily P&L gap accounting**: When computing daily returns inside the portfolio simulation, every held ticker is classified each day into one of five categories:
+  1. Normal return (valid next-day quote) — included in headline P&L
+  2. One-day forward-filled quote gap — the price is forward-filled for return continuity; the daily return is 0% and the position remains in headline P&L; the cumulative return is correctly captured when the price reappears
+  3. Two-day forward-filled quote gap — same logic extended for two consecutive missing trading days
+  4. Long gap recovered (gap > 2 trading days, but a valid quote resumes within 30 trading days) — censored from headline fully-observable returns; reported in a supplemental column
+  5. Possible delisting or data unavailable (gap > 2 trading days, no quote within 30 trading days) — censored from headline returns; classified separately
+- **Gap reporting columns** added to the daily returns parquet: ``ffill_1d_weight``, ``ffill_2d_weight``, ``long_gap_recovered_weight``, ``possible_delisting_or_unavailable_weight`` plus position counts for each category
+- **Gap summary statistics** in the portfolio summary JSON report the share of position-days in each gap category
+- A supplemental **30-trading-day recovery audit** runs after the simulation: for each position with a gap longer than 2 days, the code scans forward 30 trading days for a valid quote. Recovered positions are classified separately in the gap accounting output but do not enter headline Sharpe calculations
+- **Gap accounting parquet** (``gap_accounting_*.parquet``) persists per-gap-event details including gap date, ticker, weight, and recovery status
 
 ---
 
@@ -249,19 +286,33 @@ Implementation note: timestamp features roll weekends forward with a business-da
   - `failed_tickers.csv` records fetch status
   - Report `tradeable_members / pit_members` for every universe x rebalance date; flag <90% in red in the PDF
   - Missing entry price -> `skip_no_entry_quote`; missing exit price -> `right_censored_no_exit_quote`; do not silently forward-fill fake data or silently delete the whole trade
+  - **Daily return gap handling**: For quotes missing during daily P&L computation (as opposed to entry/exit), bounded forward-fill is used for continuity:
+    - One- or two-day price gaps are forward-filled (price held constant, net zero return for that day). The cumulative return is correctly captured when the price reappears. The affected weight and position count are reported in the daily returns parquet.
+    - Gaps longer than two trading days censor the position from headline fully-observable portfolio returns. A supplemental 30-trading-day recovery audit classifies the gap as either `long_quote_gap_recovered` (if a valid quote resumes) or `possible_delisting_or_data_unavailable` (if evidence remains absent). Recovered-gap returns are reported in supplemental columns only and do not enter headline Sharpe.
 - **Do not** fill with a second data source: multi-source stitching can introduce silent bias and is more dangerous than "single source + transparent missingness"
 
 ### 5.4 G15. Historical shares-outstanding coverage
 - Market-cap buckets depend on PIT `shares_outstanding`
 - Tickers missing historical share series are excluded only from market-cap bucket / `%ADV consumed` supplemental analysis and **do not affect main strategy returns**
 - Coverage must be reported by universe x year; low-coverage buckets are qualitative reference only
-- **Confirmed after Phase 1**: yfinance's `Ticker.get_shares_full` returns no data before ~2015. `results/audit/marketcap_capacity_coverage.csv` shows SP500 / SP1500 coverage at 0.0–0.9% for 2010–2014 (well below the 70% floor) and 77–85% for 2015–2026. **Market-cap buckets and `%ADV-consumed` AUM analysis are therefore quantitative only for 2015 onward**; the 2010–2014 subperiod is qualitative-robustness-only and is flagged in red in the PDF
+- **Coverage denominator**: the denominator is the union of PIT members on snapshots within the calendar year only (not all of history). Years with no PIT snapshots (e.g., RU3K) get explicit zero-member rows. This prevents early-year coverage from being understated by including future members.
+- **Confirmed after Phase 1**: yfinance's `Ticker.get_shares_full` returns no data before ~2015. `results/audit/marketcap_capacity_coverage.csv` shows per-year membership (521–537 tickers for SP500, not a flat 817 all-historical count). SP500 / SP1500 coverage is 0.0–0.6% for 2010–2014 (well below the 70% floor) and 91.9–99.8% for 2015–2026 (above floor). RU3K has no PIT snapshots and is reported as explicit empty rows. **Market-cap buckets and `%ADV-consumed` AUM analysis are therefore quantitative only for 2015 onward**; the 2010–2014 subperiod is qualitative-robustness-only and is flagged in red in the PDF
 
 ### 5.5 ETF approximation for SP1500/RU3K PIT constituents
 - iShares ETF actual holdings are not identical to official FTSE Russell / S&P constituents; ETF sampling can skip some small-cap names
 - This is a data-source transparency issue and **not look-ahead bias**
 - Disclose it only in the PDF methodology section
 - **Phase 1 status**: iShares does not expose a historical-snapshot API, so `data/load_universes.py` only persists the iShares snapshot for *today*. Until enough monthly snapshots accumulate going forward, the SP1500 PIT is effectively the SP500 monthly slice (390 month-end gaps logged for `IJH` + `IJR`) and the RU3K PIT is empty (195 month-end gaps). All gaps are written to `results/audit/universe_coverage_gaps.csv`; the loader **never** falls back to the current snapshot for past dates. Practical consequence: the SP1500 and RU3K backtests for 2010–2025 are tagged `coverage_constrained` and reported alongside SP500 with explicit coverage disclosure, rather than being silently filled with survivorship-biased data
+
+### 5.6 G16. Unified operational availability-date rule
+
+- **ProntoNLP / ATC's NLP processing system went live on 2023-07-06**. Earnings call transcripts existed publicly before that date (``MOSTIMPORTANTDATEUTC`` dates go back to 2010), but the structured ATC signals were backfilled at the time the system launched.
+- ``INGESTDATEUTC`` records when ATC actually processed the call (all >= 2023-07-06), not when the earnings call itself was published. ``MOSTIMPORTANTDATEUTC`` is the actual call date.
+- Therefore, a strict ``availability_date = max(call_entry_date, ingest_entry_date)`` labels every pre-2023-07-06 event as unavailable (because all historical ``INGESTDATEUTC`` values are >= 2023-07-06), making the entire 2010-2019 period unavailable for tuning.
+- **Unified operational rule**: for calls before 2023-07-06, ``availability_date = call_entry_date + 2 business days`` (simulating the operational processing delay if the NLP system had existed). For calls on or after 2023-07-06, ``availability_date = max(call_entry_date, ingest_entry_date)`` (reflecting the real ingest-based availability).
+- This unified ``availability_date`` is used everywhere: feature history, PIT percentiles, forward-return entry, fold construction, tuning sample filtering, label purge, portfolio signal dates, and rebalance eligibility. The raw ``call_entry_date`` and ``ingest_entry_date`` fields are preserved in the feature output for audit and transparency.
+- **Impact assessment**: The ``+2 business days`` pre-launch rule is an operational assumption, not an observed ProntoNLP vendor timestamp. It is a practical compromise that avoids making all pre-2023 events unavailable while respecting that a same-day entry is unrealistic for signals that were backfilled. The exact effect on early-period IC and Sharpe depends on the specific call dates and weekend/holiday patterns, but is expected to be small since most earnings calls occur on business days.
+- Code location: ``features/engineer.py`` ``compute_timestamps()`` implements the rule. ``backtest/model.py`` CLI ``--availability-col`` defaults to ``availability_date``. ``backtest/splits.py`` ``compute_forward_returns()`` accepts an ``entry_date_col`` parameter (default ``"availability_date"``). ``backtest/portfolio.py`` ``--date-col`` defaults to ``availability_date``. ``run_all.py`` passes ``--date-col availability_date`` in Phase 5 portfolio calls.
 
 ---
 
@@ -319,6 +370,140 @@ Implementation note: timestamp features roll weekends forward with a business-da
 ---
 
 ## 10. Experiment Results (Fill After Runs Finish)
+
+### 10.0 Experiment infrastructure status — 2026-04-30
+All Phase 5 modules are implemented and validated end-to-end on SP500 + SP1500 enhanced features (full pipeline: 14m32s).
+
+| Module | File | Lines | Status |
+|---|---|---|---|
+| 5.1 IC analysis | `backtest/single_feature_ic.py` | 422 | Validated — 14 features × 5 horizons × 5 SignalTypes; Newey-West t-stats (manual Bartlett kernel); sector-split IC |
+| 5.2 Quintile/decile | `backtest/quintile.py` | 422 | Validated — decile baseline + quintile; monthly cross-sectional bucketing; cumulative equity / drawdown / rolling Sharpe |
+| 5.3 Walk-forward preds | `backtest/model.py` | 679 | Shared with Phase 4; OOS predictions for Ridge/LightGBM/XGBoost |
+| 5.4 Portfolio sim | `backtest/portfolio.py` | 952 | Validated — PIT-filtered OOS portfolios; daily P&L accounting for all cadences; model-tagged outputs; trade log + universe coverage artifacts |
+| 5.5 Robustness | `backtest/robustness.py` | 680 | Validated — 8 check categories (subperiod / sector-neutral / mcap / weighting / bootstrap / OFAT quantile / OFAT cost / R8 beta) |
+
+**Key robustness findings (SP500).**
+- **Signal decay**: ATCClassifierScore IC drops from 0.062 (pre-2020) to −0.012 (2023–2026)
+- **Sector neutralization reduces Sharpe**: raw > sector-neutral for most horizons
+- **Score-weighting helps at h=3–10d**: improves Sharpe vs equal-weight; hurts at h=1d and h=20d
+- **Top-50 cutoff optimal**: Sharpe 0.84 (h=5d) vs 0.20 for top-5; top-100 is negative
+- **R8 CFO warning**: `pre_event_idio_resid_5d` IC negative for all CFO SignalTypes → remove from final model per transparency requirement
+
+Full run: `python run_all.py --from-phase 5`.
+
+### 10.0.1 Post-review correctness and speed fixes — 2026-04-30
+
+After reviewing Phase 0–5 against `docs/requirement.md`, the following issues were fixed in code:
+
+- Replaced per-ticker/stale universe joins with a shared global PIT snapshot filter in `backtest/universe.py`; empty RU3K now keeps 0 rows instead of all rows
+- Applied PIT filtering inside portfolio construction, so OOS prediction rows and portfolio weights cannot include non-members on the rebalance date
+- Changed weekly/monthly portfolio accounting from rebalance-only rows to true daily P&L rows while retaining rebalance markers
+- Added model-tagged portfolio outputs to prevent Ridge/LightGBM/XGBoost overwrites
+- Persisted `results/audit/trade_execution_log*.parquet` and `results/audit/universe_coverage_by_date*.csv`
+- Changed forward-return entry matching from a 10-calendar-day tolerance to a max 3-business-day entry gap
+- Fixed sector-neutral robustness so sector-neutral and raw comparisons both use `SignalType == Total`
+- Made `lookahead_checklist_onepager.md` report pending Phase 4/5 items instead of saying `ALL PASSED`
+- Batched `data/load_shares.py` failed-ticker log writes to avoid repeated CSV read/write overhead
+
+Targeted validation:
+
+- `python -m compileall data features backtest reports run_all.py` passed
+- Empty RU3K smoke: IC and quintile filters kept `0 / 1000` rows
+- LightGBM weekly SP500 portfolio smoke: `1582` daily rows, `295` rebalance rows, median row gap `1.0` day, `4788` weight rows, `0` out-of-universe weights
+- Trade log validation: `0` violations; universe coverage rows `295`, minimum coverage ratio `0.9091`
+
+### 10.0.2 Round-2 review fixes — 2026-04-30
+
+A second pass surfaced one numerical bug and two large safe speed wins. All applied:
+
+- **M6 — Block bootstrap annualization** (`backtest/robustness.py`). `block_bootstrap` was annualizing with `*252 / sqrt(252)`, but the call site at the bottom of `run_robustness` feeds *monthly* L/S returns from `_build_equity_curves`. The reported Sharpe 95% CIs were therefore overstated by `sqrt(252/12) ≈ 4.58×`. Added a `periods_per_year` parameter (default 252) and pass `periods_per_year=12` from the monthly call site. Smoke test: with monthly synthetic returns the new CI lies in roughly `[-0.3, 1.5]` instead of the inflated `[0.02, 9.2]` range that the old code would have produced.
+- **S1 — Cache forward returns** (`backtest/splits.py` + 4 call sites). Phase 5a/5b/5c/5d each invoked `compute_forward_returns` independently, scanning every per-ticker price parquet from scratch. Added `get_forward_returns_cached(features_path, df, ...)` which initially wrote a parquet cache keyed on features mtime. Later upgraded to `joblib.Memory` with an explicit `ForwardReturnsCacheSignature` dataclass capturing features parquet metadata (path, size, mtime), price manifest metadata (path, size, mtime, SHA-256 content hash), source-code hash of `compute_forward_returns`, horizons, `entry_date_col`, and a cache schema version. The cached function uses `@memory.cache(ignore=['df'])` so the cache key is the dependency signature only, not the full DataFrame. A human-readable manifest is written to `results/cache/forward_returns_manifest.json`. Eliminates 3+ duplicate passes per `run_all.py --from-phase 5`.
+- **S2 — Vectorize and correct `assign_market_cap_buckets`** (`backtest/robustness.py`). Old version reloaded each ticker's parquet for every month (~100k parquet reads on full SP500), assigned buckets via per-row `df.loc[idx, ...]`, and formed thresholds from event-month tickers rather than the same-day PIT universe. Rewrote to: (a) pre-load price + shares history for PIT universe members once via `_load_ticker_history`; (b) use `np.searchsorted` for strict T-1 price and strict T-1 shares relative to each event date; (c) compute mega / large / mid / small cutoffs from covered members in the latest PIT universe snapshot on or before that event date; (d) use `np.select` for vectorized event-row bucket assignment. Missing data remains `"unknown"` and coverage is now reported as covered PIT members / PIT members for the event date.
+
+Each fix passed `python -m compileall backtest features data run_all.py`. The market-cap bucket rewrite is intentionally not numerically equivalent to the previous approximation: it now uses same-day PIT universe thresholds and strict event-date T-1 price/shares lookups. The Phase 5d full re-run will produce refreshed timing and market-cap bucket tables for the next report update.
+
+### 10.0.3 Round-3 review fixes — 2026-04-30
+
+A third pass surfaced four issues across audit wiring, plan compliance, and code hygiene. All applied:
+
+- **A1 — Wire fit() call-stack monitoring** (`backtest/model.py`). `features/audit.py` defined `monitor_fit_calls()` and `assert_fit_callstack()` for intercepting every `fit()` call during walk-forward (Plan §3.2 assertion 3), but `backtest/model.py` never imported or used them. Fixed by wrapping the impute/scale → LassoCV → model.fit section of `_run_one_fold()` inside `monitor_fit_calls()`, extracting the log, and calling `assert_fit_callstack()` with the fold's `[train_start, train_end]` boundaries. Violations are recorded in `FoldResult.fit_violations` and persisted to `fit_audit_log.jsonl`.
+
+- **A2 — Add 3-day entry/exit quote tolerance** (`backtest/portfolio.py`). Plan §4.5 requires checking "3 consecutive trading days" for a valid quote before marking `skip_no_entry_quote` or `right_censored_no_exit_quote`. The portfolio simulator previously checked only the exact rebalance date for entry and the exact next-rebalance date for exit. Added `_next_valid_quote()` helper that scans up to 3 calendar days forward in the trading calendar; both entry and exit now use this helper. Actual entry/exit dates and prices are recorded in `trade_execution_log.parquet`.
+
+- **A3 — Remove hard-coded `tolerance_days=65`** (`backtest/single_feature_ic.py`, `backtest/quintile.py`). Both modules hard-coded `tolerance_days=65` for universe PIT filtering, overriding the adaptive tolerance in `backtest/universe.py` (7 days for daily SP500 snapshots, 65 for monthly SP1500/RU3K). Changed the default to `None` so the shared module auto-detects the correct tolerance from snapshot frequency.
+
+- **A4 — Replace deprecated `datetime.utcnow()`** (`data/config.py`, `data/load_prices.py`, `data/load_shares.py`). `datetime.utcnow()` is deprecated since Python 3.12. Added `utc_now_iso()` helper to `data/config.py` using `datetime.now(dt.UTC)` with fallback; updated all 5 call sites.
+
+Validation: `python -m compileall backtest features data` passes; `from backtest.model import ...` and `from backtest.portfolio import ...` import cleanly.
+
+### 10.0.4 Round-4 review fix — 2026-04-30
+
+A fourth pass addressed the most complex review item — missing daily returns and delisting treatment in portfolio P&L (Bug #8).
+
+- **B8 — Bounded forward-fill and recovery audit for missing daily returns** (`backtest/portfolio.py`). The daily P&L loop previously used ``dropna()`` before summing returns, silently ignoring held names with missing next-day quotes. Replaced with a per-day classification system:
+  - Added ``_audit_long_gap_recovery()`` module-level function for the 30-trading-day recovery audit.
+  - During the daily loop, each held ticker is classified: normal (valid next-day quote), ``ffill_1d`` (gap < 2 days, forward-filled with 0% return), ``ffill_2d`` (gap = 2 days), or long gap (>2 days, censored from headline P&L).
+  - Long-gap positions are recorded and audited post-loop via the 30-trading-day recovery scan.
+  - Eight gap accounting columns added to ``daily_returns`` parquet: weights (``ffill_1d_weight``, ``ffill_2d_weight``, ``long_gap_recovered_weight``, ``possible_delisting_or_unavailable_weight``) and position counts (``n_*`` equivalents).
+  - Four gap summary statistics added to portfolio summary JSON (share of position-days in each category).
+  - ``gap_accounting_*.parquet`` persisted with per-gap-event details.
+- **Documentation**: ``ideas/plan.md`` Phase 5.4 updated; ``docs/report.md`` Sections 4.5 and 5.3 updated; ``docs/debugging.md`` Section 5 "Fix Applied" added.
+
+Validation: ``python -m compileall backtest features data`` passes. Portfolio smoke test on SP500 weekly Ridge produces daily returns with all 15 columns including gap accounting columns. Summary JSON includes all four gap share statistics.
+
+### 10.0.5 Round-5 review fix — 2026-04-30 (Phase 5 expanded loops)
+
+A fifth pass expanded Phase 5's ``run_all.py`` orchestration to cover all requested dimensions:
+
+- **Tier loop**: Phase 5 now iterates over all tiers in ``--tier``, so ``--tier both`` runs both Enhanced and Stretch experiments for every sub-phase (previously only ``args.tiers[0]`` was used, so Stretch Phase 5 was silently skipped).
+- **Universe loop**: IC (5a), quintile (5b), and robustness (5d) now iterate over every universe in ``--universes`` (default: ``sp500 sp1500 ru3k``). Portfolio simulation (5c) loops over universes × models × cadences.
+- **OOS prediction discovery**: The portfolio glob pattern changed from ``oos_pred_*_{tier}_h5d.parquet`` to ``oos_pred_*_{tier}_h*.parquet``, discovering predictions across all horizons.
+- **RU3K coverage-constrained handling**: Added ``--skip-empty-universe`` flag. By default, empty/missing universe PIT files (e.g., RU3K) produce explicit ``{module}_{universe}_coverage_constrained.json`` sentinel artifacts instead of silently skipping.
+- **Dry-run expansion**: ``python run_all.py --dry-run --tier both`` now enumerates all sub-tasks with their tiers, universes, models, and cadences.
+
+See ``docs/debugging.md`` Section 2 for full details.
+
+### 10.0.6 Round-6 review fix — 2026-04-30 (default parameter + cache stability)
+
+A sixth pass surfaced two issues:
+
+- **C1 — `run_walk_forward()` default `availability_col` mismatch** (`backtest/model.py`). The function signature defaulted to ``availability_col="call_entry_date"``, but the CLI and plan specify ``"availability_date"`` (the unified operational availability date) as the main pipeline default. If ``run_walk_forward()`` were called programmatically without passing this argument, it would silently use the wrong date column for fold construction, training-set filtering, and G11 label purge. Changed the function-signature default to ``"availability_date"`` to match the CLI and plan.
+
+- **C2 — Deterministic source-code hash for cache signature** (`backtest/splits.py`). ``_build_cache_signature()`` used Python's built-in ``hash()`` to fingerprint the source code of ``compute_forward_returns``. Since Python's string ``hash()`` is randomised via ``PYTHONHASHSEED`` across interpreter restarts, the ``source_hash`` field in ``ForwardReturnsCacheSignature`` could differ between runs even when the source code was unchanged, causing unnecessary forward-return cache recomputation. Replaced with ``int(hashlib.sha256(source.encode()).hexdigest()[:16], 16)``, matching the deterministic SHA-256 approach already used for the price-manifest hash in the same function.
+
+Validation: ``python -m compileall backtest/model.py backtest/splits.py`` passes.
+
+### 10.0.7 Round-7 review fix — 2026-04-30 (PIT membership, model sample, audit, and portfolio execution)
+
+A seventh pass reviewed the code against the intended Phase 0-5 methodology rather than only checking syntax. This surfaced several material issues that affected reproducibility and the interpretation of existing Phase 4/5 artifacts. All fixes below were applied in code. **Important consequence:** previously generated Phase 4/5 outputs in `results/` should be treated as stale and regenerated before final conclusions are reported.
+
+- **D1 — Correct SP500 PIT effective dates** (`data/load_universes.py`). The SP500 Wikipedia reverse-replay logic previously recorded the pre-change state at `change_date - 1` and then forward-filled it, which could keep removed names active after the effective date and delay added names until a later snapshot. The corrected implementation records the post-change membership at the actual effective date, then undoes all additions/removals for that same date before continuing backward. A synthetic fixture with `A -> B` on `2020-01-15` now returns `A` on `2020-01-14` and `B` from `2020-01-15` onward.
+
+- **D2 — Filter predictive model samples by PIT universe and `SignalType`** (`backtest/model.py`). The walk-forward model path previously trained on the full 2.74M-row feature table and was filtered only later during portfolio construction. This mixed universes and signal slices inside model fitting. The CLI now defaults to `--universe sp500 --signal-type Total`; `filter_model_sample()` applies PIT universe membership before tuning and walk-forward. `_orig_df_index` is preserved so OOS predictions can still be joined to the original feature parquet in portfolio simulation. On the current enhanced artifact, the SP500 + `Total` model sample is `32,136` rows.
+
+- **D3 — Per-horizon frozen hparams and universe-aware Phase 4 orchestration** (`backtest/model.py`, `run_all.py`). Tuning now runs once per requested horizon and writes `results/hparams/{tier}/h{horizon}d/frozen_hparams_{model}.json`. `run_all.py` tunes on the first populated universe, then runs walk-forward separately for every requested populated universe while reusing the shared frozen hparams. This preserves the cross-universe hparam discipline while making Phase 4 reproducible from source.
+
+- **D4 — Prevent portfolio output overwrites across prediction horizons** (`backtest/model.py`, `run_all.py`, `backtest/portfolio.py`). OOS prediction filenames now include model, tier, universe, signal slice, and prediction horizon, e.g. `oos_pred_ridge_enhanced_sp500_total_h5d.parquet`. Phase 5 portfolio tags include `predh{horizon}d`, so h1/h3/h5/h10/h20 prediction runs no longer overwrite the same `{model, cadence, lookback}` output filenames.
+
+- **D5 — Strengthen fit-call audit evidence** (`features/audit.py`, `backtest/model.py`). Fit-call monitoring now patches `Ridge.fit()` directly. Training matrices are kept as pandas DataFrames with a `DatetimeIndex` through imputation, scaling, feature selection, and model fitting, so the fit log records real min/max training dates instead of just NumPy array shapes. `FoldResult` stores the fit-call log and `write_fit_audit_log()` persists it.
+
+- **D6 — Apply actual delayed entry dates to daily P&L** (`backtest/portfolio.py`). `_next_valid_quote()` may fill an intended trade 1-3 trading days after the planned rebalance date. The previous simulator logged the delayed `actual_entry_date` but let the position contribute to daily P&L immediately on the planned date. The simulator now tracks `current_entry_dates` and includes a position in gross/P&L only once `actual_entry_date <= current_date`.
+
+Validation completed after this round:
+
+- `python -m compileall data features backtest reports run_all.py` passed.
+- Main module import smoke test passed.
+- Synthetic SP500 add/remove fixture passed.
+- `filter_model_sample()` kept `32,136` SP500 `Total` rows with unique `_orig_df_index`.
+- Synthetic walk-forward smoke wrote `oos_pred_ridge_enhanced_sp500_total_h1d.parquet`, preserved original feature indices, and produced dated fit logs for `SimpleImputer`, `StandardScaler`, and `Ridge`.
+- Portfolio smoke confirmed that delayed-entry positions are excluded from gross exposure and P&L before `actual_entry_date`.
+
+Required rerun before using final numbers:
+
+```bash
+python -m data.load_universes --only sp500
+python run_all.py --from-phase 4 --stop-at-phase 5 --tier enhanced
+```
 
 ### 10.1 Per-universe result summary
 - SP500: (fill IC / decile spread / walk-forward Sharpe)

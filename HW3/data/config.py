@@ -7,6 +7,7 @@ one place.
 
 from __future__ import annotations
 
+import datetime as dt
 import os
 import random
 from pathlib import Path
@@ -55,3 +56,15 @@ def set_global_seed(seed: int = SEED) -> None:
     random.seed(seed)
     np.random.seed(seed)
     os.environ["PYTHONHASHSEED"] = str(seed)
+
+
+def utc_now_iso() -> str:
+    """Return current UTC time as an ISO-8601 string with Z suffix.
+
+    Uses ``datetime.now(dt.UTC)`` on Python 3.12+ and falls back to the
+    deprecated ``datetime.utcnow()`` on older interpreters.
+    """
+    try:
+        return dt.datetime.now(dt.UTC).isoformat() + "Z"
+    except AttributeError:
+        return dt.datetime.utcnow().isoformat() + "Z"  # pragma: no cover - py<3.12

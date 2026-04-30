@@ -71,7 +71,8 @@ def load_manifest() -> dict:
 
 
 def save_manifest(manifest: dict) -> None:
-    manifest["updated_at"] = dt.datetime.utcnow().isoformat() + "Z"
+    from data.config import utc_now_iso
+    manifest["updated_at"] = utc_now_iso()
     SHARES_MANIFEST.parent.mkdir(parents=True, exist_ok=True)
     SHARES_MANIFEST.write_text(json.dumps(manifest, indent=2, sort_keys=True))
 
@@ -82,10 +83,28 @@ def update_failed_log(result: FetchResult) -> None:
     SHARES_FAILED_TICKERS.parent.mkdir(parents=True, exist_ok=True)
     if SHARES_FAILED_TICKERS.exists():
         existing = pd.read_csv(SHARES_FAILED_TICKERS, dtype=str)
-        existing = existing[existing["ticker"] != result.ticker]
     else:
         existing = pd.DataFrame(columns=columns)
 
+    existing = apply_failed_log_result(existing, result)
+    existing.to_csv(SHARES_FAILED_TICKERS, index=False)
+
+
+def load_failed_log() -> pd.DataFrame:
+    columns = ["ticker", "status", "rows", "first_date", "last_date", "error"]
+    if SHARES_FAILED_TICKERS.exists():
+        return pd.read_csv(SHARES_FAILED_TICKERS, dtype=str)
+    return pd.DataFrame(columns=columns)
+
+
+def save_failed_log(existing: pd.DataFrame) -> None:
+    SHARES_FAILED_TICKERS.parent.mkdir(parents=True, exist_ok=True)
+    existing.to_csv(SHARES_FAILED_TICKERS, index=False)
+
+
+def apply_failed_log_result(existing: pd.DataFrame, result: FetchResult) -> pd.DataFrame:
+    """Apply one fetch result to an in-memory failed ticker log."""
+    existing = existing[existing["ticker"] != result.ticker].copy()
     if result.status != "success":
         row = pd.DataFrame([{
             "ticker": result.ticker,
@@ -96,8 +115,7 @@ def update_failed_log(result: FetchResult) -> None:
             "error": result.error or "",
         }])
         existing = pd.concat([existing, row], ignore_index=True)
-
-    existing.to_csv(SHARES_FAILED_TICKERS, index=False)
+    return existing
 
 
 # ---------------------------------------------------------------------------
@@ -196,9 +214,37 @@ def union_tickers(per_universe: dict[str, set[str]]) -> list[str]:
 # Coverage report
 # ---------------------------------------------------------------------------
 
+def _yearly_pit_members(universe: str) -> dict[int, set[str]]:
+    """Load the PIT parquet for *universe* and return per-year member sets.
+
+    For each calendar year that has at least one snapshot, the member set is
+    the union of all tickers appearing on snapshots within that year.  Years
+    with no snapshots are omitted from the result.
+    """
+    path = UNIVERSE_CACHE_DIR / f"{universe}_pit.parquet"
+    if not path.exists():
+        return {}
+
+    pit_df = pd.read_parquet(path)
+    if pit_df.empty:
+        return {}
+
+    year_series = pd.to_datetime(pit_df["date"]).dt.year.astype(int)
+
+    result: dict[int, set[str]] = {}
+    for yr, grp in pit_df.groupby(year_series):
+        result[int(yr)] = set(grp["ticker"].astype(str).str.upper().unique())
+    return result
+
+
 def write_coverage(per_universe: dict[str, set[str]], manifest: dict) -> None:
     """For each (universe, year) compute fraction of tickers with shares
-    coverage on that year. Flag any (u, y) below COVERAGE_FLOOR."""
+    coverage on that year. Flag any (u, y) below COVERAGE_FLOOR.
+
+    The denominator is the union of PIT members on snapshots within that
+    calendar year only (not all of history).  Years with no PIT snapshots
+    get an explicit missing/empty row.
+    """
     rows: list[dict] = []
 
     cached: dict[str, tuple[dt.date, dt.date]] = {}
@@ -213,16 +259,28 @@ def write_coverage(per_universe: dict[str, set[str]], manifest: dict) -> None:
         )
 
     today_year = dt.date.today().year
-    for u, members in progress(
-        list(per_universe.items()),
-        desc="shares coverage",
-        unit="universe",
-    ):
-        if not members:
-            continue
+    universe_names = sorted(per_universe.keys())
+
+    for u in progress(universe_names, desc="shares coverage", unit="universe"):
+        year_members = _yearly_pit_members(u)
+
         for year in range(2010, today_year + 1):
             year_start = dt.date(year, 1, 1)
             year_end = dt.date(year, 12, 31)
+            members = year_members.get(year)
+
+            if members is None:
+                # No PIT snapshots in this year -> explicit empty row
+                rows.append({
+                    "universe": u,
+                    "year": year,
+                    "members": 0,
+                    "covered": 0,
+                    "coverage_ratio": 0.0,
+                    "below_floor": True,
+                })
+                continue
+
             covered = 0
             for t in members:
                 rng = cached.get(t)
@@ -230,6 +288,7 @@ def write_coverage(per_universe: dict[str, set[str]], manifest: dict) -> None:
                     continue
                 if rng[0] <= year_end and rng[1] >= year_start:
                     covered += 1
+
             ratio = covered / len(members)
             rows.append({
                 "universe": u,
@@ -273,6 +332,7 @@ def run(
     sleep: float = BASE_SLEEP,
     limit: int | None = None,
 ) -> dict:
+    from data.config import utc_now_iso
     set_global_seed()
     ensure_dirs()
     SHARES_CACHE_DIR.mkdir(parents=True, exist_ok=True)
@@ -285,13 +345,17 @@ def run(
     log.info("ticker universe: %d", len(tickers))
 
     manifest = load_manifest()
+    failed_log = load_failed_log()
     counts = {"success": 0, "empty": 0, "error": 0, "skipped_cached": 0}
 
     ticker_bar = progress(tickers, desc="shares tickers", unit="ticker")
     for i, t in enumerate(ticker_bar, 1):
         if is_cached_fresh(t, manifest, end=end):
             counts["skipped_cached"] += 1
-            update_failed_log(FetchResult(t, "success", 0, None, None))
+            failed_log = apply_failed_log_result(
+                failed_log,
+                FetchResult(t, "success", 0, None, None),
+            )
             ticker_bar.set_postfix(counts)
             continue
         res = fetch_ticker(t, start=start, end=end, base_sleep=sleep)
@@ -301,17 +365,19 @@ def run(
             "first_date": res.first_date,
             "last_date": res.last_date,
             "error": res.error,
-            "fetched_at": dt.datetime.utcnow().isoformat() + "Z",
+            "fetched_at": utc_now_iso(),
         }
         counts[res.status] = counts.get(res.status, 0) + 1
-        update_failed_log(res)
+        failed_log = apply_failed_log_result(failed_log, res)
         ticker_bar.set_postfix(counts)
 
         if i % 50 == 0:
             save_manifest(manifest)
+            save_failed_log(failed_log)
             log.info("progress %d/%d  counts=%s", i, len(tickers), counts)
 
     save_manifest(manifest)
+    save_failed_log(failed_log)
     write_coverage(per_u, manifest)
     log.info("done. counts=%s", counts)
     return counts

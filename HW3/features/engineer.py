@@ -20,6 +20,11 @@ import pandas as pd
 from data.config import PRICE_CACHE_DIR, SIGNALS_PARQUET
 from data.progress import progress
 
+try:
+    from numba import njit as _numba_njit
+except ImportError:  # pragma: no cover - exercised on environments without numba
+    _numba_njit = None
+
 log = logging.getLogger("engineer")
 
 # ---------------------------------------------------------------------------
@@ -105,15 +110,38 @@ def compute_timestamps(df: pd.DataFrame) -> pd.DataFrame:
     """Add *call_entry_date*, *ingest_entry_date*, and *availability_date*.
 
     Returns a new DataFrame with the three date columns appended.
+
+    ``availability_date`` uses the unified operational rule:
+    - If ``call_entry_date < 2023-07-06``: ``call_entry_date + 2 business days``
+    - Else: ``max(call_entry_date, ingest_entry_date)``
     """
     df = df.copy()
     df["call_entry_date"] = entry_rule(df["MOSTIMPORTANTDATEUTC"])
     df["ingest_entry_date"] = entry_rule(df["INGESTDATEUTC"])
-    df["availability_date"] = (
-        df[["call_entry_date", "ingest_entry_date"]]
-        .max(axis=1)
-        .astype("datetime64[ns]")
-    )
+
+    cutoff = pd.Timestamp("2023-07-06")
+    call = df["call_entry_date"]
+    has_call = call.notna()
+
+    # Pre-launch rule: call_entry_date + 2 business days
+    pre_mask = has_call & (call < cutoff)
+    pre_result = pd.Series(pd.NaT, index=df.index, dtype="datetime64[ns]")
+    if pre_mask.any():
+        pre_days = call[pre_mask].dt.normalize().to_numpy(dtype="datetime64[D]").copy()
+        pre_plus_2 = np.busday_offset(pre_days, 2, roll="forward")
+        pre_result.loc[pre_mask] = pd.to_datetime(pre_plus_2)
+
+    # Post-launch rule: max(call_entry_date, ingest_entry_date)
+    post_mask = has_call & (call >= cutoff)
+    post_result = pd.Series(pd.NaT, index=df.index, dtype="datetime64[ns]")
+    if post_mask.any():
+        post_result.loc[post_mask] = (
+            df.loc[post_mask, ["call_entry_date", "ingest_entry_date"]]
+            .max(axis=1)
+            .astype("datetime64[ns]")
+        )
+
+    df["availability_date"] = pre_result.where(pre_mask, post_result)
     return df
 
 
@@ -321,10 +349,21 @@ def compute_qoq_deltas(df: pd.DataFrame) -> pd.DataFrame:
         work_cols.append("call_entry_date")
 
     work = df[work_cols].copy()
+    # _orig_idx maps each row back to its position in *df* so results can be
+    # placed into the output DataFrame aligned with the caller's index.
     work["_orig_idx"] = df.index
+    # _sort_tiebreaker provides a stable sort across different-sized DataFrames
+    # when rows share the same (ticker, signal, date, call_entry) keys.  Using
+    # the original _row_id (if present) makes the sort deterministic regardless
+    # of which other rows happen to be present — needed by the streaming audit.
+    if "_row_id" in df.columns:
+        work["_sort_tiebreaker"] = df["_row_id"].values
+    else:
+        work["_sort_tiebreaker"] = np.arange(len(work), dtype="int64")
     sort_cols = keys + ["availability_date"]
     if "call_entry_date" in work.columns:
         sort_cols.append("call_entry_date")
+    sort_cols.append("_sort_tiebreaker")
     work = work.sort_values(sort_cols)
 
     # Collapse simultaneous rows to one date-level value per ticker/slice, then
@@ -367,9 +406,14 @@ def compute_4q_trend(df: pd.DataFrame) -> pd.Series:
 
     work = df[work_cols].copy()
     work["_orig_idx"] = df.index
+    if "_row_id" in df.columns:
+        work["_sort_tiebreaker"] = df["_row_id"].values
+    else:
+        work["_sort_tiebreaker"] = np.arange(len(work), dtype="int64")
     sort_cols = keys + ["availability_date"]
     if "call_entry_date" in work.columns:
         sort_cols.append("call_entry_date")
+    sort_cols.append("_sort_tiebreaker")
     work = work.sort_values(sort_cols)
 
     atc_by_date = work.groupby(block_cols, sort=False)["ATCClassifierScore"].last()
@@ -408,6 +452,62 @@ def compute_timeseries_features(df: pd.DataFrame) -> pd.DataFrame:
 # ---------------------------------------------------------------------------
 # 2.2  Cross-sectional PIT percentiles  (6 columns)
 # ---------------------------------------------------------------------------
+
+if _numba_njit is not None:
+    @_numba_njit(cache=True)
+    def _strict_historical_percentile_numba(
+        vals: np.ndarray,
+        unique_vals: np.ndarray,
+        hist_dates: np.ndarray,
+        hist_codes: np.ndarray,
+        query_order: np.ndarray,
+        cutoff_dates: np.ndarray,
+    ) -> np.ndarray:
+        pct = np.empty(len(vals), dtype=np.float64)
+        for i in range(len(pct)):
+            pct[i] = np.nan
+
+        bit = np.zeros(len(unique_vals) + 1, dtype=np.int64)
+        total = 0
+        add_pos = 0
+
+        for qi in query_order:
+            q_cutoff = cutoff_dates[qi]
+
+            while add_pos < len(hist_dates) and hist_dates[add_pos] < q_cutoff:
+                bit_i = hist_codes[add_pos]
+                while bit_i < len(bit):
+                    bit[bit_i] += 1
+                    bit_i += bit_i & -bit_i
+                total += 1
+                add_pos += 1
+
+            if total == 0:
+                continue
+
+            value = vals[qi]
+            lo = 0
+            hi = len(unique_vals)
+            while lo < hi:
+                mid = (lo + hi) // 2
+                if value < unique_vals[mid]:
+                    hi = mid
+                else:
+                    lo = mid + 1
+            q_code = lo
+
+            s = 0
+            bit_i = q_code
+            while bit_i > 0:
+                s += bit[bit_i]
+                bit_i -= bit_i & -bit_i
+
+            pct[qi] = s / total
+
+        return pct
+else:
+    _strict_historical_percentile_numba = None
+
 
 def compute_pit_percentiles(df: pd.DataFrame) -> pd.DataFrame:
     """Sector-relative expanding percentiles of ATC + per-Aspect totals.
@@ -478,6 +578,16 @@ def _strict_historical_percentile(
 
     query_idx = np.flatnonzero(valid_query)
     query_order = query_idx[np.argsort(cutoff[query_idx], kind="mergesort")]
+
+    if _strict_historical_percentile_numba is not None:
+        return _strict_historical_percentile_numba(
+            vals,
+            unique_vals,
+            hist_dates.astype("int64"),
+            hist_codes.astype("int64"),
+            query_order.astype("int64"),
+            cutoff.astype("int64"),
+        )
 
     bit = np.zeros(len(unique_vals) + 1, dtype=np.int64)
     total = 0
