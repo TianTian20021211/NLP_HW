@@ -16,22 +16,60 @@ import json
 import logging
 import re
 import time
+import warnings
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
+from functools import lru_cache
 from pathlib import Path
-from typing import Any, Sequence
+from typing import Any, Iterable, Sequence
 
 import joblib
 from joblib import Memory
 import numpy as np
 import pandas as pd
 
+warnings.filterwarnings("ignore", message=".*does not have valid feature names.*")
+
 from data.config import PRICE_CACHE_DIR, RESULTS_DIR, AUDIT_DIR, SEED, utc_now_iso
 from data.progress import progress
+
+from backtest._stats import make_median_imputer, spearman
 
 log = logging.getLogger("backtest.splits")
 
 HORIZONS: list[int] = [1, 3, 5, 10, 20]
+
+
+@lru_cache(maxsize=1)
+def _cached_read_features(path: str) -> pd.DataFrame:
+    """Read features parquet with LRU caching (maxsize=1)."""
+    return pd.read_parquet(path)
+
+
+def read_feature_columns(
+    path: Path,
+    columns: Iterable[str],
+    *,
+    required_columns: Iterable[str] = (),
+) -> pd.DataFrame:
+    """Read only requested columns that exist in a feature parquet.
+
+    Phase 5 often needs a small metadata/short-list slice from the stretch
+    feature table. Loading all columns can inflate a 447 MB parquet file into
+    10+ GB RSS, so callers should use this helper instead of full reads.
+    """
+    import pyarrow.parquet as pq
+
+    path = Path(path)
+    available = set(pq.ParquetFile(path).schema_arrow.names)
+    required = list(dict.fromkeys(required_columns))
+    missing_required = [c for c in required if c not in available]
+    if missing_required:
+        raise KeyError(f"{path} is missing required columns: {missing_required}")
+
+    requested = list(dict.fromkeys([*required, *columns]))
+    read_cols = [c for c in requested if c in available]
+    return pd.read_parquet(path, columns=read_cols)
 
 TUNING_START = pd.Timestamp("2010-01-01")
 TUNING_END = pd.Timestamp("2019-12-31")
@@ -43,12 +81,13 @@ ID_COLS = {
     "BESTTICKER", "SECTOR", "availability_date", "call_entry_date",
     "ingest_entry_date", "MOSTIMPORTANTDATEUTC", "INGESTDATEUTC",
     "SignalType", "QTR_YEAR", "call_hour_utc", "SECTOR_GICS",
-    "_orig_df_index",
+    "_orig_df_index", "_in_universe",
 }
 # Forward-return / target-date columns added by compute_forward_returns.
 _RETURN_COL_RE = re.compile(r"^forward_return_\d+d$")
 _TARGET_DATE_COL_RE = re.compile(r"^target_available_date_\d+d$")
 _RAW_RETURN_COL_RE = re.compile(r"^Return_\d+d$")
+_RIGHT_CENSORED_COL_RE = re.compile(r"^right_censored_\d+d$")
 
 
 # ---------------------------------------------------------------------------
@@ -71,11 +110,14 @@ HPARAMS_DIR: Path = RESULTS_DIR / "hparams"
 # Forward-return cache infrastructure (joblib.Memory + explicit signatures)
 # ---------------------------------------------------------------------------
 
-FORWARD_RETURNS_CACHE_VERSION = 1
+FORWARD_RETURNS_CACHE_VERSION = 3
 """Schema version for the forward-returns cache signature.
 Bump this when the cache signature schema changes (e.g., new dependency
 fields added) to force a full recomputation.
 """
+
+MAX_ENTRY_GAP_BDAYS = 5
+"""Maximum business-day roll-forward from signal availability to first quote."""
 
 
 @dataclass(frozen=True)
@@ -105,10 +147,17 @@ class ForwardReturnsCacheSignature:
     entry_date_col: str
     """Column used as the entry date for forward returns."""
     source_hash: int
-    """``hash(inspect.getsource(compute_forward_returns))`` — captures code
-    changes in the forward-return computation itself."""
+    """SHA-256 hash of ``compute_forward_returns`` and all helper sources —
+    captures code changes in the forward-return computation itself."""
     cache_version: int = FORWARD_RETURNS_CACHE_VERSION
     """Schema version — bump to force full cache invalidation."""
+    len_df: int = 0
+    """Number of rows in the DataFrame whose forward returns were computed.
+    Used for cache collision detection."""
+    row_fingerprint: int = 0
+    """Deterministic hash of the first 1000 index values for cache collision
+    detection. Catches cases where a filtered/subset DataFrame would
+    otherwise produce a cache hit for the wrong row set."""
 
 
 # Shared joblib.Memory instance for the forward-returns cache.
@@ -144,11 +193,13 @@ def _build_cache_signature(
     price_cache_dir: Path,
     horizons: Sequence[int],
     entry_date_col: str,
+    df: pd.DataFrame,
 ) -> ForwardReturnsCacheSignature:
     """Build a dependency signature for forward-returns caching.
 
     Gathers file metadata and content hashes for every input that affects
-    the forward-return computation.
+    the forward-return computation, plus a row-position fingerprint of *df*
+    to detect when a filtered/subset DataFrame is passed to the cache.
     """
     # Features file info
     fs = features_path.stat() if features_path.exists() else None
@@ -156,6 +207,7 @@ def _build_cache_signature(
     features_mtime = fs.st_mtime if fs else 0.0
 
     # Price manifest file info + content hash
+    _sync_price_cache_manifest(price_cache_dir)
     price_manifest_path = price_cache_dir / "_manifest.json"
     if price_manifest_path.exists():
         pms = price_manifest_path.stat()
@@ -168,12 +220,15 @@ def _build_cache_signature(
         price_manifest_size = 0
         price_manifest_mtime = 0.0
 
-    # Source-code hash for the core computation function
+    # Source-code hash for the core computation and all extracted helpers
     try:
-        source = inspect.getsource(compute_forward_returns)
-        source_hash = int(hashlib.sha256(source.encode()).hexdigest()[:16], 16)
+        source_hash = _build_forward_returns_source_hash()
     except (OSError, TypeError):
         source_hash = 0
+
+    # DataFrame fingerprint for cache collision detection
+    len_df = len(df)
+    row_fingerprint = int(hashlib.sha256(str(tuple(df.index[:1000])).encode()).hexdigest()[:16], 16)
 
     return ForwardReturnsCacheSignature(
         features_path=str(features_path.resolve()),
@@ -186,6 +241,8 @@ def _build_cache_signature(
         horizons=tuple(sorted(horizons)),
         entry_date_col=entry_date_col,
         source_hash=source_hash,
+        len_df=len_df,
+        row_fingerprint=row_fingerprint,
     )
 
 
@@ -213,6 +270,268 @@ def _write_forward_returns_manifest(
     return path
 
 
+def _sync_price_cache_manifest(price_cache_dir: Path) -> None:
+    """Force a lightweight manifest update from current price parquet files.
+
+    The external loaders own the rich ticker metadata in ``_manifest.json``.
+    This helper only adds a deterministic fingerprint over current parquet
+    names, sizes, and mtimes before forward-return cache signatures are built.
+    """
+    price_cache_dir = Path(price_cache_dir)
+    if not price_cache_dir.exists():
+        return
+
+    manifest_path = price_cache_dir / "_manifest.json"
+    entries: list[str] = []
+    for path in sorted(price_cache_dir.glob("*.parquet")):
+        try:
+            stat = path.stat()
+        except OSError:
+            continue
+        entries.append(f"{path.name}:{stat.st_size}:{stat.st_mtime_ns}")
+
+    fingerprint = hashlib.sha256("\n".join(entries).encode()).hexdigest()
+    manifest: dict[str, Any] = {}
+    if manifest_path.exists():
+        try:
+            manifest = json.loads(manifest_path.read_text())
+        except json.JSONDecodeError:
+            manifest = {}
+
+    if manifest.get("_price_files_fingerprint") == fingerprint:
+        return
+
+    manifest["_price_files_fingerprint"] = fingerprint
+    manifest["_price_files_count"] = len(entries)
+    manifest["_price_files_synced_at"] = datetime.now(timezone.utc).isoformat()
+    manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True))
+
+
+def _build_forward_returns_source_hash() -> int:
+    """Hash compute_forward_returns plus all helper/orchestrator sources and cache version."""
+    funcs = [
+        compute_forward_returns,
+        _empty_forward_return_frame,
+        _prepare_forward_return_events,
+        _load_forward_return_price_metrics,
+        _compute_ticker_forward_return_matches,
+        _fill_forward_return_arrays,
+        _build_cache_signature,
+        _sync_price_cache_manifest,
+        get_forward_returns_cached,
+        ensure_forward_returns,
+    ]
+    source_blob = "\n\n".join(inspect.getsource(fn) for fn in funcs)
+    source_blob += f"\nCACHE_VERSION={FORWARD_RETURNS_CACHE_VERSION}"
+    source_blob += f"\nMAX_ENTRY_GAP_BDAYS={MAX_ENTRY_GAP_BDAYS}"
+    return int(hashlib.sha256(source_blob.encode()).hexdigest()[:16], 16)
+
+
+def _empty_forward_return_frame(
+    index: pd.Index,
+    horizons: Sequence[int],
+    ret_arrays: dict[int, np.ndarray],
+    date_arrays: dict[int, np.ndarray],
+) -> pd.DataFrame:
+    """Build the standard forward-return result DataFrame from pre-allocated arrays.
+
+    Returns a DataFrame indexed like *index* with ``forward_return_{h}d`` and
+    ``target_available_date_{h}d`` for each horizon.
+    """
+    result = pd.DataFrame(index=index)
+    for hh in horizons:
+        result[f"forward_return_{hh}d"] = ret_arrays[hh]
+        result[f"target_available_date_{hh}d"] = date_arrays[hh]
+        result[f"right_censored_{hh}d"] = pd.isna(date_arrays[hh])
+    return result
+
+
+def _prepare_forward_return_events(
+    df: pd.DataFrame,
+    ticker_col: str,
+    entry_date_col: str,
+) -> pd.DataFrame:
+    """Build per-row event metadata for forward-return matching.
+
+    Returns a DataFrame with ``_orig_pos``, ``_ticker``, and ``_entry_date``
+    columns. Rows with missing ticker or entry date are dropped.
+    """
+    events = pd.DataFrame({
+        "_orig_pos": np.arange(len(df), dtype=np.int64),
+        "_ticker": df[ticker_col].values,
+        "_entry_date": pd.to_datetime(
+            df[entry_date_col], errors="coerce"
+        ).to_numpy(dtype="datetime64[ns]"),
+    })
+    events = events[
+        events["_ticker"].notna() & events["_entry_date"].notna()
+    ].copy()
+    if not events.empty:
+        events["_ticker"] = events["_ticker"].astype(str)
+    return events
+
+
+def _load_forward_return_price_metrics(
+    path: Path,
+    horizons: Sequence[int],
+) -> pd.DataFrame | None:
+    """Load one ticker price file and precompute forward returns by price row.
+
+    Returns a metrics DataFrame with ``_merge_date``, ``_price_pos``,
+    ``forward_return_{h}d``, and ``target_available_date_{h}d``, or None
+    for missing/empty/unusable prices.
+    """
+    if not path.exists():
+        return None
+
+    try:
+        px = pd.read_parquet(path, columns=["date", "adj_close", "volume"])
+    except Exception:
+        px = pd.read_parquet(path)
+        if "volume" not in px.columns:
+            px["volume"] = np.nan
+    px["date"] = pd.to_datetime(px["date"], errors="coerce")
+    px = px[
+        px["date"].notna()
+        & px["adj_close"].notna()
+        & (px["adj_close"] > 0)
+        & px["volume"].notna()
+        & (px["volume"] > 0)
+    ].sort_values("date")
+    if px.empty:
+        return None
+
+    dates = px["date"].to_numpy(dtype="datetime64[ns]")
+    closes = px["adj_close"].to_numpy(dtype="float64")
+    metrics = pd.DataFrame({
+        "_merge_date": dates,
+        "_price_pos": np.arange(len(dates), dtype=np.int64),
+    })
+    for h in horizons:
+        returns = np.full(len(closes), np.nan, dtype="float64")
+        target_dates = np.full(
+            len(dates), np.datetime64("NaT"), dtype="datetime64[ns]"
+        )
+        if len(closes) > h:
+            returns[:-h] = closes[h:] / closes[:-h] - 1.0
+            target_dates[:-h] = dates[h:]
+        metrics[f"forward_return_{h}d"] = returns
+        metrics[f"target_available_date_{h}d"] = target_dates
+
+    return metrics
+
+
+def _compute_ticker_forward_return_matches(
+    ticker: str,
+    events: pd.DataFrame,
+    price_cache_dir: Path,
+    horizons: Sequence[int],
+) -> tuple[np.ndarray, dict[int, np.ndarray], dict[int, np.ndarray]] | None:
+    """Merge one ticker's events to entry prices and return matched arrays.
+
+    Loads the ticker's price data via ``_load_forward_return_price_metrics``,
+    sorts events, then merges with ``pd.merge_asof`` (direction="forward").
+    Entry gap must be between 0 and 5 business days inclusive.
+    Missing exits remain NaN/NaT.
+
+    Returns (orig_pos, ret_by_h, date_by_h) where:
+    - orig_pos: original row positions with valid entries/returns for at least
+      one horizon.
+    - ret_by_h: horizon -> return array aligned to orig_pos.
+    - date_by_h: horizon -> target date array aligned to orig_pos.
+
+    Returns None when no price data or no valid matches are found.
+    """
+    path = price_cache_dir / f"{ticker}.parquet"
+    metrics = _load_forward_return_price_metrics(path, horizons)
+    if metrics is None:
+        return None
+
+    h_list = list(horizons)
+    ev = events.sort_values("_entry_date")
+    ev["_entry_date"] = ev["_entry_date"].astype("datetime64[ns]")
+
+    mg = pd.merge_asof(
+        ev, metrics,
+        left_on="_entry_date", right_on="_merge_date",
+        direction="forward",
+    )
+
+    # Entry gap check
+    entry_days_np = mg["_entry_date"].to_numpy(dtype="datetime64[D]")
+    entry_days_m = pd.to_datetime(mg["_merge_date"], errors="coerce").to_numpy(
+        dtype="datetime64[D]"
+    )
+    entry_gap_bdays = np.full(len(mg), np.nan, dtype="float64")
+    has_entry = ~pd.isna(entry_days_m)
+    entry_gap_bdays[has_entry] = np.busday_count(
+        entry_days_np[has_entry],
+        entry_days_m[has_entry],
+    )
+
+    price_pos_notna = mg["_price_pos"].notna().to_numpy()
+    entry_valid = (
+        price_pos_notna
+        & np.isfinite(entry_gap_bdays)
+        & (entry_gap_bdays >= 0)
+        & (entry_gap_bdays <= MAX_ENTRY_GAP_BDAYS)
+    )
+
+    # Build all_valid mask (union across horizons)
+    all_valid = np.zeros(len(mg), dtype=bool)
+    for h in h_list:
+        valid = entry_valid & mg[f"forward_return_{h}d"].notna().to_numpy()
+        all_valid |= valid
+
+    if not all_valid.any():
+        return None
+
+    orig_pos = mg["_orig_pos"].to_numpy(dtype=np.int64)[all_valid]
+    all_valid_indices = np.where(all_valid)[0]
+
+    ret_by_h: dict[int, np.ndarray] = {}
+    date_by_h: dict[int, np.ndarray] = {}
+    for h in h_list:
+        ret_col = f"forward_return_{h}d"
+        date_col = f"target_available_date_{h}d"
+
+        valid = entry_valid & mg[ret_col].notna().to_numpy()
+
+        arr_ret = np.full(len(orig_pos), np.nan, dtype="float64")
+        arr_date = np.full(len(orig_pos), np.datetime64("NaT"), dtype="datetime64[ns]")
+
+        if valid.any():
+            valid_indices = np.where(valid)[0]
+            pos_in_all = np.searchsorted(all_valid_indices, valid_indices)
+
+            valid_ret = mg[ret_col].to_numpy(dtype="float64")[valid_indices]
+            valid_date = pd.to_datetime(
+                mg[date_col], errors="coerce"
+            ).to_numpy(dtype="datetime64[ns]")[valid_indices]
+
+            arr_ret[pos_in_all] = valid_ret
+            arr_date[pos_in_all] = valid_date
+
+        ret_by_h[h] = arr_ret
+        date_by_h[h] = arr_date
+
+    return orig_pos, ret_by_h, date_by_h
+
+
+def _fill_forward_return_arrays(
+    ret_arrays: dict[int, np.ndarray],
+    date_arrays: dict[int, np.ndarray],
+    orig_pos: np.ndarray,
+    ret_by_h: dict[int, np.ndarray],
+    date_by_h: dict[int, np.ndarray],
+    horizons: Sequence[int],
+) -> None:
+    """Copy one ticker's matched return arrays into the preallocated output arrays."""
+    for h in horizons:
+        ret_arrays[h][orig_pos] = ret_by_h[h]
+        date_arrays[h][orig_pos] = date_by_h[h]
+
+
 def compute_forward_returns(
     df: pd.DataFrame,
     price_cache_dir: Path = PRICE_CACHE_DIR,
@@ -226,6 +545,20 @@ def compute_forward_returns(
     2. For each horizon *h*, ``close[t+h] / close[t] - 1`` using the ticker's
        own price history.
     3. ``target_available_date_h`` = date of the exit close.
+
+    .. important::
+        Forward returns are anchored on *entry_date_col* (default
+        ``availability_date``).  When these returns serve as model targets,
+        the model learns to predict returns starting at signal-availability
+        time.  In :class:`backtest.portfolio.PortfolioSimulator`, however,
+        signals are collected in a lookback window and traded at the next
+        rebalance date, which is always >= *entry_date_col*.  This creates a
+        systematic delay between the target horizon and the actual holding
+        period.
+
+        Consequence: walk-forward OOS IC/MSE is an **upper bound** on
+        achievable signal quality.  The portfolio simulator's own post-cost
+        Sharpe (which uses actual entry/exit dates) is the ground truth.
 
     Parameters
     ----------
@@ -252,38 +585,14 @@ def compute_forward_returns(
         for h in h_list
     }
 
-    def _result_frame() -> pd.DataFrame:
-        result = pd.DataFrame(index=df.index)
-        for hh in h_list:
-            result[f"forward_return_{hh}d"] = ret_arrays[hh]
-            result[f"target_available_date_{hh}d"] = date_arrays[hh]
-        return result
-
     if not price_cache_dir.exists():
         log.warning("price cache dir %s missing", price_cache_dir)
-        return _result_frame()
+        return _empty_forward_return_frame(df.index, h_list, ret_arrays, date_arrays)
 
-    # ------------------------------------------------------------------
-    # Build per-ticker event groups once. This avoids scanning the full event
-    # table for every ticker and also keeps only one price history in memory.
-    # ------------------------------------------------------------------
-    events = pd.DataFrame({
-        "_orig_pos": np.arange(n, dtype=np.int64),
-        "_ticker": df[ticker_col].values,
-        "_entry_date": pd.to_datetime(
-            df[entry_date_col], errors="coerce"
-        ).to_numpy(dtype="datetime64[ns]"),
-    })
-    events = events[
-        events["_ticker"].notna() & events["_entry_date"].notna()
-    ].copy()
+    events = _prepare_forward_return_events(df, ticker_col, entry_date_col)
     if events.empty:
-        return _result_frame()
-    events["_ticker"] = events["_ticker"].astype(str)
+        return _empty_forward_return_frame(df.index, h_list, ret_arrays, date_arrays)
 
-    # ------------------------------------------------------------------
-    # Build per-ticker forward-return tables, merge_asof with events
-    # ------------------------------------------------------------------
     n_with_prices = 0
     event_groups = events.groupby("_ticker", sort=False)
     for tkr_str, ev in progress(
@@ -292,77 +601,19 @@ def compute_forward_returns(
         desc="forward returns",
         unit="tkr",
     ):
-        path = price_cache_dir / f"{tkr_str}.parquet"
-        if not path.exists():
-            continue
-
-        px = pd.read_parquet(path, columns=["date", "adj_close"])
-        px["date"] = pd.to_datetime(px["date"], errors="coerce")
-        px = px[px["date"].notna() & px["adj_close"].notna()]
-        px = px[px["adj_close"] > 0].sort_values("date")
-        if px.empty:
-            continue
-
-        n_with_prices += 1
-        ev = ev.sort_values("_entry_date").copy()
-        ev["_entry_date"] = ev["_entry_date"].astype("datetime64[ns]")
-
-        dates = px["date"].to_numpy(dtype="datetime64[ns]")
-        closes = px["adj_close"].to_numpy(dtype="float64")
-        metrics = pd.DataFrame({
-            "_merge_date": dates,
-            "_price_pos": np.arange(len(dates), dtype=np.int64),
-        })
-        for h in h_list:
-            returns = np.full(len(closes), np.nan, dtype="float64")
-            target_dates = np.full(
-                len(dates), np.datetime64("NaT"), dtype="datetime64[ns]"
+        result = _compute_ticker_forward_return_matches(
+            tkr_str, ev, price_cache_dir, h_list,
+        )
+        if result is not None:
+            n_with_prices += 1
+            orig_pos, ret_by_h, date_by_h = result
+            _fill_forward_return_arrays(
+                ret_arrays, date_arrays, orig_pos, ret_by_h, date_by_h, h_list,
             )
-            if len(closes) > h:
-                returns[:-h] = closes[h:] / closes[:-h] - 1.0
-                target_dates[:-h] = dates[h:]
-            metrics[f"forward_return_{h}d"] = returns
-            metrics[f"target_available_date_{h}d"] = target_dates
-
-        mg = pd.merge_asof(
-            ev, metrics,
-            left_on="_entry_date", right_on="_merge_date",
-            direction="forward",
-        )
-        entry_days_np = mg["_entry_date"].to_numpy(dtype="datetime64[D]")
-        entry_days_m = pd.to_datetime(mg["_merge_date"], errors="coerce").to_numpy(
-            dtype="datetime64[D]"
-        )
-        entry_gap_bdays = np.full(len(mg), np.nan, dtype="float64")
-        has_entry = ~pd.isna(entry_days_m)
-        entry_gap_bdays[has_entry] = np.busday_count(
-            entry_days_np[has_entry],
-            entry_days_m[has_entry],
-        )
-        entry_valid = (
-            mg["_price_pos"].notna()
-            & np.isfinite(entry_gap_bdays)
-            & (entry_gap_bdays >= 0)
-            & (entry_gap_bdays <= 3)
-        )
-
-        for h in h_list:
-            ret_col = f"forward_return_{h}d"
-            date_col = f"target_available_date_{h}d"
-            valid = entry_valid & mg[ret_col].notna()
-            if not valid.any():
-                continue
-            orig_pos = mg.loc[valid, "_orig_pos"].to_numpy(dtype=np.int64)
-            ret_arrays[h][orig_pos] = mg.loc[valid, ret_col].to_numpy(
-                dtype="float64"
-            )
-            date_arrays[h][orig_pos] = pd.to_datetime(
-                mg.loc[valid, date_col], errors="coerce"
-            ).to_numpy(dtype="datetime64[ns]")
 
     if n_with_prices == 0:
         log.warning("no price data available — forward returns are all NaN")
-    return _result_frame()
+    return _empty_forward_return_frame(df.index, h_list, ret_arrays, date_arrays)
 
 
 # ---------------------------------------------------------------------------
@@ -384,6 +635,7 @@ def get_feature_cols(df: pd.DataFrame) -> list[str]:
             or _RETURN_COL_RE.match(c)
             or _TARGET_DATE_COL_RE.match(c)
             or _RAW_RETURN_COL_RE.match(c)
+            or _RIGHT_CENSORED_COL_RE.match(c)
         ):
             continue
         if pd.api.types.is_numeric_dtype(df[c]):
@@ -434,7 +686,7 @@ def generate_folds(
     """Generate walk-forward folds (2020Q1 through 2026Q2).
 
     Each fold:
-    - **test**: events whose ``call_entry_date`` is inside the quarter.
+    - **test**: events whose *availability_col* is inside the quarter.
     - **train**: events with *availability_col* < test_start and
       ``call_entry_date >= 2010-01-01``.
 
@@ -450,17 +702,16 @@ def generate_folds(
         earnings call publication time) is available for backward
         compatibility.
     """
-    df = df.reset_index(drop=True)
-    call_entry = pd.to_datetime(df["call_entry_date"].values)
-    avail_date = pd.to_datetime(df[availability_col].values)
+    call_entry = pd.to_datetime(df["call_entry_date"].to_numpy())
+    avail_date = pd.to_datetime(df[availability_col].to_numpy())
 
     quarters = _quarter_boundaries(start, end)
     folds: list[Fold] = []
 
     for fold_id, (q_start, q_end) in enumerate(quarters):
         test_mask = (
-            (call_entry >= q_start.to_datetime64())
-            & (call_entry <= q_end.to_datetime64())
+            (avail_date >= q_start.to_datetime64())
+            & (avail_date <= q_end.to_datetime64())
         )
         test_idx = np.flatnonzero(test_mask)
         if len(test_idx) == 0:
@@ -502,7 +753,10 @@ def purge_train_for_horizon(
     ``fold.max_train_target_date`` for the audit trail.
     """
     date_col = f"target_available_date_{horizon}d"
-    target_dates = pd.to_datetime(df[date_col].values)
+    if df[date_col].dtype == "datetime64[ns]":
+        target_dates = df[date_col].to_numpy()
+    else:
+        target_dates = pd.to_datetime(df[date_col].values)
     train_end_ns = fold.train_end.to_datetime64()
 
     valid = (
@@ -608,15 +862,6 @@ def _time_series_splits(
     return splits
 
 
-def _make_median_imputer() -> Any:
-    from sklearn.impute import SimpleImputer
-
-    try:
-        return SimpleImputer(strategy="median", keep_empty_features=True)
-    except TypeError:  # pragma: no cover - older scikit-learn fallback
-        return SimpleImputer(strategy="median")
-
-
 def _preprocess_train_val(
     X: np.ndarray,
     train_idx: np.ndarray,
@@ -628,7 +873,7 @@ def _preprocess_train_val(
     X_train = X[train_idx]
     X_val = X[val_idx]
 
-    imp = _make_median_imputer()
+    imp = make_median_imputer()
     X_train = imp.fit_transform(X_train)
     X_val = imp.transform(X_val)
 
@@ -646,24 +891,72 @@ def _preprocess_train_val(
 # Hyperparameter tuning
 # ---------------------------------------------------------------------------
 
+def _fit_lgbm_trial(
+    params: dict[str, Any],
+    X_train: np.ndarray,
+    y_train: np.ndarray,
+    X_val: np.ndarray,
+    y_val: np.ndarray,
+    seed: int,
+) -> float:
+    import lightgbm as lgb
+
+    m = lgb.LGBMRegressor(**params, random_state=seed, verbose=-1, n_jobs=1)
+    m.fit(X_train, y_train)
+    pred = m.predict(X_val)
+    return spearman(pred, y_val)
+
+
+def _fit_xgb_trial(
+    params: dict[str, Any],
+    X_train: np.ndarray,
+    y_train: np.ndarray,
+    X_val: np.ndarray,
+    y_val: np.ndarray,
+    seed: int,
+) -> float:
+    import xgboost as xgb
+
+    m = xgb.XGBRegressor(**params, random_state=seed, verbosity=0, n_jobs=1)
+    m.fit(X_train, y_train)
+    pred = m.predict(X_val)
+    return spearman(pred, y_val)
+
+
+def _fit_ridge_alpha(
+    alpha: float,
+    X_train: np.ndarray,
+    y_train: np.ndarray,
+    X_val: np.ndarray,
+    y_val: np.ndarray,
+) -> float:
+    """Fit Ridge with given alpha and return Spearman IC."""
+    from sklearn.linear_model import Ridge
+    m = Ridge(alpha=alpha, random_state=SEED)
+    m.fit(X_train, y_train)
+    pred = m.predict(X_val)
+    return spearman(pred, y_val)
+
+
 def tune_ridge(
     X: np.ndarray,
     y: np.ndarray,
     cv_splits: list[tuple[np.ndarray, np.ndarray]],
 ) -> dict[str, Any]:
     """Grid-search Ridge alpha.  Spearman IC is the objective."""
-    from sklearn.linear_model import Ridge
+    from joblib import Parallel, delayed
 
     alphas = [0.01, 0.1, 1.0, 10.0, 100.0, 1000.0]
     scores_by_alpha: dict[float, list[float]] = {a: [] for a in alphas}
 
     for tr, vl in progress(cv_splits, desc="ridge tuning", unit="fold"):
         X_tr, X_vl = _preprocess_train_val(X, tr, vl, scale=True)
-        for alpha in alphas:
-            m = Ridge(alpha=alpha, random_state=SEED)
-            m.fit(X_tr, y[tr])
-            pred = m.predict(X_vl)
-            scores_by_alpha[alpha].append(_spearman(pred, y[vl]))
+        fold_scores: list[float] = Parallel(n_jobs=-1)(
+            delayed(_fit_ridge_alpha)(a, X_tr, y[tr], X_vl, y[vl])
+            for a in alphas
+        )
+        for alpha, score in zip(alphas, fold_scores):
+            scores_by_alpha[alpha].append(score)
 
     best_alpha: float | None = None
     best_score = -np.inf
@@ -703,14 +996,17 @@ def tune_lightgbm(
     rng = np.random.RandomState(SEED)
     trials = _random_param_combos(space, 30, rng)
 
+    from joblib import Parallel, delayed
+
     scores_by_trial: list[list[float]] = [[] for _ in trials]
     for tr, vl in progress(cv_splits, desc="lgbm tuning", unit="fold"):
         X_tr, X_vl = _preprocess_train_val(X, tr, vl, scale=False)
-        for i, params in enumerate(trials):
-            m = lgb.LGBMRegressor(**params, random_state=SEED, verbose=-1, n_jobs=1)
-            m.fit(X_tr, y[tr])
-            pred = m.predict(X_vl)
-            scores_by_trial[i].append(_spearman(pred, y[vl]))
+        fold_scores: list[float] = Parallel(n_jobs=-1)(
+            delayed(_fit_lgbm_trial)(params, X_tr, y[tr], X_vl, y[vl], SEED)
+            for params in trials
+        )
+        for i, score in enumerate(fold_scores):
+            scores_by_trial[i].append(score)
 
     best_params: dict[str, Any] | None = None
     best_score = -np.inf
@@ -753,14 +1049,17 @@ def tune_xgboost(
     rng = np.random.RandomState(SEED)
     trials = _random_param_combos(space, 30, rng)
 
+    from joblib import Parallel, delayed
+
     scores_by_trial: list[list[float]] = [[] for _ in trials]
     for tr, vl in progress(cv_splits, desc="xgb tuning", unit="fold"):
         X_tr, X_vl = _preprocess_train_val(X, tr, vl, scale=False)
-        for i, params in enumerate(trials):
-            m = xgb.XGBRegressor(**params, random_state=SEED, verbosity=0, n_jobs=1)
-            m.fit(X_tr, y[tr])
-            pred = m.predict(X_vl)
-            scores_by_trial[i].append(_spearman(pred, y[vl]))
+        fold_scores: list[float] = Parallel(n_jobs=-1)(
+            delayed(_fit_xgb_trial)(params, X_tr, y[tr], X_vl, y[vl], SEED)
+            for params in trials
+        )
+        for i, score in enumerate(fold_scores):
+            scores_by_trial[i].append(score)
 
     best_params: dict[str, Any] | None = None
     best_score = -np.inf
@@ -786,14 +1085,29 @@ def _random_param_combos(
     keys = list(space)
     combos: list[dict[str, Any]] = []
     for _ in range(n):
-        combo = {k: rng.choice(space[k]) for k in keys}
+        combo = {k: _json_safe(rng.choice(space[k])) for k in keys}
         combos.append(combo)
     return combos
 
 
-def _spearman(a: np.ndarray, b: np.ndarray) -> float:
-    """Spearman rank correlation between two 1-d arrays."""
-    return float(pd.Series(a).corr(pd.Series(b), method="spearman"))
+def _json_safe(value: Any) -> Any:
+    """Convert numpy/pandas scalar containers into JSON-native objects."""
+    if isinstance(value, dict):
+        return {str(k): _json_safe(v) for k, v in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_json_safe(v) for v in value]
+    if isinstance(value, np.ndarray):
+        return [_json_safe(v) for v in value.tolist()]
+    if isinstance(value, np.integer):
+        return int(value)
+    if isinstance(value, np.floating):
+        return float(value)
+    if isinstance(value, np.bool_):
+        return bool(value)
+    if isinstance(value, pd.Timestamp):
+        return value.isoformat()
+    return value
+
 
 
 # ---------------------------------------------------------------------------
@@ -870,22 +1184,12 @@ def _write_frozen_hparams(
     """
     path = output_dir / tier / f"h{horizon}d" / f"frozen_hparams_{model_name}.json"
     path.parent.mkdir(parents=True, exist_ok=True)
-    # Sanitise numpy types for JSON
-    clean = {}
-    for k, v in params.items():
-        if isinstance(v, (np.integer,)):
-            clean[k] = int(v)
-        elif isinstance(v, (np.floating,)):
-            clean[k] = float(v)
-        elif isinstance(v, np.ndarray):
-            clean[k] = v.tolist()
-        else:
-            clean[k] = v
+    clean = _json_safe(params)
     path.write_text(json.dumps(clean, indent=2))
     log.info("wrote %s", path)
 
     # Update the hparams manifest
-    _update_hparams_manifest(output_dir, tier, horizon, model_name, params)
+    _update_hparams_manifest(output_dir, tier, horizon, model_name, clean)
     return path
 
 
@@ -943,17 +1247,17 @@ def _update_hparams_manifest(
         "model": model_name,
         "tier": tier,
         "horizon": f"{horizon}d",
-        "cv_ic": params.get("cv_ic", None),
+        "cv_ic": _json_safe(params.get("cv_ic", None)),
         "git_hash": git_hash,
         "created_at": utc_now_iso(),
     }
     # Include sanitised params (exclude cv_ic which is already top-level).
-    clean_params = {k: v for k, v in params.items() if k != "cv_ic"}
+    clean_params = _json_safe({k: v for k, v in params.items() if k != "cv_ic"})
     entry["params"] = clean_params
 
     manifest["entries"].append(entry)
     manifest_path.parent.mkdir(parents=True, exist_ok=True)
-    manifest_path.write_text(json.dumps(manifest, indent=2))
+    manifest_path.write_text(json.dumps(_json_safe(manifest), indent=2))
     log.info("updated hparams manifest: %s", manifest_path)
     return manifest_path
 
@@ -1002,7 +1306,7 @@ def write_hparams_manifest(
         "n_entries": len(entries),
     }
     manifest_path = d / "hparams_manifest.json"
-    manifest_path.write_text(json.dumps(manifest, indent=2))
+    manifest_path.write_text(json.dumps(_json_safe(manifest), indent=2))
     log.info("wrote hparams manifest: %s (%d entries)", manifest_path, len(entries))
     return manifest_path
 
@@ -1061,40 +1365,70 @@ def write_sample_size_audit(
     df: pd.DataFrame,
     folds: list[Fold],
     output_path: Path | None = None,
+    universe: str = "",
+    signal_type: str = "",
 ) -> Path:
-    """Write per-quarter event / tradeable / censored counts to parquet."""
+    """Write per-quarter event / tradeable / censored counts to parquet.
+
+    For each fold the test events are broken down by calendar quarter with
+    columns: *n_events*, *n_tradeable*, *censored_{h}d*, and *low_sample_flag*
+    (True when *n_events* < 100).
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Full feature DataFrame (must contain ``call_entry_date``,
+        ``forward_return_{h}d``, and ``right_censored_{h}d`` columns).
+    folds : list[Fold]
+        Walk-forward folds.
+    output_path : Path, optional
+        Parquet output path. Defaults to ``AUDIT_DIR / sample_size_by_quarter.parquet``.
+    universe : str
+        Universe label (e.g. ``"sp500"``).
+    signal_type : str
+        Signal type (e.g. ``"Total"``).
+    """
     output_path = output_path or (AUDIT_DIR / "sample_size_by_quarter.parquet")
     AUDIT_DIR.mkdir(parents=True, exist_ok=True)
 
-    call_entry = pd.to_datetime(df["call_entry_date"].values)
-
     rows = []
     for f in folds:
-        n_test = len(f.test_indices)
-        # count censored (right-censored targets) per horizon
-        censored: dict[str, int] = {}
-        for h in HORIZONS:
-            dcol = f"target_available_date_{h}d"
-            if dcol in df.columns:
-                targets = pd.to_datetime(df[dcol].iloc[f.test_indices].values)
-                n_censored = int((targets.isna()).sum())
-            else:
-                n_censored = -1
-            censored[f"censored_{h}d"] = n_censored
+        test_df = df.iloc[f.test_indices].copy()
+        test_df["_quarter"] = pd.to_datetime(test_df["call_entry_date"]).dt.to_period("Q")
 
-        row = {
-            "fold_id": f.fold_id,
-            "quarter_start": str(f.test_start.date()),
-            "quarter_end": str(f.test_end.date()),
-            "n_test_events": n_test,
-            "n_train_events": len(f.train_indices),
-            **censored,
-        }
-        rows.append(row)
+        for qtr, qtr_df in test_df.groupby("_quarter"):
+            n_events = len(qtr_df)
+            n_tradeable = int(qtr_df["forward_return_1d"].notna().sum())
+            censored: dict[str, int] = {}
+            for h in HORIZONS:
+                rc_col = f"right_censored_{h}d"
+                if rc_col in qtr_df.columns:
+                    n_censored = int(qtr_df[rc_col].sum())
+                else:
+                    dcol = f"target_available_date_{h}d"
+                    if dcol in qtr_df.columns:
+                        targets = pd.to_datetime(qtr_df[dcol].values)
+                        n_censored = int(targets.isna().sum())
+                    else:
+                        n_censored = -1
+                censored[f"censored_{h}d"] = n_censored
+
+            row = {
+                "universe": universe,
+                "signal_type": signal_type,
+                "fold_id": f.fold_id,
+                "quarter": str(qtr),
+                "n_events": n_events,
+                "n_tradeable": n_tradeable,
+                "low_sample_flag": n_events < 100,
+                **censored,
+            }
+            rows.append(row)
 
     audit = pd.DataFrame(rows)
     audit.to_parquet(output_path, index=False)
-    log.info("wrote sample size audit: %s", output_path)
+    log.info("wrote sample size audit: %s  (universe=%s, signal_type=%s)",
+             output_path, universe, signal_type)
     return output_path
 
 
@@ -1155,9 +1489,9 @@ def get_forward_returns_cached(
     """
     features_path = Path(features_path)
 
-    # Build the dependency signature
+    # Build the dependency signature (includes df fingerprint)
     signature = _build_cache_signature(
-        features_path, price_cache_dir, horizons, entry_date_col
+        features_path, price_cache_dir, horizons, entry_date_col, df,
     )
 
     # Call the joblib-cached function.  joblib compares the signature fields
@@ -1166,6 +1500,24 @@ def get_forward_returns_cached(
     # dependency fields in *signature*.
     fwd = _compute_forward_returns_cached(signature, df, price_cache_dir)
 
+    # Defense-in-depth: verify the cached result matches the caller's DataFrame.
+    # This catches any case where the signature fields happen to collide for
+    # different DataFrames (virtually impossible but we check anyway).
+    if len(df) != signature.len_df:
+        raise ValueError(
+            f"DataFrame length mismatch in cached forward returns: "
+            f"caller passed {len(df)} rows, cache built for {signature.len_df} rows. "
+            "This likely means ensure_forward_returns was called on a "
+            "filtered/subset DataFrame, which is not supported."
+        )
+    df_fprint = int(hashlib.sha256(str(tuple(df.index[:1000])).encode()).hexdigest()[:16], 16)
+    if df_fprint != signature.row_fingerprint:
+        raise ValueError(
+            f"DataFrame row fingerprint mismatch in cached forward returns. "
+            f"Caller fingerprint: {df_fprint}, cached: {signature.row_fingerprint}. "
+            "Cache collided for different DataFrames with the same features_path."
+        )
+
     # Write the human-readable manifest (always, even on cache hit)
     _write_forward_returns_manifest(signature)
     log.info(
@@ -1173,3 +1525,72 @@ def get_forward_returns_cached(
     )
 
     return fwd
+
+
+def ensure_forward_returns(
+    df: pd.DataFrame,
+    features_path: Path,
+    price_cache_dir: Path = PRICE_CACHE_DIR,
+    horizons: Sequence[int] | None = None,
+    entry_date_col: str = "availability_date",
+    overwrite: bool = False,
+) -> pd.DataFrame:
+    """Return df with requested forward returns and target-available dates.
+
+    CRITICAL: This function must ONLY be called on the full, unfiltered
+    DataFrame loaded directly from the features parquet file. Never call
+    it on a subset (e.g. after universe filtering or row slicing). The
+    underlying get_forward_returns_cached uses features_path as the primary
+    cache key and excludes df from the joblib key, so calling with a
+    filtered/subset DataFrame with the same features_path will return cached
+    forward returns for the full row set — causing silent row misalignment and
+    forward-return contamination. To reinforce this, the cache signature
+    includes len(df) and a deterministic row-position fingerprint; a
+    size/order mismatch between the cached and caller df raises ValueError.
+
+    Parameters
+    ----------
+    df:
+        Full, unfiltered feature DataFrame.
+    features_path:
+        Feature parquet path used by the cache signature.
+    price_cache_dir:
+        Per-ticker price parquet directory.
+    horizons:
+        Requested forward-return horizons. Defaults to global HORIZONS.
+    entry_date_col:
+        Column used as the entry date for forward returns.
+    overwrite:
+        When True, recompute even if all requested columns exist.
+
+    Returns
+    -------
+    DataFrame with requested forward_return_{h}d and target_available_date_{h}d
+    columns present. Preserves row order and index.
+    """
+    if horizons is None:
+        horizons = HORIZONS
+
+    # Build the set of column names required for the given horizons
+    required_cols: list[str] = []
+    for h in horizons:
+        required_cols.append(f"forward_return_{h}d")
+        required_cols.append(f"target_available_date_{h}d")
+
+    # If all required columns exist and overwrite is False, return unchanged
+    if not overwrite:
+        missing = [c for c in required_cols if c not in df.columns]
+        if not missing:
+            return df
+
+    # Compute forward returns from cache
+    fwd = get_forward_returns_cached(
+        features_path, df, price_cache_dir, horizons, entry_date_col,
+    )
+
+    # Drop stale requested columns, then assign new values aligned to row order
+    drop_cols = [c for c in required_cols if c in df.columns]
+    out = df.drop(columns=drop_cols, errors="ignore").copy()
+    for col in fwd.columns:
+        out[col] = fwd[col].to_numpy()
+    return out

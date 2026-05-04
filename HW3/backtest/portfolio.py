@@ -27,8 +27,15 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
+try:
+    from numba import njit as _njit
+    _NUMBA_AVAILABLE = True
+except ImportError:
+    _NUMBA_AVAILABLE = False
+
 from data.config import (
     AUDIT_DIR,
+    CACHE_MANIFEST_DIR,
     PRICE_CACHE_DIR,
     RESULTS_DIR,
     UNIVERSE_CACHE_DIR,
@@ -38,6 +45,9 @@ from backtest.universe import filter_to_universe
 from features.audit import validate_trade_log
 
 log = logging.getLogger("backtest.portfolio")
+
+MAX_QUOTE_FORWARD_DAYS = 5
+"""Maximum trading-day roll-forward for portfolio entry/exit quote lookup."""
 
 
 # ---------------------------------------------------------------------------
@@ -75,11 +85,12 @@ def _rebalance_dates(
     cadence: str,
     start: pd.Timestamp,
     end: pd.Timestamp,
+    weekly_day: str = "monday",
 ) -> pd.DatetimeIndex:
     """Return rebalance dates within [start, end].
 
     - daily: every trading day
-    - weekly: every Monday (or next trading day if Monday is not in calendar)
+    - weekly: Monday close by default, or Friday close for timing robustness
     - monthly: first trading day of each month
     """
     cal = calendar[(calendar >= start) & (calendar <= end)]
@@ -87,13 +98,18 @@ def _rebalance_dates(
         return cal
     if cadence == "weekly":
         # Monday close, or the next trading day when Monday is a holiday.
+        # For Friday timing robustness, use the last trading day in each ISO week.
         # Group by ISO year as well as week so late-December / early-January
         # weeks do not collide across calendar years.
+        if weekly_day not in {"monday", "friday"}:
+            raise ValueError(f"Unknown weekly_day: {weekly_day}")
         iso = cal.isocalendar()
         week_groups = pd.Series(cal, index=cal).groupby(
             [iso["year"].to_numpy(), iso["week"].to_numpy()],
             sort=True,
         )
+        if weekly_day == "friday":
+            return pd.DatetimeIndex([g.iloc[-1] for _, g in week_groups])
         return pd.DatetimeIndex([g.iloc[0] for _, g in week_groups])
     if cadence == "monthly":
         month_groups = cal.to_series().groupby(cal.to_period("M"))
@@ -129,6 +145,8 @@ def _load_price_table(
             px["date"].notna()
             & px["adj_close"].notna()
             & (px["adj_close"] > 0)
+            & px["volume"].notna()
+            & (px["volume"] > 0)
         ]
         px = px[(px["date"] >= start) & (px["date"] <= end)]
         if px.empty:
@@ -414,6 +432,29 @@ class PortfolioResult:
             gap_stats["long_gap_recovered_position_day_share"] = 0.0
             gap_stats["possible_delisting_or_unavailable_position_day_share"] = 0.0
 
+        entry_delay: dict[str, float] = {}
+        if (
+            not self.trade_log.empty
+            and "actual_entry_date" in self.trade_log.columns
+            and "planned_entry_date" in self.trade_log.columns
+        ):
+            log_df = self.trade_log
+            has_entry = (
+                log_df["actual_entry_date"].notna()
+                & log_df["planned_entry_date"].notna()
+            )
+            if has_entry.any():
+                delay = (
+                    pd.to_datetime(log_df.loc[has_entry, "actual_entry_date"])
+                    - pd.to_datetime(log_df.loc[has_entry, "planned_entry_date"])
+                )
+                entry_delay["avg_entry_delay_trading_days"] = float(
+                    delay.dt.days.mean()
+                )
+                entry_delay["median_entry_delay_trading_days"] = float(
+                    delay.dt.days.median()
+                )
+
         return {
             "n_days": n_days,
             "ann_return_pre_cost": ann_ret,
@@ -425,8 +466,409 @@ class PortfolioResult:
             "avg_gross_exposure": float(r["gross_exposure"].mean()),
             "avg_net_exposure": float(r["net_exposure"].mean()),
             "n_rebalances": int(r["_rebalance"].sum()) if "_rebalance" in r.columns else 0,
+            **entry_delay,
             **gap_stats,
         }
+
+
+@dataclass
+class SimulationState:
+    """Mutable state accumulated through a portfolio simulation loop."""
+
+    current_weights: dict[str, float] = field(default_factory=dict)
+    prev_weights: dict[str, float] = field(default_factory=dict)
+    current_entry_dates: dict[str, pd.Timestamp] = field(default_factory=dict)
+    current_entry_prices: dict[str, float] = field(default_factory=dict)
+    last_prices: dict[str, float] = field(default_factory=dict)
+    missing_streaks: dict[str, int] = field(default_factory=dict)
+    censored_tickers: set[str] = field(default_factory=set)
+    today_turnover: float = 0.0
+    daily_records: list[dict[str, Any]] = field(default_factory=list)
+    trade_records: list[dict[str, Any]] = field(default_factory=list)
+    long_gap_records: dict[pd.Timestamp, dict[str, float]] = field(default_factory=dict)
+    weights_history: dict[pd.Timestamp, pd.DataFrame] = field(default_factory=dict)
+    cohort_weights_history: dict[pd.Timestamp, pd.DataFrame] = field(default_factory=dict)
+
+    # Numpy parallel arrays (populated after ticker_to_idx is built)
+    last_prices_arr: np.ndarray | None = None
+    missing_streaks_arr: np.ndarray | None = None
+    is_censored_arr: np.ndarray | None = None
+    weights_arr: np.ndarray | None = None
+    entry_dates_arr: np.ndarray | None = None
+
+
+_EMPTY_COLUMNS = [
+    "date", "pnl", "gross_exposure", "net_exposure", "turnover", "_rebalance",
+    "n_positions", "ffill_1d_weight", "ffill_2d_weight",
+    "long_gap_recovered_weight", "possible_delisting_or_unavailable_weight",
+    "n_ffill_1d_positions", "n_ffill_2d_positions",
+    "n_long_gap_recovered_positions", "n_possible_delisting_or_unavailable_positions",
+]
+
+
+def _advance_daily_state(
+    tickers: list[str],
+    weights: dict[str, float],
+    last_prices: dict[str, float],
+    missing_streaks: dict[str, int],
+    censored_tickers: set[str],
+    p_today: dict[str, float],
+    p_next: dict[str, float],
+) -> dict:
+    """Advance one day of the gap-state machine. Returns a daily record dict.
+
+    Pure function over plain dicts — no pandas, no SimulationState, no
+    close_matrix slicing. Mutates *last_prices*, *missing_streaks*, and
+    *censored_tickers* in place.
+    """
+    import math
+
+    if not tickers:
+        return {
+            "pnl": 0.0, "gross_exposure": 0.0, "net_exposure": 0.0,
+            "n_positions": 0, "ffill_1d_weight": 0.0, "ffill_2d_weight": 0.0,
+            "n_ffill_1d": 0, "n_ffill_2d": 0, "long_gap_tickers": {},
+        }
+
+    gross = sum(abs(w) for w in weights.values())
+    net = sum(weights.values())
+    n_positions = len(tickers)
+
+    pnl = 0.0
+    ffill_1d_weight = 0.0
+    ffill_2d_weight = 0.0
+    n_ffill_1d = 0
+    n_ffill_2d = 0
+    long_gap_tickers: dict[str, float] = {}
+
+    for tkr in tickers:
+        w = weights.get(tkr, 0.0)
+        today_px = p_today.get(tkr, float("nan"))
+        next_px = p_next.get(tkr, float("nan"))
+
+        if not math.isnan(today_px) and float(today_px) > 0:
+            last_prices.setdefault(tkr, float(today_px))
+
+        if tkr in censored_tickers:
+            if math.isnan(next_px):
+                long_gap_tickers[tkr] = float(w)
+            continue
+
+        if not math.isnan(next_px) and float(next_px) > 0:
+            base_px = last_prices.get(tkr)
+            if base_px is not None and base_px > 0:
+                pnl += float(w) * (float(next_px) / base_px - 1.0)
+            last_prices[tkr] = float(next_px)
+            missing_streaks[tkr] = 0
+            continue
+
+        if tkr not in last_prices:
+            continue
+        streak = missing_streaks.get(tkr, 0) + 1
+        missing_streaks[tkr] = streak
+        if streak == 1:
+            ffill_1d_weight += abs(float(w))
+            n_ffill_1d += 1
+        elif streak == 2:
+            ffill_2d_weight += abs(float(w))
+            n_ffill_2d += 1
+        else:
+            long_gap_tickers[tkr] = float(w)
+            censored_tickers.add(tkr)
+
+    return {
+        "pnl": pnl,
+        "gross_exposure": gross,
+        "net_exposure": net,
+        "n_positions": n_positions,
+        "ffill_1d_weight": ffill_1d_weight,
+        "ffill_2d_weight": ffill_2d_weight,
+        "n_ffill_1d": n_ffill_1d,
+        "n_ffill_2d": n_ffill_2d,
+        "long_gap_tickers": long_gap_tickers,
+    }
+
+
+def _advance_daily_state_numpy(
+    weights_arr: np.ndarray,
+    last_prices_arr: np.ndarray,
+    missing_streaks_arr: np.ndarray,
+    is_censored_arr: np.ndarray,
+    entry_dates_arr: np.ndarray,
+    prices_2d: np.ndarray,
+    d: int,
+    d_next: int,
+    idx_to_ticker: list[str],
+) -> dict:
+    """Vectorized daily PnL — 4 boolean-mask passes, no per-ticker loop.
+
+    Mutates *last_prices_arr*, *missing_streaks_arr*, *is_censored_arr*
+    in place. Returns the same dict shape as ``_advance_daily_state``.
+    """
+    has_position = (
+        (weights_arr != 0.0)
+        & (entry_dates_arr >= 0)
+        & (entry_dates_arr <= d)
+    )
+
+    if not has_position.any():
+        return {
+            "pnl": 0.0, "gross_exposure": 0.0, "net_exposure": 0.0,
+            "n_positions": 0, "ffill_1d_weight": 0.0, "ffill_2d_weight": 0.0,
+            "n_ffill_1d": 0, "n_ffill_2d": 0, "long_gap_tickers": {},
+        }
+
+    pos_idx = np.flatnonzero(has_position)
+    weights_pos = weights_arr[pos_idx]
+    p_today = prices_2d[pos_idx, d]
+    p_next = prices_2d[pos_idx, d_next]
+
+    gross = float(np.abs(weights_pos).sum())
+    net = float(weights_pos.sum())
+    n_positions = len(pos_idx)
+
+    # --- Pass 1: setdefault for newly-seen valid today prices (all positions) ---
+    need_init = (
+        np.isnan(last_prices_arr[pos_idx])
+        & np.isfinite(p_today) & (p_today > 0)
+    )
+    if need_init.any():
+        last_prices_arr[pos_idx[need_init]] = p_today[need_init]
+
+    # --- Separate censored from active (non-censored) ---
+    is_cens = is_censored_arr[pos_idx]
+    non_cens = ~is_cens
+
+    long_gap_tickers: dict[str, float] = {}
+
+    # Censored positions: only flag long_gap when next quote is missing
+    if is_cens.any():
+        cens_next = p_next[is_cens]
+        cens_nan = ~np.isfinite(cens_next)
+        if cens_nan.any():
+            cens_abs_idx = pos_idx[is_cens][cens_nan]
+            for i in cens_abs_idx:
+                long_gap_tickers[idx_to_ticker[i]] = float(weights_arr[i])
+
+    if not non_cens.any():
+        return {
+            "pnl": 0.0,
+            "gross_exposure": gross,
+            "net_exposure": net,
+            "n_positions": n_positions,
+            "ffill_1d_weight": 0.0,
+            "ffill_2d_weight": 0.0,
+            "n_ffill_1d": 0,
+            "n_ffill_2d": 0,
+            "long_gap_tickers": long_gap_tickers,
+        }
+
+    active_idx = pos_idx[non_cens]
+    weights_a = weights_pos[non_cens]
+    p_next_a = p_next[non_cens]
+
+    # --- Pass 2: compute PnL for tickers with valid next price ---
+    can_compute = (
+        np.isfinite(p_next_a) & (p_next_a > 0)
+        & np.isfinite(last_prices_arr[active_idx])
+        & (last_prices_arr[active_idx] > 0)
+    )
+    pnl = 0.0
+    if can_compute.any():
+        ret = p_next_a[can_compute] / last_prices_arr[active_idx[can_compute]] - 1.0
+        pnl = float(np.dot(weights_a[can_compute], ret))
+        last_prices_arr[active_idx[can_compute]] = p_next_a[can_compute]
+        missing_streaks_arr[active_idx[can_compute]] = 0
+
+    # --- Pass 3: missing quotes → increment streaks ---
+    has_last = np.isfinite(last_prices_arr[active_idx])
+    missing = ~np.isfinite(p_next_a) & has_last
+
+    ffill_1d_weight = 0.0
+    ffill_2d_weight = 0.0
+    n_ffill_1d = 0
+    n_ffill_2d = 0
+
+    if missing.any():
+        missing_streaks_arr[active_idx[missing]] += 1
+        streaks = missing_streaks_arr[active_idx]
+        is_1d = missing & (streaks == 1)
+        is_2d = missing & (streaks == 2)
+        long_gap_mask = missing & (streaks > 2)
+
+        if is_1d.any():
+            ffill_1d_weight = float(np.abs(weights_a[is_1d]).sum())
+            n_ffill_1d = int(is_1d.sum())
+        if is_2d.any():
+            ffill_2d_weight = float(np.abs(weights_a[is_2d]).sum())
+            n_ffill_2d = int(is_2d.sum())
+        if long_gap_mask.any():
+            is_censored_arr[active_idx[long_gap_mask]] = True
+            for i in active_idx[long_gap_mask]:
+                long_gap_tickers[idx_to_ticker[i]] = float(weights_arr[i])
+
+    return {
+        "pnl": pnl,
+        "gross_exposure": gross,
+        "net_exposure": net,
+        "n_positions": n_positions,
+        "ffill_1d_weight": ffill_1d_weight,
+        "ffill_2d_weight": ffill_2d_weight,
+        "n_ffill_1d": n_ffill_1d,
+        "n_ffill_2d": n_ffill_2d,
+        "long_gap_tickers": long_gap_tickers,
+    }
+
+
+if _NUMBA_AVAILABLE:
+
+    @_njit(cache=True)
+    def _advance_daily_state_numba(
+        weights_arr,
+        last_prices_arr,
+        missing_streaks_arr,
+        is_censored_arr,
+        entry_dates_arr,
+        prices_2d,
+        d,
+        d_next,
+        long_gap_out,
+    ):
+        """Single fused loop over all tickers — numba-compiled.
+
+        Returns a tuple of scalar results. *long_gap_out* is filled with
+        ticker indices that hit a long gap. Mutates the state arrays in place.
+        """
+        n_tickers = weights_arr.shape[0]
+        pnl = 0.0
+        gross = 0.0
+        net = 0.0
+        n_positions = 0
+        ffill_1d_weight = 0.0
+        ffill_2d_weight = 0.0
+        n_ffill_1d = 0
+        n_ffill_2d = 0
+        n_long_gap = 0
+
+        for i in range(n_tickers):
+            w = weights_arr[i]
+            if w == 0.0:
+                continue
+            ed = entry_dates_arr[i]
+            if ed < 0 or ed > d:
+                continue
+
+            n_positions += 1
+            gross += abs(w)
+            net += w
+
+            today_px = prices_2d[i, d]
+            next_px = prices_2d[i, d_next]
+
+            # Pass 1: setdefault
+            if not np.isnan(today_px) and today_px > 0.0:
+                if np.isnan(last_prices_arr[i]):
+                    last_prices_arr[i] = today_px
+
+            # Censored check
+            if is_censored_arr[i]:
+                if np.isnan(next_px):
+                    long_gap_out[n_long_gap] = i
+                    n_long_gap += 1
+                continue
+
+            # Pass 2: valid next price
+            if not np.isnan(next_px) and next_px > 0.0:
+                base_px = last_prices_arr[i]
+                if not np.isnan(base_px) and base_px > 0.0:
+                    pnl += w * (next_px / base_px - 1.0)
+                last_prices_arr[i] = next_px
+                missing_streaks_arr[i] = 0
+                continue
+
+            # Pass 3: missing next price
+            if np.isnan(last_prices_arr[i]):
+                continue
+            streak = missing_streaks_arr[i] + 1
+            missing_streaks_arr[i] = streak
+            if streak == 1:
+                ffill_1d_weight += abs(w)
+                n_ffill_1d += 1
+            elif streak == 2:
+                ffill_2d_weight += abs(w)
+                n_ffill_2d += 1
+            else:
+                long_gap_out[n_long_gap] = i
+                n_long_gap += 1
+                is_censored_arr[i] = True
+
+        return (pnl, gross, net, n_positions,
+                ffill_1d_weight, ffill_2d_weight,
+                n_ffill_1d, n_ffill_2d, n_long_gap)
+
+
+def _advance_daily_state_numba_wrapper(
+    weights_arr: np.ndarray,
+    last_prices_arr: np.ndarray,
+    missing_streaks_arr: np.ndarray,
+    is_censored_arr: np.ndarray,
+    entry_dates_arr: np.ndarray,
+    prices_2d: np.ndarray,
+    d: int,
+    d_next: int,
+    idx_to_ticker: list[str],
+) -> dict:
+    """Python wrapper that calls the numba kernel and builds the result dict."""
+    n_tickers = weights_arr.shape[0]
+    long_gap_out = np.zeros(n_tickers, dtype=np.int64)
+
+    (pnl, gross, net, n_positions,
+     ffill_1d_weight, ffill_2d_weight,
+     n_ffill_1d, n_ffill_2d, n_long_gap) = _advance_daily_state_numba(
+        weights_arr, last_prices_arr, missing_streaks_arr, is_censored_arr,
+        entry_dates_arr, prices_2d, d, d_next, long_gap_out,
+    )
+
+    long_gap_tickers: dict[str, float] = {}
+    for j in range(n_long_gap):
+        i = long_gap_out[j]
+        long_gap_tickers[idx_to_ticker[i]] = float(weights_arr[i])
+
+    return {
+        "pnl": float(pnl),
+        "gross_exposure": float(gross),
+        "net_exposure": float(net),
+        "n_positions": int(n_positions),
+        "ffill_1d_weight": float(ffill_1d_weight),
+        "ffill_2d_weight": float(ffill_2d_weight),
+        "n_ffill_1d": int(n_ffill_1d),
+        "n_ffill_2d": int(n_ffill_2d),
+        "long_gap_tickers": long_gap_tickers,
+    }
+
+
+def _empty_result(
+    universe_coverage: pd.DataFrame | None = None,
+    trade_records: list[dict[str, Any]] | None = None,
+    trade_log_violations: pd.DataFrame | None = None,
+) -> PortfolioResult:
+    """Build a standard empty PortfolioResult with stable schemas."""
+    return PortfolioResult(
+        daily_returns=pd.DataFrame(columns=_EMPTY_COLUMNS),
+        weights_history={},
+        cohort_weights_history={},
+        trade_log=pd.DataFrame(trade_records) if trade_records else pd.DataFrame(),
+        trade_log_violations=(
+            trade_log_violations
+            if trade_log_violations is not None
+            else pd.DataFrame()
+        ),
+        universe_coverage=(
+            universe_coverage
+            if universe_coverage is not None
+            else pd.DataFrame()
+        ),
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -440,7 +882,7 @@ def _next_valid_quote(
     planned_date: pd.Timestamp,
     calendar: list[pd.Timestamp],
     cal_pos: dict[pd.Timestamp, int],
-    max_forward_days: int = 3,
+    max_forward_days: int = MAX_QUOTE_FORWARD_DAYS,
 ) -> tuple[pd.Timestamp, float]:
     """Find the next valid close on or after *planned_date*, up to
     *max_forward_days* consecutive trading days.
@@ -509,6 +951,74 @@ def _audit_long_gap_recovery(
     return result
 
 
+def _apply_long_gap_recovery(
+    daily_df: pd.DataFrame,
+    state: SimulationState,
+    close_matrix: pd.DataFrame,
+    calendar: list[pd.Timestamp],
+    cal_pos_by_date: dict[pd.Timestamp, int],
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Run 30-trading-day long-gap recovery audit and update *daily_df*.
+
+    Returns (updated daily_df, gap_records_df).
+    """
+    recovery_result: dict[tuple[pd.Timestamp, str], bool] = {}
+    if not daily_df.empty and state.long_gap_records:
+        log.info(
+            "Long-gap recovery audit: %d dates with gap events",
+            len(state.long_gap_records),
+        )
+        recovery_result = _audit_long_gap_recovery(
+            close_matrix, calendar, cal_pos_by_date, state.long_gap_records,
+            max_recovery_days=30,
+        )
+
+        # Map recovery results back to daily_df rows
+        for idx in daily_df.index:
+            date = daily_df.at[idx, "date"]
+            gap_dict = state.long_gap_records.get(date, {})
+            if not gap_dict:
+                continue
+            recovered_w = 0.0
+            unrecovered_w = 0.0
+            recovered_n = 0
+            unrecovered_n = 0
+            for tkr, w in gap_dict.items():
+                if recovery_result.get((date, tkr), False):
+                    recovered_w += abs(w)
+                    recovered_n += 1
+                else:
+                    unrecovered_w += abs(w)
+                    unrecovered_n += 1
+            daily_df.at[idx, "long_gap_recovered_weight"] = recovered_w
+            daily_df.at[idx, "possible_delisting_or_unavailable_weight"] = unrecovered_w
+            daily_df.at[idx, "n_long_gap_recovered_positions"] = recovered_n
+            daily_df.at[idx, "n_possible_delisting_or_unavailable_positions"] = unrecovered_n
+
+        n_recovered = sum(1 for v in recovery_result.values() if v)
+        n_unrecovered = sum(1 for v in recovery_result.values() if not v)
+        log.info(
+            "Long-gap recovery audit: %d recovered, %d unrecovered (possible delisting)",
+            n_recovered, n_unrecovered,
+        )
+
+    # Build gap_records_df for persistence
+    gap_records_frames: list[dict[str, Any]] = []
+    if state.long_gap_records:
+        for gap_date, gap_dict in state.long_gap_records.items():
+            for tkr, w in gap_dict.items():
+                recovered = recovery_result.get((gap_date, tkr), False) if recovery_result else False
+                gap_records_frames.append({
+                    "gap_date": gap_date,
+                    "ticker": tkr,
+                    "weight": w,
+                    "recovered": recovered,
+                })
+    gap_records_df = pd.DataFrame(gap_records_frames) if gap_records_frames else pd.DataFrame()
+
+    return daily_df, gap_records_df
+
+
 class PortfolioSimulator:
     """Rebalanced portfolio simulation.
 
@@ -529,40 +1039,23 @@ class PortfolioSimulator:
         self.universe_name = universe_name
         self._price_table: pd.DataFrame | None = None
         self._calendar: pd.DatetimeIndex | None = None
+        self._signals: pd.DataFrame | None = None
+        self._market_cache: dict[
+            tuple[tuple[str, ...], pd.Timestamp, pd.Timestamp, int, str, str],
+            tuple[pd.DataFrame, pd.DatetimeIndex, dict[pd.Timestamp, int], pd.DatetimeIndex, pd.DataFrame],
+        ] = {}
 
-    def run(
+    # -------------------------------------------------------------------
+    # C1.3 — Validate signals, normalize dates, apply PIT universe filter
+    # -------------------------------------------------------------------
+
+    def _validate_and_filter_signals(
         self,
         signals: pd.DataFrame,
-        cadence: str = "weekly",
-        lookback: int = 5,
-        start: pd.Timestamp | None = None,
-        end: pd.Timestamp | None = None,
-        long_frac: float = 0.2,
-        transaction_cost_bps: float = 5.0,
-    ) -> PortfolioResult:
-        """Run portfolio simulation.
-
-        Parameters
-        ----------
-        signals:
-            DataFrame with ``[date, ticker, score]``.  *date* is the
-            availability date of each signal.
-        cadence:
-            ``daily``, ``weekly``, or ``monthly``.
-        lookback:
-            Number of trading days to look back for eligible signals at each
-            rebalance date.
-        start, end:
-            Date bounds. Default: min/max of *signals* date.
-        long_frac:
-            Fraction of stocks in each leg (0.2 = quintile).
-        transaction_cost_bps:
-            One-way transaction cost in basis points.
-
-        Returns
-        -------
-        PortfolioResult with daily returns, weights history, and config.
-        """
+        start: pd.Timestamp | None,
+        end: pd.Timestamp | None,
+    ) -> tuple[pd.DataFrame, pd.Timestamp, pd.Timestamp, int]:
+        """Normalize signal columns, date bounds, and PIT universe membership."""
         signals = signals.copy()
         signals["date"] = pd.to_datetime(signals["date"], errors="coerce")
         signals = signals[signals["date"].notna()]
@@ -576,7 +1069,6 @@ class PortfolioSimulator:
         start = pd.Timestamp(start)
         end = pd.Timestamp(end)
 
-        # Enforce the requested PIT universe before any portfolio construction.
         n_before = len(signals)
         signals = filter_to_universe(
             signals,
@@ -591,30 +1083,59 @@ class PortfolioSimulator:
             len(signals),
             n_before,
         )
-        if signals.empty:
-            log.warning("No signals left after PIT universe filtering")
-            return PortfolioResult(
-                daily_returns=pd.DataFrame(
-                    columns=["date", "pnl", "gross_exposure", "net_exposure", "turnover", "_rebalance",
-                             "n_positions", "ffill_1d_weight", "ffill_2d_weight",
-                             "long_gap_recovered_weight", "possible_delisting_or_unavailable_weight",
-                             "n_ffill_1d_positions", "n_ffill_2d_positions",
-                             "n_long_gap_recovered_positions", "n_possible_delisting_or_unavailable_positions"]
-                ),
-                weights_history={},
-                cohort_weights_history={},
-                trade_log=pd.DataFrame(),
-                universe_coverage=pd.DataFrame(),
-            )
+        return signals, start, end, n_before
 
-        # Build calendar and price table. Include all historical PIT members in
-        # the price load so the coverage audit is not limited to traded names.
+    # -------------------------------------------------------------------
+    # C1.4 — Collect traded tickers, coverage tickers, and union
+    # -------------------------------------------------------------------
+
+    def _collect_price_tickers(
+        self,
+        signals: pd.DataFrame,
+    ) -> tuple[set[str], set[str], set[str]]:
+        """Collect traded tickers, coverage tickers, and union price tickers."""
         tickers = set(signals["ticker"].unique())
         _, snapshots = _load_universe_snapshots(self.universe_name)
         coverage_tickers: set[str] = set()
         for members in snapshots.values():
             coverage_tickers.update(members)
         price_tickers = tickers | coverage_tickers
+        return tickers, coverage_tickers, price_tickers
+
+    # -------------------------------------------------------------------
+    # C1.5 — Load prices, build calendar, rebalance dates, coverage
+    # -------------------------------------------------------------------
+
+    def _load_calendar_prices_and_coverage(
+        self,
+        price_tickers: set[str],
+        start: pd.Timestamp,
+        end: pd.Timestamp,
+        lookback: int,
+        cadence: str,
+        weekly_day: str = "monday",
+    ) -> tuple[pd.DataFrame, pd.DatetimeIndex, dict[pd.Timestamp, int], pd.DatetimeIndex, pd.DataFrame]:
+        """Load prices, close matrix, trading calendar, rebalance dates, and coverage."""
+        cache_key = (
+            tuple(sorted(price_tickers)),
+            pd.Timestamp(start).normalize(),
+            pd.Timestamp(end).normalize(),
+            int(lookback),
+            cadence,
+            weekly_day,
+        )
+        cached = self._market_cache.get(cache_key)
+        if cached is not None:
+            close_matrix, calendar, cal_pos_by_date, rebal_dates, universe_coverage = cached
+            self._price_table = None
+            self._calendar = calendar
+            log.info(
+                "Simulation market cache hit: %s cadence, %d lookback, %s weekly timing",
+                cadence,
+                lookback,
+                weekly_day,
+            )
+            return close_matrix, calendar, cal_pos_by_date, rebal_dates, universe_coverage
 
         calendar_end = end + pd.Timedelta(days=30)
         self._price_table = _load_price_table(
@@ -627,12 +1148,13 @@ class PortfolioSimulator:
         self._calendar = pd.DatetimeIndex(
             close_matrix.index[(close_matrix.index >= start) & (close_matrix.index <= calendar_end)]
         )
-        rebal_dates = _rebalance_dates(self._calendar, cadence, start, end)
+        rebal_dates = _rebalance_dates(self._calendar, cadence, start, end, weekly_day=weekly_day)
 
         log.info(
-            "Simulation: %s cadence, %d lookback, %d rebalance dates",
+            "Simulation: %s cadence, %d lookback, %s weekly timing, %d rebalance dates",
             cadence,
             lookback,
+            weekly_day,
             len(rebal_dates),
         )
 
@@ -642,305 +1164,445 @@ class PortfolioSimulator:
             close_matrix,
         )
 
-        # ---- Run simulation loop ----
-        weights_history: dict[pd.Timestamp, pd.DataFrame] = {}
-        cohort_weights_history: dict[pd.Timestamp, pd.DataFrame] = {}
-        daily_records: list[dict[str, Any]] = []
-        trade_records: list[dict[str, Any]] = []
+        cal_pos_by_date = {d: i for i, d in enumerate(self._calendar)}
 
-        prev_weights: dict[str, float] = {}
-        current_weights: dict[str, float] = {}
-        current_entry_dates: dict[str, pd.Timestamp] = {}
-        cal_list = list(self._calendar)
-        cal_pos = {d: i for i, d in enumerate(cal_list)}
-        rebal_set = set(rebal_dates)
+        result = (close_matrix, self._calendar, cal_pos_by_date, rebal_dates, universe_coverage)
+        self._market_cache[cache_key] = result
+        return result
 
-        # Gap accounting: date -> {ticker: weight} for gaps > 2 trading days
-        long_gap_records: dict[pd.Timestamp, dict[str, float]] = {}
+    # -------------------------------------------------------------------
+    # C1.6 — Compute lookback start date (static helper)
+    # -------------------------------------------------------------------
 
-        for i in progress(
-            range(len(cal_list) - 1),
-            desc=f"Simulating ({cadence})",
-            unit="day",
-        ):
-            date = cal_list[i]
-            next_date = cal_list[i + 1]
-            if date < start:
-                continue
-            if date > end:
-                break
+    @staticmethod
+    def _rebalance_lookback_start(
+        calendar: pd.DatetimeIndex,
+        cal_pos_by_date: dict[pd.Timestamp, int],
+        date: pd.Timestamp,
+        lookback: int,
+    ) -> pd.Timestamp:
+        """Return the first eligible signal date for a rebalance date."""
+        rb_pos = cal_pos_by_date[date]
+        return (
+            calendar[max(0, rb_pos - lookback + 1)]
+            if rb_pos >= lookback - 1
+            else calendar[0]
+        )
 
-            did_rebalance = date in rebal_set
-            turnover = 0.0
+    # -------------------------------------------------------------------
+    # C1.7 — Look up entry quotes and rescale weights
+    # -------------------------------------------------------------------
 
-            if did_rebalance:
-                rb_pos = cal_pos[date]
-                lookback_start = (
-                    self._calendar[max(0, rb_pos - lookback + 1)]
-                    if rb_pos >= lookback - 1
-                    else self._calendar[0]
+    def _lookup_tradeable_entries(
+        self,
+        agg_weights_df: pd.DataFrame,
+        close_matrix: pd.DataFrame,
+        calendar: list[pd.Timestamp],
+        cal_pos_by_date: dict[pd.Timestamp, int],
+        planned_entry_date: pd.Timestamp,
+        lookback: int,
+    ) -> tuple[pd.DataFrame, dict[str, pd.Timestamp], dict[str, float], list[dict[str, Any]]]:
+        """Find entry quotes, remove untradeable names, and rescale gross to 2.0."""
+        entry_dates: dict[str, pd.Timestamp] = {}
+        entry_prices: dict[str, float] = {}
+        skip_records: list[dict[str, Any]] = []
+
+        if not agg_weights_df.empty:
+            for _, row in agg_weights_df.iterrows():
+                tkr = str(row["ticker"])
+                actual_d, actual_px = _next_valid_quote(
+                    close_matrix, tkr, planned_entry_date, calendar, cal_pos_by_date,
                 )
-                eligible = signals[
-                    (signals["date"] >= lookback_start) & (signals["date"] <= date)
-                ]
-
-                # ---- Build cohort-aggregated weights ----
-                cohort_weights_df, agg_weights_df = _build_cohort_weights(
-                    eligible, long_frac=long_frac, n_min_positions=5,
-                )
-
-                # Store raw cohort weights (before cross-cohort aggregation).
-                if not cohort_weights_df.empty:
-                    cohort_weights_history[date] = cohort_weights_df
-
-                # ---- Look up entry prices for weighted tickers ----
-                entry_dates: dict[str, pd.Timestamp] = {}
-                entry_prices: dict[str, float] = {}
-                if not agg_weights_df.empty:
-                    for _, row in agg_weights_df.iterrows():
-                        tkr = str(row["ticker"])
-                        actual_d, actual_px = _next_valid_quote(
-                            close_matrix, tkr, date, cal_list, cal_pos, max_forward_days=3,
-                        )
-                        if pd.isna(actual_d):
-                            trade_records.append({
-                                "trade_id": f"{date.date()}:{tkr}:skip",
-                                "ticker": tkr,
-                                "signal_date": date,
-                                "planned_entry_date": date,
-                                "actual_entry_date": pd.NaT,
-                                "planned_exit_date": pd.NaT,
-                                "actual_exit_date": pd.NaT,
-                                "skip_reason": "skip_no_entry_quote",
-                                "entry_price": np.nan,
-                                "exit_price": np.nan,
-                                "horizon_days": lookback,
-                                "universe": self.universe_name,
-                            })
-                        else:
-                            entry_dates[tkr] = actual_d
-                            entry_prices[tkr] = actual_px
-
-                    # Remove tickers with no entry quote and re-scale to gross=2.0.
-                    tradeable = list(entry_dates)
-                    agg_weights_df = agg_weights_df[
-                        agg_weights_df["ticker"].isin(tradeable)
-                    ].copy()
-                    if not agg_weights_df.empty:
-                        gross_after = agg_weights_df["raw_weight"].abs().sum()
-                        if gross_after > 1e-10:
-                            agg_weights_df["raw_weight"] *= 2.0 / gross_after
-
-                    current_weights = dict(
-                        zip(agg_weights_df["ticker"], agg_weights_df["raw_weight"])
-                    )
-                    current_entry_dates = {
-                        t: entry_dates[t] for t in current_weights if t in entry_dates
-                    }
-                else:
-                    current_weights = {}
-                    current_entry_dates = {}
-
-                # ---- Turnover ----
-                all_tkrs = set(current_weights) | set(prev_weights)
-                turnover = float(
-                    sum(abs(current_weights.get(t, 0.0) - prev_weights.get(t, 0.0)) for t in all_tkrs)
-                )
-
-                weights_history[date] = agg_weights_df
-
-                # ---- Trade log for entered positions ----
-                next_reb_pos = rebal_dates.searchsorted(date, side="right")
-                planned_exit = (
-                    pd.Timestamp(rebal_dates[next_reb_pos])
-                    if next_reb_pos < len(rebal_dates)
-                    else pd.NaT
-                )
-                for tkr, w in current_weights.items():
-                    entry_price = entry_prices.get(tkr, np.nan)
-                    actual_entry = entry_dates.get(tkr, pd.NaT)
-                    exit_price = np.nan
-                    actual_exit = pd.NaT
-                    skip_reason = None
-                    if pd.notna(planned_exit):
-                        actual_exit, exit_price = _next_valid_quote(
-                            close_matrix, tkr, planned_exit,
-                            cal_list, cal_pos, max_forward_days=3,
-                        )
-                        if pd.isna(actual_exit):
-                            skip_reason = "right_censored_no_exit_quote"
-                    else:
-                        skip_reason = "right_censored_no_exit_quote"
-
-                    trade_records.append({
-                        "trade_id": f"{date.date()}:{tkr}",
+                if pd.isna(actual_d):
+                    skip_records.append({
+                        "trade_id": f"{planned_entry_date.date()}:{tkr}:skip",
                         "ticker": tkr,
-                        "signal_date": date,
-                        "planned_entry_date": date,
-                        "actual_entry_date": actual_entry,
-                        "planned_exit_date": planned_exit,
-                        "actual_exit_date": actual_exit,
-                        "skip_reason": skip_reason,
-                        "entry_price": entry_price,
-                        "exit_price": exit_price,
+                        "signal_date": planned_entry_date,
+                        "planned_entry_date": planned_entry_date,
+                        "actual_entry_date": pd.NaT,
+                        "planned_exit_date": pd.NaT,
+                        "actual_exit_date": pd.NaT,
+                        "skip_reason": "skip_no_entry_quote",
+                        "entry_price": np.nan,
+                        "exit_price": np.nan,
                         "horizon_days": lookback,
                         "universe": self.universe_name,
-                        "weight": w,
                     })
-
-                prev_weights = current_weights.copy()
-
-            active_weights = {
-                t: w
-                for t, w in current_weights.items()
-                if pd.Timestamp(current_entry_dates.get(t, date)) <= date
-            }
-
-            if active_weights:
-                weights = pd.Series(active_weights, dtype="float64")
-                tickers_list = list(weights.index)
-                n_positions_today = len(tickers_list)
-
-                if date in close_matrix.index and next_date in close_matrix.index:
-                    p_today_s = close_matrix.loc[date]
-                    p_next_s = close_matrix.loc[next_date]
-                    p_t = p_today_s.reindex(tickers_list)
-                    p_n = p_next_s.reindex(tickers_list)
-
-                    has_today = p_t.notna()
-                    has_next = p_n.notna()
-                    has_both = has_today & has_next
-
-                    ret = pd.Series(0.0, index=tickers_list)
-                    ret[has_both] = p_n[has_both] / p_t[has_both] - 1.0
-
-                    pnl = float((weights[has_both] * ret[has_both]).sum())
-
-                    no_next = ~has_next & has_today
-
-                    ffill_1d = pd.Series(False, index=tickers_list)
-                    ffill_2d = pd.Series(False, index=tickers_list)
-                    long_gap = pd.Series(False, index=tickers_list)
-
-                    if no_next.any():
-                        i_next_cal = cal_pos.get(next_date)
-                        if i_next_cal is not None and i_next_cal + 1 < len(cal_list):
-                            d2 = cal_list[i_next_cal + 1]
-                            if d2 in close_matrix.index:
-                                p_d2 = close_matrix.loc[d2].reindex(tickers_list)
-                                ffill_1d = no_next & p_d2.notna()
-
-                                still_no_next = no_next & ~ffill_1d
-                                if still_no_next.any() and i_next_cal + 2 < len(cal_list):
-                                    d3 = cal_list[i_next_cal + 2]
-                                    if d3 in close_matrix.index:
-                                        p_d3 = close_matrix.loc[d3].reindex(tickers_list)
-                                        ffill_2d = still_no_next & p_d3.notna()
-                                        long_gap = still_no_next & ~ffill_2d
-                                    else:
-                                        long_gap = still_no_next
-                                else:
-                                    long_gap = still_no_next
-                            else:
-                                long_gap = no_next
-                        else:
-                            long_gap = no_next
-
-                        if long_gap.any():
-                            long_gap_records[date] = {
-                                tkr: float(weights[tkr]) for tkr in tickers_list[long_gap]
-                            }
-
-                    ffill_1d_weight = float(weights[ffill_1d].abs().sum()) if ffill_1d.any() else 0.0
-                    ffill_2d_weight = float(weights[ffill_2d].abs().sum()) if ffill_2d.any() else 0.0
-                    n_ffill_1d = int(ffill_1d.sum())
-                    n_ffill_2d = int(ffill_2d.sum())
                 else:
-                    pnl = 0.0
-                    ffill_1d_weight = 0.0
-                    ffill_2d_weight = 0.0
-                    n_ffill_1d = 0
-                    n_ffill_2d = 0
+                    entry_dates[tkr] = actual_d
+                    entry_prices[tkr] = actual_px
 
-                gross = float(weights.abs().sum())
-                net = float(weights.sum())
+            # Remove tickers with no entry quote and re-scale to gross=2.0.
+            tradeable = list(entry_dates)
+            agg_weights_df = agg_weights_df[
+                agg_weights_df["ticker"].isin(tradeable)
+            ].copy()
+            if not agg_weights_df.empty:
+                gross_after = agg_weights_df["raw_weight"].abs().sum()
+                if gross_after > 1e-10:
+                    agg_weights_df["raw_weight"] *= 2.0 / gross_after
+
+        return agg_weights_df, entry_dates, entry_prices, skip_records
+
+    # -------------------------------------------------------------------
+    # C1.8 — Append trade records for entered positions
+    # -------------------------------------------------------------------
+
+    def _append_entered_trade_records(
+        self,
+        state: SimulationState,
+        close_matrix: pd.DataFrame,
+        calendar: list[pd.Timestamp],
+        cal_pos_by_date: dict[pd.Timestamp, int],
+        rebal_dates: pd.DatetimeIndex,
+        date: pd.Timestamp,
+        lookback: int,
+        entry_dates: dict[str, pd.Timestamp],
+        entry_prices: dict[str, float],
+    ) -> None:
+        """Append trade records for successfully entered positions."""
+        next_reb_pos = rebal_dates.searchsorted(date, side="right")
+        planned_exit = (
+            pd.Timestamp(rebal_dates[next_reb_pos])
+            if next_reb_pos < len(rebal_dates)
+            else pd.NaT
+        )
+        for tkr, w in state.current_weights.items():
+            entry_price = entry_prices.get(tkr, np.nan)
+            actual_entry = entry_dates.get(tkr, pd.NaT)
+            exit_price = np.nan
+            actual_exit = pd.NaT
+            skip_reason = None
+            if pd.notna(planned_exit):
+                actual_exit, exit_price = _next_valid_quote(
+                    close_matrix, tkr, planned_exit,
+                    calendar, cal_pos_by_date,
+                )
+                if pd.isna(actual_exit):
+                    skip_reason = "right_censored_no_exit_quote"
             else:
-                pnl = 0.0
-                gross = 0.0
-                net = 0.0
-                n_positions_today = 0
-                ffill_1d_weight = 0.0
-                ffill_2d_weight = 0.0
-                n_ffill_1d = 0
-                n_ffill_2d = 0
+                skip_reason = "right_censored_no_exit_quote"
 
-            daily_records.append({
+            state.trade_records.append({
+                "trade_id": f"{date.date()}:{tkr}",
+                "ticker": tkr,
+                "signal_date": date,
+                "planned_entry_date": date,
+                "actual_entry_date": actual_entry,
+                "planned_exit_date": planned_exit,
+                "actual_exit_date": actual_exit,
+                "skip_reason": skip_reason,
+                "entry_price": entry_price,
+                "exit_price": exit_price,
+                "horizon_days": lookback,
+                "universe": self.universe_name,
+                "weight": w,
+            })
+
+    # -------------------------------------------------------------------
+    # C1.9 — Process one rebalance date
+    # -------------------------------------------------------------------
+
+    def _process_rebalance(
+        self,
+        state: SimulationState,
+        signals: pd.DataFrame,
+        close_matrix: pd.DataFrame,
+        calendar: list[pd.Timestamp],
+        cal_pos_by_date: dict[pd.Timestamp, int],
+        rebal_dates: pd.DatetimeIndex,
+        date: pd.Timestamp,
+        lookback: int,
+        long_frac: float,
+    ) -> None:
+        """Build weights for one rebalance date and update state."""
+        lookback_start = self._rebalance_lookback_start(
+            self._calendar, cal_pos_by_date, date, lookback,
+        )
+        eligible = self._signals.loc[lookback_start:date].reset_index()
+
+        # ---- Build cohort-aggregated weights ----
+        cohort_weights_df, agg_weights_df = _build_cohort_weights(
+            eligible, long_frac=long_frac, n_min_positions=5,
+        )
+
+        # Store raw cohort weights (before cross-cohort aggregation).
+        if not cohort_weights_df.empty:
+            state.cohort_weights_history[date] = cohort_weights_df
+
+        # ---- Look up entry prices and rescale ----
+        agg_weights_df, entry_dates, entry_prices, skip_records = self._lookup_tradeable_entries(
+            agg_weights_df, close_matrix, calendar, cal_pos_by_date, date, lookback,
+        )
+
+        # No eligible signals — keep existing positions, skip this rebalance.
+        if agg_weights_df.empty:
+            return
+
+        # Set current weights and entry dates from tradeable names.
+        state.current_weights = dict(
+            zip(agg_weights_df["ticker"], agg_weights_df["raw_weight"])
+        )
+        state.current_entry_dates = {
+            t: entry_dates[t] for t in state.current_weights if t in entry_dates
+        }
+        state.current_entry_prices = {
+            t: entry_prices[t] for t in state.current_weights if t in entry_prices
+        }
+
+        # A rebalance creates a fresh executable portfolio. Reset quote-state
+        # tracking so any delayed fills or stale gaps from the prior portfolio
+        # cannot bleed into the new holdings.
+        state.last_prices = dict(state.current_entry_prices)
+        state.missing_streaks = {t: 0 for t in state.current_weights}
+        state.censored_tickers = set()
+
+        # Populate parallel numpy arrays (Step 2).
+        state.weights_arr[:] = 0.0
+        state.last_prices_arr[:] = np.nan
+        state.missing_streaks_arr[:] = 0
+        state.is_censored_arr[:] = False
+        for tkr, w in state.current_weights.items():
+            idx = self._ticker_to_idx.get(tkr)
+            if idx is not None:
+                state.weights_arr[idx] = w
+                if tkr in state.current_entry_prices:
+                    state.last_prices_arr[idx] = float(state.current_entry_prices[tkr])
+                if tkr in state.current_entry_dates:
+                    ed = state.current_entry_dates[tkr]
+                    state.entry_dates_arr[idx] = self._day_index.get(ed, -1)
+
+        # ---- Turnover ----
+        all_tkrs = set(state.current_weights) | set(state.prev_weights)
+        state.today_turnover = float(
+            sum(abs(state.current_weights.get(t, 0.0) - state.prev_weights.get(t, 0.0)) for t in all_tkrs)
+        )
+
+        # Store weights for this rebalance date.
+        state.weights_history[date] = agg_weights_df
+
+        # ---- Trade log: skip records first, then entered positions ----
+        state.trade_records.extend(skip_records)
+        self._append_entered_trade_records(
+            state, close_matrix, calendar, cal_pos_by_date, rebal_dates,
+            date, lookback, entry_dates, entry_prices,
+        )
+
+        state.prev_weights = state.current_weights.copy()
+
+    # -------------------------------------------------------------------
+    # C1.10 — Compute one daily PnL row
+    # -------------------------------------------------------------------
+
+    def _compute_daily_pnl(
+        self,
+        state: SimulationState,
+        close_matrix: pd.DataFrame,
+        calendar: list[pd.Timestamp],
+        cal_pos_by_date: dict[pd.Timestamp, int],
+        date: pd.Timestamp,
+        next_date: pd.Timestamp,
+        did_rebalance: bool,
+    ) -> None:
+        """Compute one daily PnL row with delayed-entry and gap accounting.
+
+        Uses the numpy vectorized path when arrays are populated (production),
+        falling back to the dict-based kernel (tests / bootstrap).
+        """
+        if state.last_prices_arr is not None:
+            self._compute_daily_pnl_vectorized(
+                state, date, next_date, did_rebalance,
+            )
+            return
+
+        # --- Dict-based fallback path ---
+        active_weights = {
+            t: w
+            for t, w in state.current_weights.items()
+            if pd.Timestamp(state.current_entry_dates.get(t, date)) <= date
+        }
+
+        if not active_weights:
+            state.daily_records.append({
                 "date": date,
-                "pnl": pnl,
-                "gross_exposure": gross,
-                "net_exposure": net,
-                "turnover": turnover,
+                "pnl": 0.0,
+                "gross_exposure": 0.0,
+                "net_exposure": 0.0,
+                "turnover": state.today_turnover,
                 "_rebalance": int(did_rebalance),
-                "n_positions": n_positions_today,
-                "ffill_1d_weight": ffill_1d_weight,
-                "ffill_2d_weight": ffill_2d_weight,
+                "n_positions": 0,
+                "ffill_1d_weight": 0.0,
+                "ffill_2d_weight": 0.0,
                 "long_gap_recovered_weight": 0.0,
                 "possible_delisting_or_unavailable_weight": 0.0,
-                "n_ffill_1d_positions": n_ffill_1d,
-                "n_ffill_2d_positions": n_ffill_2d,
+                "n_ffill_1d_positions": 0,
+                "n_ffill_2d_positions": 0,
                 "n_long_gap_recovered_positions": 0,
                 "n_possible_delisting_or_unavailable_positions": 0,
             })
+            return
 
-        daily_df = pd.DataFrame(daily_records)
+        tickers_list = list(active_weights.keys())
+
+        if date not in close_matrix.index or next_date not in close_matrix.index:
+            gross = float(sum(abs(w) for w in active_weights.values()))
+            net = float(sum(active_weights.values()))
+            state.daily_records.append({
+                "date": date,
+                "pnl": 0.0,
+                "gross_exposure": gross,
+                "net_exposure": net,
+                "turnover": state.today_turnover,
+                "_rebalance": int(did_rebalance),
+                "n_positions": len(tickers_list),
+                "ffill_1d_weight": 0.0,
+                "ffill_2d_weight": 0.0,
+                "long_gap_recovered_weight": 0.0,
+                "possible_delisting_or_unavailable_weight": 0.0,
+                "n_ffill_1d_positions": 0,
+                "n_ffill_2d_positions": 0,
+                "n_long_gap_recovered_positions": 0,
+                "n_possible_delisting_or_unavailable_positions": 0,
+            })
+            return
+
+        p_today_s = close_matrix.loc[date]
+        p_next_s = close_matrix.loc[next_date]
+        p_today = {t: float(p_today_s[t]) if t in p_today_s.index and pd.notna(p_today_s[t]) else float("nan") for t in tickers_list}
+        p_next = {t: float(p_next_s[t]) if t in p_next_s.index and pd.notna(p_next_s[t]) else float("nan") for t in tickers_list}
+
+        result = _advance_daily_state(
+            tickers=tickers_list,
+            weights=active_weights,
+            last_prices=state.last_prices,
+            missing_streaks=state.missing_streaks,
+            censored_tickers=state.censored_tickers,
+            p_today=p_today,
+            p_next=p_next,
+        )
+
+        if result["long_gap_tickers"]:
+            state.long_gap_records[date] = result["long_gap_tickers"]
+
+        state.daily_records.append({
+            "date": date,
+            "pnl": result["pnl"],
+            "gross_exposure": result["gross_exposure"],
+            "net_exposure": result["net_exposure"],
+            "turnover": state.today_turnover,
+            "_rebalance": int(did_rebalance),
+            "n_positions": result["n_positions"],
+            "ffill_1d_weight": result["ffill_1d_weight"],
+            "ffill_2d_weight": result["ffill_2d_weight"],
+            "long_gap_recovered_weight": 0.0,
+            "possible_delisting_or_unavailable_weight": 0.0,
+            "n_ffill_1d_positions": result["n_ffill_1d"],
+            "n_ffill_2d_positions": result["n_ffill_2d"],
+            "n_long_gap_recovered_positions": 0,
+            "n_possible_delisting_or_unavailable_positions": 0,
+        })
+
+    def _compute_daily_pnl_vectorized(
+        self,
+        state: SimulationState,
+        date: pd.Timestamp,
+        next_date: pd.Timestamp,
+        did_rebalance: bool,
+    ) -> None:
+        """Vectorized daily PnL — numba when available, pure numpy fallback."""
+        d = self._day_index[date]
+        d_next = self._day_index[next_date]
+
+        if _NUMBA_AVAILABLE:
+            result = _advance_daily_state_numba_wrapper(
+                weights_arr=state.weights_arr,
+                last_prices_arr=state.last_prices_arr,
+                missing_streaks_arr=state.missing_streaks_arr,
+                is_censored_arr=state.is_censored_arr,
+                entry_dates_arr=state.entry_dates_arr,
+                prices_2d=self._prices_2d,
+                d=d,
+                d_next=d_next,
+                idx_to_ticker=self._idx_to_ticker,
+            )
+        else:
+            result = _advance_daily_state_numpy(
+                weights_arr=state.weights_arr,
+                last_prices_arr=state.last_prices_arr,
+                missing_streaks_arr=state.missing_streaks_arr,
+                is_censored_arr=state.is_censored_arr,
+                entry_dates_arr=state.entry_dates_arr,
+                prices_2d=self._prices_2d,
+                d=d,
+                d_next=d_next,
+                idx_to_ticker=self._idx_to_ticker,
+            )
+
+        if result["long_gap_tickers"]:
+            state.long_gap_records[date] = result["long_gap_tickers"]
+
+        state.daily_records.append({
+            "date": date,
+            "pnl": result["pnl"],
+            "gross_exposure": result["gross_exposure"],
+            "net_exposure": result["net_exposure"],
+            "turnover": state.today_turnover,
+            "_rebalance": int(did_rebalance),
+            "n_positions": result["n_positions"],
+            "ffill_1d_weight": result["ffill_1d_weight"],
+            "ffill_2d_weight": result["ffill_2d_weight"],
+            "long_gap_recovered_weight": 0.0,
+            "possible_delisting_or_unavailable_weight": 0.0,
+            "n_ffill_1d_positions": result["n_ffill_1d"],
+            "n_ffill_2d_positions": result["n_ffill_2d"],
+            "n_long_gap_recovered_positions": 0,
+            "n_possible_delisting_or_unavailable_positions": 0,
+        })
+
+    # -------------------------------------------------------------------
+    # C1.12 — Post-process: validate trade log, apply gap recovery, build result
+    # -------------------------------------------------------------------
+
+    def _post_process_result(
+        self,
+        state: SimulationState,
+        close_matrix: pd.DataFrame,
+        calendar: list[pd.Timestamp],
+        cal_pos_by_date: dict[pd.Timestamp, int],
+        universe_coverage: pd.DataFrame,
+        start: pd.Timestamp,
+        end: pd.Timestamp,
+        cadence: str,
+        lookback: int,
+        long_frac: float,
+        transaction_cost_bps: float,
+        weekly_day: str = "monday",
+    ) -> PortfolioResult:
+        """Validate trade log, apply gap recovery, and return PortfolioResult."""
+        daily_df = pd.DataFrame(state.daily_records)
 
         # ---- Long-gap recovery audit ----
-        recovery_result: dict[tuple[pd.Timestamp, str], bool] = {}
-        if not daily_df.empty and long_gap_records:
-            log.info(
-                "Long-gap recovery audit: %d dates with gap events",
-                len(long_gap_records),
-            )
-            recovery_result = _audit_long_gap_recovery(
-                close_matrix, cal_list, cal_pos, long_gap_records, max_recovery_days=30,
-            )
+        daily_df, gap_records_df = _apply_long_gap_recovery(
+            daily_df, state, close_matrix, calendar, cal_pos_by_date,
+        )
 
-            # Map recovery results back to daily_df rows
-            for idx in daily_df.index:
-                date = daily_df.at[idx, "date"]
-                gap_dict = long_gap_records.get(date, {})
-                if not gap_dict:
-                    continue
-                recovered_w = 0.0
-                unrecovered_w = 0.0
-                recovered_n = 0
-                unrecovered_n = 0
-                for tkr, w in gap_dict.items():
-                    if recovery_result.get((date, tkr), False):
-                        recovered_w += abs(w)
-                        recovered_n += 1
-                    else:
-                        unrecovered_w += abs(w)
-                        unrecovered_n += 1
-                daily_df.at[idx, "long_gap_recovered_weight"] = recovered_w
-                daily_df.at[idx, "possible_delisting_or_unavailable_weight"] = unrecovered_w
-                daily_df.at[idx, "n_long_gap_recovered_positions"] = recovered_n
-                daily_df.at[idx, "n_possible_delisting_or_unavailable_positions"] = unrecovered_n
-
-            n_recovered = sum(1 for v in recovery_result.values() if v)
-            n_unrecovered = sum(1 for v in recovery_result.values() if not v)
-            log.info(
-                "Long-gap recovery audit: %d recovered, %d unrecovered (possible delisting)",
-                n_recovered, n_unrecovered,
+        # ---- Post-process trade log: mark unrecovered gaps as delisting exits ----
+        if not gap_records_df.empty:
+            unrecovered_tickers = set(
+                gap_records_df.loc[~gap_records_df["recovered"], "ticker"].unique()
             )
+            if unrecovered_tickers:
+                for record in state.trade_records:
+                    if (record.get("ticker") in unrecovered_tickers
+                            and record.get("skip_reason") == "right_censored_no_exit_quote"):
+                        record["skip_reason"] = "delisting_exit_used"
 
-        # Validate trade log
-        trade_log_df = pd.DataFrame(trade_records)
+        # ---- Validate trade log ----
+        trade_log_df = pd.DataFrame(state.trade_records)
         trade_log_violations_df = pd.DataFrame()
         if not trade_log_df.empty:
             trade_log_violations_df = validate_trade_log(trade_log_df)
             if not trade_log_violations_df.empty:
-                # Count violations by type
                 vc = trade_log_violations_df["check"].value_counts()
                 summary_lines = [f"    {chk}: {cnt}" for chk, cnt in vc.items()]
                 log.warning(
@@ -961,44 +1623,140 @@ class PortfolioSimulator:
                 ),
                 weights_history={},
                 cohort_weights_history={},
-                trade_log=pd.DataFrame(trade_records),
+                trade_log=pd.DataFrame(state.trade_records),
                 trade_log_violations=trade_log_violations_df,
                 universe_coverage=universe_coverage,
             )
 
         daily_df = daily_df.sort_values("date").reset_index(drop=True)
 
-        # Build gap_records DataFrame for persistence
-        gap_records_frames: list[pd.DataFrame] = []
-        if long_gap_records:
-            for gap_date, gap_dict in long_gap_records.items():
-                for tkr, w in gap_dict.items():
-                    recovered = recovery_result.get((gap_date, tkr), False) if recovery_result else False
-                    gap_records_frames.append({
-                        "gap_date": gap_date,
-                        "ticker": tkr,
-                        "weight": w,
-                        "recovered": recovered,
-                    })
-        gap_records_df = pd.DataFrame(gap_records_frames) if gap_records_frames else pd.DataFrame()
-
         return PortfolioResult(
             daily_returns=daily_df,
-            weights_history=weights_history,
-            cohort_weights_history=cohort_weights_history,
-            trade_log=pd.DataFrame(trade_records),
+            weights_history=state.weights_history,
+            cohort_weights_history=state.cohort_weights_history,
+            trade_log=pd.DataFrame(state.trade_records),
             trade_log_violations=trade_log_violations_df,
             universe_coverage=universe_coverage,
             gap_records=gap_records_df,
             config={
                 "cadence": cadence,
                 "lookback": lookback,
+                "weekly_day": weekly_day,
                 "long_frac": long_frac,
                 "transaction_cost_bps": transaction_cost_bps,
                 "start": str(start.date()),
                 "end": str(end.date()),
                 "universe": self.universe_name,
             },
+        )
+
+    # -------------------------------------------------------------------
+    # C1.13 — Clean orchestration run() method
+    # -------------------------------------------------------------------
+
+    def run(
+        self,
+        signals: pd.DataFrame,
+        cadence: str = "weekly",
+        lookback: int = 5,
+        start: pd.Timestamp | None = None,
+        end: pd.Timestamp | None = None,
+        long_frac: float = 0.2,
+        transaction_cost_bps: float = 5.0,
+        weekly_day: str = "monday",
+    ) -> PortfolioResult:
+        """Run portfolio simulation.
+
+        Parameters
+        ----------
+        signals:
+            DataFrame with ``[date, ticker, score]``.  *date* is the
+            availability date of each signal.
+        cadence:
+            ``daily``, ``weekly``, or ``monthly``.
+        weekly_day:
+            Weekly rebalance timing, ``monday`` or ``friday``. Ignored for
+            daily/monthly cadences.
+        lookback:
+            Number of trading days to look back for eligible signals at each
+            rebalance date.
+        start, end:
+            Date bounds. Default: min/max of *signals* date.
+        long_frac:
+            Fraction of stocks in each leg (0.2 = quintile).
+        transaction_cost_bps:
+            One-way transaction cost in basis points.
+
+        Returns
+        -------
+        PortfolioResult with daily returns, weights history, and config.
+        """
+        # C1.3 — Validate and filter signals
+        signals, start, end, n_before = self._validate_and_filter_signals(
+            signals, start, end,
+        )
+        if signals.empty:
+            log.warning("No signals left after PIT universe filtering")
+            return _empty_result()
+
+        # Pre-index signals by date for O(log N) lookups at each rebalance.
+        self._signals = signals.set_index("date").sort_index()
+
+        # C1.4 — Collect ticker sets
+        tickers, coverage_tickers, price_tickers = self._collect_price_tickers(signals)
+
+        # C1.5 — Load prices, calendar, rebalance dates, coverage
+        close_matrix, calendar, cal_pos_by_date, rebal_dates, universe_coverage = (
+            self._load_calendar_prices_and_coverage(
+                price_tickers, start, end, lookback, cadence, weekly_day=weekly_day,
+            )
+        )
+
+        # Build flat price matrix and index mappings once (Step 1).
+        self._ticker_to_idx = {t: i for i, t in enumerate(close_matrix.columns)}
+        self._idx_to_ticker = list(close_matrix.columns)
+        self._day_index = {d: i for i, d in enumerate(close_matrix.index)}
+        self._prices_2d = close_matrix.values.T.astype(np.float64)  # (n_tickers, n_days)
+
+        # ---- Simulation loop ----
+        state = SimulationState()
+        n_tickers = len(self._idx_to_ticker)
+        state.last_prices_arr = np.full(n_tickers, np.nan, dtype=np.float64)
+        state.missing_streaks_arr = np.zeros(n_tickers, dtype=np.int32)
+        state.is_censored_arr = np.zeros(n_tickers, dtype=bool)
+        state.weights_arr = np.zeros(n_tickers, dtype=np.float64)
+        state.entry_dates_arr = np.full(n_tickers, -1, dtype=np.int64)
+        cal_list = list(calendar)
+        rebal_set = set(rebal_dates)
+        for i in progress(
+            range(len(cal_list) - 1),
+            desc=f"Simulating ({cadence})",
+            unit="day",
+        ):
+            date = cal_list[i]
+            next_date = cal_list[i + 1]
+            if date < start:
+                continue
+            if date > end:
+                break
+
+            state.today_turnover = 0.0
+            did_rebalance = date in rebal_set
+
+            if did_rebalance:
+                self._process_rebalance(
+                    state, signals, close_matrix, cal_list, cal_pos_by_date,
+                    rebal_dates, date, lookback, long_frac,
+                )
+
+            self._compute_daily_pnl(
+                state, close_matrix, cal_list, cal_pos_by_date,
+                date, next_date, did_rebalance,
+            )
+
+        return self._post_process_result(
+            state, close_matrix, cal_list, cal_pos_by_date, universe_coverage,
+            start, end, cadence, lookback, long_frac, transaction_cost_bps, weekly_day,
         )
 
 
@@ -1012,6 +1770,7 @@ def compute_capacity_metrics(
     price_dir: Path = PRICE_CACHE_DIR,
     aum_grid: tuple[float, ...] = (10_000_000, 50_000_000, 100_000_000),
     addv_window: int = 20,
+    price_table: pd.DataFrame | None = None,
 ) -> dict[str, Any]:
     """Compute capacity metrics from a weights history.
 
@@ -1020,11 +1779,14 @@ def compute_capacity_metrics(
     weights_history:
         Map from rebalance_date to ticker weights DataFrame.
     price_dir:
-        Path to ticker price parquet files.
+        Path to ticker price parquet files (used when *price_table* is None).
     aum_grid:
         Asset levels for %ADV consumption.
     addv_window:
         Trading days for average daily dollar volume computation.
+    price_table:
+        Optional pre-loaded price DataFrame with columns ``[date, ticker, adj_close, volume]``.
+        When provided, it is used instead of loading individual parquet files from *price_dir*.
 
     Returns
     -------
@@ -1037,20 +1799,28 @@ def compute_capacity_metrics(
 
     # Load price/volume for ADV calc
     vol_data: dict[str, pd.Series] = {}
-    for tkr in all_tickers:
-        path = price_dir / f"{tkr}.parquet"
-        if not path.exists():
-            continue
-        px = pd.read_parquet(path, columns=["date", "adj_close", "volume"])
-        px["date"] = pd.to_datetime(px["date"], errors="coerce")
-        px = px.dropna(subset=["adj_close", "volume"])
-        px = px[px["adj_close"] > 0]
-        if px.empty:
-            continue
-        px["dollar_volume"] = px["adj_close"].astype(float) * px["volume"].astype(
-            float
-        )
-        vol_data[tkr] = px.set_index("date")["dollar_volume"]
+    if price_table is not None:
+        pt = price_table.copy()
+        pt["dollar_volume"] = pt["adj_close"].astype(float) * pt["volume"].astype(float)
+        for tkr in all_tickers:
+            mask = pt["ticker"] == tkr
+            if mask.any():
+                vol_data[tkr] = pt.loc[mask, ["date", "dollar_volume"]].set_index("date")["dollar_volume"]
+    else:
+        for tkr in all_tickers:
+            path = price_dir / f"{tkr}.parquet"
+            if not path.exists():
+                continue
+            px = pd.read_parquet(path, columns=["date", "adj_close", "volume"])
+            px["date"] = pd.to_datetime(px["date"], errors="coerce")
+            px = px.dropna(subset=["adj_close", "volume"])
+            px = px[px["adj_close"] > 0]
+            if px.empty:
+                continue
+            px["dollar_volume"] = px["adj_close"].astype(float) * px["volume"].astype(
+                float
+            )
+            vol_data[tkr] = px.set_index("date")["dollar_volume"]
 
     n_holdings: list[int] = []
     top10_concentration: list[float] = []
@@ -1104,6 +1874,274 @@ def compute_capacity_metrics(
 # ---------------------------------------------------------------------------
 
 
+def _normalize_signals(
+    signals_path: Path,
+    features_path: Path | None,
+    signal_type: str,
+    date_col: str,
+) -> pd.DataFrame:
+    """Load signals or OOS predictions and return standard [date, ticker, score] columns."""
+    signals = pd.read_parquet(signals_path)
+    log.info("Loaded %d signal rows from %s", len(signals), signals_path)
+
+    # ---- Convert OOS prediction format [df_index, y_pred] -> [date, ticker, score] ----
+    if "date" not in signals.columns and "df_index" in signals.columns:
+        if features_path is None:
+            log.error(
+                "Signals file has 'df_index' column but no 'date'/'ticker' -- "
+                "this is Phase 4 OOS prediction format. Pass --features "
+                "<features.parquet> to join with feature metadata."
+            )
+            raise SystemExit(1)
+        log.info("Joining OOS predictions with features from %s", features_path)
+        from backtest.splits import read_feature_columns
+
+        meta_cols = ["BESTTICKER", date_col]
+        features = read_feature_columns(
+            features_path,
+            [*meta_cols, "SignalType"],
+            required_columns=meta_cols,
+        )
+        if "SignalType" in features.columns:
+            meta_cols.append("SignalType")
+        signals = signals.merge(
+            features[meta_cols],
+            left_on="df_index",
+            right_index=True,
+            how="left",
+        )
+        if signal_type.lower() != "all" and "SignalType" in signals.columns:
+            before = len(signals)
+            signals = signals[signals["SignalType"] == signal_type].copy()
+            log.info(
+                "SignalType filter %s: %d / %d rows kept",
+                signal_type,
+                len(signals),
+                before,
+            )
+        signals = signals.rename(
+            columns={
+                date_col: "date",
+                "BESTTICKER": "ticker",
+                "y_pred": "score",
+            }
+        )
+        signals = signals[signals["date"].notna() & signals["ticker"].notna()]
+        log.info("After join: %d rows with date+ticker", len(signals))
+    else:
+        if signal_type.lower() != "all" and "SignalType" in signals.columns:
+            before = len(signals)
+            signals = signals[signals["SignalType"] == signal_type].copy()
+            log.info(
+                "SignalType filter %s: %d / %d rows kept",
+                signal_type,
+                len(signals),
+                before,
+            )
+        rename_cols: dict[str, str] = {}
+        if "ticker" not in signals.columns and "BESTTICKER" in signals.columns:
+            rename_cols["BESTTICKER"] = "ticker"
+        if "score" not in signals.columns and "y_pred" in signals.columns:
+            rename_cols["y_pred"] = "score"
+        if "date" not in signals.columns and date_col in signals.columns:
+            rename_cols[date_col] = "date"
+        if rename_cols:
+            signals = signals.rename(columns=rename_cols)
+
+    required_cols = {"date", "ticker", "score"}
+    missing_cols = sorted(required_cols - set(signals.columns))
+    if missing_cols:
+        raise KeyError(f"signals missing required columns after normalization: {missing_cols}")
+
+    return signals
+
+
+def _portfolio_output_suffix(
+    universe: str,
+    cadence: str,
+    lookback: int,
+    tag: str | None,
+    signals: pd.DataFrame,
+    weekly_day: str = "monday",
+) -> str:
+    """Build the existing output filename suffix."""
+    suffix_parts = [universe]
+    if tag:
+        suffix_parts.append(_slug(tag))
+    suffix_parts.extend([cadence, f"{lookback}d"])
+    if cadence == "weekly" and weekly_day != "monday":
+        suffix_parts.append(_slug(weekly_day))
+    return "_".join(suffix_parts)
+
+
+def _weights_history_to_frame(
+    weights_history: dict[pd.Timestamp, pd.DataFrame],
+) -> pd.DataFrame:
+    """Convert rebalance-date keyed weights history to tall DataFrame."""
+    weight_frames: list[pd.DataFrame] = []
+    for date, wdf in weights_history.items():
+        if not wdf.empty:
+            wdf_copy = wdf.copy()
+            wdf_copy["rebalance_date"] = date
+            weight_frames.append(wdf_copy)
+    if weight_frames:
+        return pd.concat(weight_frames, ignore_index=True)
+    return pd.DataFrame(columns=["ticker", "raw_weight", "rebalance_date"])
+
+
+def _cohort_weights_history_to_frame(
+    cohort_weights_history: dict[pd.Timestamp, pd.DataFrame],
+) -> pd.DataFrame:
+    """Convert raw cohort weights history to tall DataFrame."""
+    cohort_weight_frames: list[pd.DataFrame] = []
+    for date, cwdf in cohort_weights_history.items():
+        if not cwdf.empty:
+            cwdf_copy = cwdf.copy()
+            cwdf_copy["rebalance_date"] = date
+            cohort_weight_frames.append(cwdf_copy)
+    if cohort_weight_frames:
+        return pd.concat(cohort_weight_frames, ignore_index=True)
+    return pd.DataFrame(
+        columns=["cohort_date", "ticker", "raw_weight", "rebalance_date"]
+    )
+
+
+def _persist_portfolio_results(
+    result: PortfolioResult,
+    output_dir: Path,
+    audit_dir: Path,
+    suffix: str,
+    cost_bps: float,
+    price_cache_dir: Path,
+    tag: str | None,
+    price_table: pd.DataFrame | None = None,
+    # Cache manifest parameters (optional for backward compat).
+    signals_path: Path | None = None,
+    features_path: Path | None = None,
+    signal_type: str | None = None,
+    date_col: str | None = None,
+) -> Path:
+    """Write portfolio, audit, capacity, and summary artifacts."""
+    output_dir.mkdir(parents=True, exist_ok=True)
+    audit_dir.mkdir(parents=True, exist_ok=True)
+
+    summary = result.summary(cost_bps=cost_bps)
+    cap = compute_capacity_metrics(
+        result.weights_history, price_cache_dir, price_table=price_table,
+    )
+
+    result.daily_returns.to_parquet(
+        output_dir / f"daily_returns_{suffix}.parquet"
+    )
+
+    # Persist weights history as a tall DataFrame
+    weights_out = _weights_history_to_frame(result.weights_history)
+    weights_out.to_parquet(output_dir / f"weights_{suffix}.parquet")
+
+    # Persist raw cohort weights (before cross-cohort aggregation)
+    cohort_weights_out = _cohort_weights_history_to_frame(result.cohort_weights_history)
+    cohort_weights_out.to_parquet(
+        output_dir / f"cohort_weights_{suffix}.parquet"
+    )
+
+    trade_log = result.trade_log.copy()
+    if trade_log.empty:
+        trade_log = pd.DataFrame(
+            columns=[
+                "trade_id", "ticker", "signal_date", "planned_entry_date",
+                "actual_entry_date", "planned_exit_date", "actual_exit_date",
+                "skip_reason", "entry_price", "exit_price", "horizon_days",
+                "universe", "weight",
+            ]
+        )
+    trade_log.to_parquet(audit_dir / f"trade_execution_log_{suffix}.parquet")
+    trade_log.to_parquet(audit_dir / "trade_execution_log.parquet")
+
+    # Persist trade log violations — always write both generic and scenario-
+    # specific files so downstream consumers can distinguish "no violations"
+    # from "scenario not run."
+    violations = result.trade_log_violations
+    if not violations.empty:
+        violations.to_parquet(
+            audit_dir / f"trade_execution_violations_{suffix}.parquet"
+        )
+        log.warning("Trade log violations: %d rows written", len(violations))
+    else:
+        # Write empty sentinel so the file exists
+        pd.DataFrame().to_parquet(audit_dir / f"trade_execution_violations_{suffix}.parquet")
+    # Always write a generic file (even if empty, so manifest can reference it)
+    violations.to_parquet(audit_dir / "trade_execution_violations.parquet")
+
+    coverage = result.universe_coverage.copy()
+    coverage.to_csv(audit_dir / f"universe_coverage_by_date_{suffix}.csv", index=False)
+    coverage.to_csv(audit_dir / "universe_coverage_by_date.csv", index=False)
+
+    # Persist gap accounting details
+    gap_records = result.gap_records
+    if not gap_records.empty:
+        gap_records.to_parquet(output_dir / f"gap_accounting_{suffix}.parquet")
+        log.info("Gap accounting: %d gap event rows written", len(gap_records))
+
+    combined = {**summary, **cap, "config": {**result.config, "tag": tag}}
+    json_path = output_dir / f"summary_{suffix}.json"
+    json_path.write_text(json.dumps(combined, indent=2, default=str))
+
+    log.info("Portfolio simulation complete.")
+    log.info("Sharpe (post-cost 5bps): %.3f", summary.get("sharpe_post_cost_5bps", np.nan))
+    log.info("Max drawdown: %.2f%%", summary.get("max_drawdown", np.nan) * 100)
+    log.info("Annual turnover: %.2f", summary.get("ann_turnover", np.nan))
+
+    # --- Write cache manifest for this simulation run ---
+    try:
+        from data.cache_utils import build_cache_manifest, write_cache_manifest
+
+        cfg = result.config
+        phase_key = f"5c_{suffix}"
+
+        manifest_params = {
+            "universe": cfg.get("universe"),
+            "cadence": cfg.get("cadence"),
+            "lookback": cfg.get("lookback"),
+            "long_frac": cfg.get("long_frac"),
+            "cost_bps": cost_bps,
+            "weekly_day": cfg.get("weekly_day", "monday"),
+            "tag": tag,
+            "signal_type": signal_type,
+            "date_col": date_col,
+        }
+
+        manifest_inputs: list[Path] = []
+        if signals_path is not None:
+            manifest_inputs.append(signals_path)
+        if features_path is not None:
+            manifest_inputs.append(features_path)
+        manifest_inputs.append(price_cache_dir / "_manifest.json")
+        universe_name = cfg.get("universe", "sp500")
+        manifest_inputs.append(UNIVERSE_CACHE_DIR / f"{universe_name}_pit.parquet")
+
+        manifest_sources = [
+            PortfolioSimulator.run,
+            PortfolioSimulator._process_rebalance,
+            PortfolioSimulator._compute_daily_pnl,
+            PortfolioSimulator._post_process_result,
+            _build_cohort_weights,
+            _persist_portfolio_results,
+        ]
+
+        manifest = build_cache_manifest(
+            phase=phase_key,
+            parameters=manifest_params,
+            input_paths=manifest_inputs,
+            source_funcs=manifest_sources,
+        )
+        write_cache_manifest(manifest, CACHE_MANIFEST_DIR / f"{phase_key}.json")
+        log.info("Cache manifest written: %s.json", phase_key)
+    except Exception:
+        log.warning("Failed to write cache manifest for %s", suffix, exc_info=True)
+
+    return json_path
+
+
 def main() -> None:
     logging.basicConfig(
         level=logging.INFO,
@@ -1130,6 +2168,12 @@ def main() -> None:
         default="weekly",
     )
     p.add_argument("--lookback", type=int, default=5)
+    p.add_argument(
+        "--weekly-day",
+        choices=["monday", "friday"],
+        default="monday",
+        help="Weekly rebalance timing for weekly cadence robustness",
+    )
     p.add_argument("--long-frac", type=float, default=0.2)
     p.add_argument("--cost-bps", type=float, default=5.0)
     p.add_argument("--output-dir", type=Path, default=RESULTS_DIR / "portfolio")
@@ -1159,74 +2203,12 @@ def main() -> None:
     )
     args = p.parse_args()
 
-    signals = pd.read_parquet(args.signals)
-    log.info("Loaded %d signal rows from %s", len(signals), args.signals)
-
-    # ---- Convert OOS prediction format [df_index, y_pred] → [date, ticker, score] ----
-    if "date" not in signals.columns and "df_index" in signals.columns:
-        if args.features is None:
-            log.error(
-                "Signals file has 'df_index' column but no 'date'/'ticker' — "
-                "this is Phase 4 OOS prediction format. Pass --features "
-                "<features.parquet> to join with feature metadata."
-            )
-            raise SystemExit(1)
-        log.info("Joining OOS predictions with features from %s", args.features)
-        features = pd.read_parquet(args.features)
-        meta_cols = ["BESTTICKER", args.date_col]
-        if "SignalType" in features.columns:
-            meta_cols.append("SignalType")
-        missing_meta = [c for c in meta_cols if c not in features.columns]
-        if missing_meta:
-            raise KeyError(f"feature metadata missing columns: {missing_meta}")
-        signals = signals.merge(
-            features[meta_cols],
-            left_on="df_index",
-            right_index=True,
-            how="left",
-        )
-        if args.signal_type.lower() != "all" and "SignalType" in signals.columns:
-            before = len(signals)
-            signals = signals[signals["SignalType"] == args.signal_type].copy()
-            log.info(
-                "SignalType filter %s: %d / %d rows kept",
-                args.signal_type,
-                len(signals),
-                before,
-            )
-        signals = signals.rename(
-            columns={
-                args.date_col: "date",
-                "BESTTICKER": "ticker",
-                "y_pred": "score",
-            }
-        )
-        signals = signals[signals["date"].notna() & signals["ticker"].notna()]
-        log.info("After join: %d rows with date+ticker", len(signals))
-    else:
-        if args.signal_type.lower() != "all" and "SignalType" in signals.columns:
-            before = len(signals)
-            signals = signals[signals["SignalType"] == args.signal_type].copy()
-            log.info(
-                "SignalType filter %s: %d / %d rows kept",
-                args.signal_type,
-                len(signals),
-                before,
-            )
-        rename_cols: dict[str, str] = {}
-        if "ticker" not in signals.columns and "BESTTICKER" in signals.columns:
-            rename_cols["BESTTICKER"] = "ticker"
-        if "score" not in signals.columns and "y_pred" in signals.columns:
-            rename_cols["y_pred"] = "score"
-        if "date" not in signals.columns and args.date_col in signals.columns:
-            rename_cols[args.date_col] = "date"
-        if rename_cols:
-            signals = signals.rename(columns=rename_cols)
-
-    required_cols = {"date", "ticker", "score"}
-    missing_cols = sorted(required_cols - set(signals.columns))
-    if missing_cols:
-        raise KeyError(f"signals missing required columns after normalization: {missing_cols}")
+    signals = _normalize_signals(
+        signals_path=args.signals,
+        features_path=args.features,
+        signal_type=args.signal_type,
+        date_col=args.date_col,
+    )
 
     sim = PortfolioSimulator(
         price_dir=args.price_cache,
@@ -1238,101 +2220,39 @@ def main() -> None:
         lookback=args.lookback,
         long_frac=args.long_frac,
         transaction_cost_bps=args.cost_bps,
+        weekly_day=args.weekly_day,
     )
 
-    summary = result.summary(cost_bps=args.cost_bps)
-    cap = compute_capacity_metrics(result.weights_history, args.price_cache)
-
-    output_dir = Path(args.output_dir)
-    output_dir.mkdir(parents=True, exist_ok=True)
-    AUDIT_DIR.mkdir(parents=True, exist_ok=True)
-
+    # Resolve tag for output filenames
     tag = args.tag
     if tag is None and "model" in signals.columns:
         models = signals["model"].dropna().astype(str).unique()
         if len(models) == 1:
             tag = models[0]
-    suffix_parts = [args.universe]
-    if tag:
-        suffix_parts.append(_slug(tag))
-    suffix_parts.extend([args.cadence, f"{args.lookback}d"])
-    suffix = "_".join(suffix_parts)
 
-    result.daily_returns.to_parquet(
-        output_dir / f"daily_returns_{suffix}.parquet"
+    suffix = _portfolio_output_suffix(
+        universe=args.universe,
+        cadence=args.cadence,
+        lookback=args.lookback,
+        tag=tag,
+        signals=signals,
+        weekly_day=args.weekly_day,
     )
 
-    # Persist weights history as a tall DataFrame
-    weight_frames: list[pd.DataFrame] = []
-    for date, wdf in result.weights_history.items():
-        if not wdf.empty:
-            wdf_copy = wdf.copy()
-            wdf_copy["rebalance_date"] = date
-            weight_frames.append(wdf_copy)
-    if weight_frames:
-        weights_out = pd.concat(weight_frames, ignore_index=True)
-    else:
-        weights_out = pd.DataFrame(columns=["ticker", "raw_weight", "rebalance_date"])
-    weights_out.to_parquet(output_dir / f"weights_{suffix}.parquet")
-
-    # Persist raw cohort weights (before cross-cohort aggregation)
-    cohort_weight_frames: list[pd.DataFrame] = []
-    for date, cwdf in result.cohort_weights_history.items():
-        if not cwdf.empty:
-            cwdf_copy = cwdf.copy()
-            cwdf_copy["rebalance_date"] = date
-            cohort_weight_frames.append(cwdf_copy)
-    if cohort_weight_frames:
-        cohort_weights_out = pd.concat(cohort_weight_frames, ignore_index=True)
-    else:
-        cohort_weights_out = pd.DataFrame(
-            columns=["cohort_date", "ticker", "raw_weight", "rebalance_date"]
-        )
-    cohort_weights_out.to_parquet(
-        output_dir / f"cohort_weights_{suffix}.parquet"
+    _persist_portfolio_results(
+        result=result,
+        output_dir=Path(args.output_dir),
+        audit_dir=AUDIT_DIR,
+        suffix=suffix,
+        cost_bps=args.cost_bps,
+        price_cache_dir=args.price_cache,
+        tag=tag,
+        price_table=sim._price_table,
+        signals_path=args.signals,
+        features_path=args.features,
+        signal_type=args.signal_type,
+        date_col=args.date_col,
     )
-
-    trade_log = result.trade_log.copy()
-    if trade_log.empty:
-        trade_log = pd.DataFrame(
-            columns=[
-                "trade_id", "ticker", "signal_date", "planned_entry_date",
-                "actual_entry_date", "planned_exit_date", "actual_exit_date",
-                "skip_reason", "entry_price", "exit_price", "horizon_days",
-                "universe", "weight",
-            ]
-        )
-    trade_log.to_parquet(AUDIT_DIR / f"trade_execution_log_{suffix}.parquet")
-    trade_log.to_parquet(AUDIT_DIR / "trade_execution_log.parquet")
-
-    # Persist trade log violations
-    violations = result.trade_log_violations
-    if not violations.empty:
-        violations.to_parquet(
-            AUDIT_DIR / f"trade_execution_violations_{suffix}.parquet"
-        )
-        log.warning("Trade log violations: %d rows written", len(violations))
-    # Always write a generic file (even if empty, so manifest can reference it)
-    violations.to_parquet(AUDIT_DIR / "trade_execution_violations.parquet")
-
-    coverage = result.universe_coverage.copy()
-    coverage.to_csv(AUDIT_DIR / f"universe_coverage_by_date_{suffix}.csv", index=False)
-    coverage.to_csv(AUDIT_DIR / "universe_coverage_by_date.csv", index=False)
-
-    # Persist gap accounting details
-    gap_records = result.gap_records
-    if not gap_records.empty:
-        gap_records.to_parquet(output_dir / f"gap_accounting_{suffix}.parquet")
-        log.info("Gap accounting: %d gap event rows written", len(gap_records))
-
-    combined = {**summary, **cap, "config": {**result.config, "tag": tag}}
-    json_path = output_dir / f"summary_{suffix}.json"
-    json_path.write_text(json.dumps(combined, indent=2, default=str))
-
-    log.info("Portfolio simulation complete.")
-    log.info("Sharpe (post-cost 5bps): %.3f", summary.get("sharpe_post_cost_5bps", np.nan))
-    log.info("Max drawdown: %.2f%%", summary.get("max_drawdown", np.nan) * 100)
-    log.info("Annual turnover: %.2f", summary.get("ann_turnover", np.nan))
 
 
 if __name__ == "__main__":

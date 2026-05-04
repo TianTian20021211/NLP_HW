@@ -9,8 +9,10 @@ Plan rules (`ideas/plan.md` 1.2):
 - Raw snapshots: `data/universe_raw/`.
 - Compiled artifacts: `data/cache/universes/{sp500,sp1500,ru3k}_pit.parquet`.
 - Any segment that cannot be recovered automatically -> write to
-  `results/audit/universe_coverage_gaps.csv`. **Never** silently patch gaps;
-  **never** fall back to the current snapshot.
+  `results/audit/universe_coverage_gaps.csv`. **Never** silently patch gaps.
+  For iShares products with no historical snapshot API, the earliest cached
+  snapshot may be forward/backfilled only with an explicit survivorship-bias
+  coverage-gap record.
 - `members_at(universe, date)`:
     - raise directly when `date > today`,
     - return an empty set when `date < min(snapshot)`.
@@ -30,6 +32,7 @@ from pathlib import Path
 import pandas as pd
 import requests
 
+from data._utils import setup_logger
 from data.config import (
     AUDIT_DIR,
     UNIVERSE_CACHE_DIR,
@@ -40,11 +43,7 @@ from data.config import (
 from data.progress import progress
 
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s",
-)
-log = logging.getLogger("load_universes")
+log = setup_logger("load_universes")
 
 
 SP500_WIKI_URL = "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
@@ -330,8 +329,9 @@ def expand_to_month_grid(
 ) -> tuple[pd.DataFrame, list[CoverageGap]]:
     """Forward-fill monthly snapshots to a contiguous month-end grid.
 
-    Months without any snapshot at or before them get logged as gaps in the
-    audit file; **never** filled with the current snapshot.
+    When no snapshot covers an early month, the earliest available snapshot is
+    used as a static-universe fallback (survivorship bias — documented as a
+    single coverage gap, not per-month gaps).
     """
     end = end or dt.date.today()
     gaps: list[CoverageGap] = []
@@ -353,17 +353,22 @@ def expand_to_month_grid(
     rows: list[tuple[dt.date, str]] = []
     earliest = sorted_dates[0]
 
+    if start < earliest:
+        gaps.append(CoverageGap(
+            universe=universe,
+            period_start=str(start),
+            period_end=str(earliest - dt.timedelta(days=1)),
+            reason=(
+                f"no iShares snapshots before {earliest}; "
+                "using earliest available snapshot as static universe "
+                "(survivorship bias — reported alpha is an upper bound)"
+            ),
+        ))
+
     for d in progress(grid, desc=f"{universe} month grid", unit="month"):
-        if d < earliest:
-            gaps.append(CoverageGap(
-                universe=universe,
-                period_start=str(d),
-                period_end=str(d),
-                reason=f"no iShares snapshot at or before {d}",
-            ))
-            continue
         eligible = [s for s in sorted_dates if s <= d]
-        snap = snap_by_date[eligible[-1]]
+        snap_date = eligible[-1] if eligible else earliest
+        snap = snap_by_date[snap_date]
         rows.extend((d, t) for t in snap)
 
     return pd.DataFrame(rows, columns=["date", "ticker"]), gaps

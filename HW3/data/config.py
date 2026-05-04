@@ -27,8 +27,13 @@ UNIVERSE_RAW_DIR: Path = DATA_DIR / "universe_raw"
 RESULTS_DIR: Path = PROJECT_ROOT / "results"
 AUDIT_DIR: Path = RESULTS_DIR / "audit"
 
+CACHE_MANIFEST_DIR: Path = RESULTS_DIR / "cache" / "manifests"
+REPORTS_DIR: Path = PROJECT_ROOT / "reports"
+FIGURES_DIR: Path = REPORTS_DIR / "figures"
+REPORT_PDF: Path = REPORTS_DIR / "final_report.pdf"
+
 RAW_SIGNAL_CSV: Path = DATA_DIR / "Earnings_ATC_until_2026-04-21.csv"
-RAW_SIGNAL_ZIP: Path = DATA_DIR / "data.zip"
+RAW_SIGNAL_ZIP: Path = DATA_DIR / "Earnings_ATC_until_2026-04-21.csv.zip"
 
 SIGNALS_PARQUET: Path = CACHE_DIR / "signals.parquet"
 SIGNALS_SLIM_PARQUET: Path = CACHE_DIR / "signals_slim.parquet"
@@ -48,6 +53,7 @@ def ensure_dirs() -> None:
         UNIVERSE_RAW_DIR,
         RESULTS_DIR,
         AUDIT_DIR,
+        FIGURES_DIR,
     ):
         p.mkdir(parents=True, exist_ok=True)
 

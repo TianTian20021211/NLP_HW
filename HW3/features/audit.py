@@ -22,7 +22,19 @@ from typing import Any, Callable
 import numpy as np
 import pandas as pd
 
-from data.config import AUDIT_DIR, PRICE_CACHE_DIR, SIGNALS_PARQUET, UNIVERSE_CACHE_DIR
+from data.cache_utils import build_cache_manifest, write_cache_manifest
+from data.config import (
+    AUDIT_DIR,
+    CACHE_DIR,
+    CACHE_MANIFEST_DIR,
+    PRICE_CACHE_DIR,
+    PRICE_MANIFEST,
+    RAW_SIGNAL_CSV,
+    RAW_SIGNAL_ZIP,
+    RESULTS_DIR,
+    SIGNALS_PARQUET,
+    UNIVERSE_CACHE_DIR,
+)
 from data.load_universes import members_at
 
 log = logging.getLogger("audit")
@@ -39,6 +51,8 @@ IDENTIFIER_LIKE = {
 }
 
 RETURN_COL_PATTERN = re.compile(r"^Return_\d+d$")
+FORWARD_RETURN_COL_PATTERN = re.compile(r"^forward_return_\d+d$")
+TARGET_DATE_COL_PATTERN = re.compile(r"^target_available_date_\d+d$")
 
 # Features whose values depend on the cross-sectional ticker universe available
 # at a point in time.  Streaming-vs-batch comparisons for these columns are
@@ -49,13 +63,40 @@ CROSS_SECTIONAL_FEATURE_PATTERNS = [
     "pre_event_idio_resid_5d",        # depends on beta × sector median
 ]
 
+MOMENTUM_FEATURE_COLS = {
+    "pre_event_ret_21d",
+    "pre_event_ret_21d_sector_rel",
+    "pre_event_idio_resid_5d",
+}
+
+
+def _feature_col_names(
+    columns: list[str] | pd.Index,
+    *,
+    include_momentum: bool = True,
+) -> list[str]:
+    """Return generated feature column names from an iterable of names."""
+    return [
+        c for c in columns
+        if c not in IDENTIFIER_LIKE
+        and not RETURN_COL_PATTERN.match(c)
+        and not FORWARD_RETURN_COL_PATTERN.match(c)
+        and not TARGET_DATE_COL_PATTERN.match(c)
+        and not c.startswith("_")
+        and (include_momentum or c not in MOMENTUM_FEATURE_COLS)
+    ]
+
 
 def _feature_cols(df: pd.DataFrame) -> list[str]:
     """Return columns in *df* that are not identifier-like and not return cols."""
+    return _feature_col_names(df.columns)
+
+
+def _non_identifier_columns(df: pd.DataFrame) -> list[str]:
+    """Return all generated non-identifier columns for leakage assertions."""
     return [
         c for c in df.columns
         if c not in IDENTIFIER_LIKE
-        and not RETURN_COL_PATTERN.match(c)
         and not c.startswith("_")
     ]
 
@@ -86,7 +127,7 @@ def _sample_availability_dates(
     n: int,
 ) -> list[pd.Timestamp]:
     """Pick at most *n* evenly-spaced dates from *dates*."""
-    uniq = sorted(dates.dropna().unique())
+    uniq = dates.dropna().unique().tolist()
     if n is None or len(uniq) <= n:
         return uniq
     step = max(1, len(uniq) // n)
@@ -127,6 +168,252 @@ def _compare_parity(
     return pd.DataFrame(columns=["column", "n_mismatch", "max_abs_diff"])
 
 
+def _build_batch_features_for_audit(
+    df: pd.DataFrame,
+    price_cache_dir: Path,
+    tier: str,
+    include_momentum: bool,
+) -> tuple[pd.DataFrame, list[str], list[str]]:
+    """Build full batch features and partition columns into strict/xsectional."""
+    log.info("  [1/2] batch on %d rows …", len(df))
+    batch = _build_safe(df, price_cache_dir, tier, include_momentum)
+    log.info("  batch done: %d rows x %d cols", len(batch), len(batch.columns))
+
+    all_feat = _feature_cols(batch)
+    strict_cols, xsectional_cols = _partition_feature_cols(all_feat)
+    log.info("  strict features: %d  cross-sectional: %d",
+             len(strict_cols), len(xsectional_cols))
+    return batch, strict_cols, xsectional_cols
+
+
+def _audit_history_base_columns(columns: list[str] | pd.Index) -> list[str]:
+    """Columns needed to recompute no-momentum streaming targets."""
+    from features.engineer import ASPECTS, THEMES
+
+    id_cols = [
+        "BESTTICKER", "SECTOR", "availability_date",
+        "call_entry_date", "SignalType",
+    ]
+    input_cols = (
+        ["ATCClassifierScore"]
+        + [f"aspect_{a}_total" for a in ASPECTS]
+        + [f"theme_{t}_total" for t in THEMES]
+    )
+    available = set(columns)
+    return [c for c in id_cols + input_cols if c in available]
+
+
+def _read_feature_rows_for_dates(
+    features_path: Path,
+    sampled_dates: list[pd.Timestamp],
+    columns: list[str],
+    *,
+    batch_size: int = 32_768,
+) -> pd.DataFrame:
+    """Read only sampled-date rows from a feature parquet in Arrow batches."""
+    import pyarrow as pa
+    import pyarrow.compute as pc
+    import pyarrow.parquet as pq
+
+    if not sampled_dates:
+        return pd.DataFrame(columns=columns)
+
+    pf = pq.ParquetFile(features_path)
+    schema_names = set(pf.schema_arrow.names)
+    read_cols = [c for c in dict.fromkeys(columns) if c in schema_names]
+    if "availability_date" not in read_cols:
+        read_cols.insert(0, "availability_date")
+
+    date_type = pf.schema_arrow.field("availability_date").type
+    date_values = pa.array(
+        pd.to_datetime(sampled_dates).to_numpy(dtype="datetime64[ns]"),
+        type=date_type,
+    )
+
+    parts: list[pa.Table] = []
+    for batch in pf.iter_batches(batch_size=batch_size, columns=read_cols):
+        table = pa.Table.from_batches([batch])
+        mask = pc.is_in(table["availability_date"], value_set=date_values)
+        filtered = table.filter(mask)
+        if filtered.num_rows:
+            parts.append(filtered)
+
+    if not parts:
+        return pd.DataFrame(columns=read_cols)
+    return pa.concat_tables(parts, promote_options="default").to_pandas()
+
+
+def _build_artifact_features_for_audit(
+    features_path: Path,
+    sampled_dates: list[pd.Timestamp],
+) -> tuple[pd.DataFrame, pd.DataFrame, list[str], list[str]]:
+    """Load no-momentum audit inputs from an existing Phase 2 feature parquet."""
+    import pyarrow.parquet as pq
+
+    log.info("  [1/2] batch from feature artifact %s", features_path)
+    pf = pq.ParquetFile(features_path)
+    schema_cols = pf.schema_arrow.names
+
+    all_feat = _feature_col_names(schema_cols, include_momentum=False)
+    strict_cols, xsectional_cols = _partition_feature_cols(all_feat)
+    log.info(
+        "  strict features: %d  cross-sectional: %d",
+        len(strict_cols), len(xsectional_cols),
+    )
+
+    history_cols = _audit_history_base_columns(schema_cols)
+    history_base = pd.read_parquet(features_path, columns=history_cols)
+    log.info(
+        "  loaded history base: %d rows x %d cols",
+        len(history_base), len(history_base.columns),
+    )
+
+    # Include id columns needed by _build_streaming_targets_no_momentum
+    # for recomputing time-series and PIT features on sampled dates.
+    id_cols = ["BESTTICKER", "SECTOR", "availability_date",
+               "call_entry_date", "SignalType"]
+    compare_cols = list(dict.fromkeys(id_cols + strict_cols + xsectional_cols))
+    batch = _read_feature_rows_for_dates(features_path, sampled_dates, compare_cols)
+    log.info("  batch target rows: %d rows x %d cols", len(batch), len(batch.columns))
+    return batch, history_base, strict_cols, xsectional_cols
+
+
+def _prepare_streaming_targets_for_audit(
+    batch: pd.DataFrame,
+    sampled_dates: list[pd.Timestamp],
+    strict_cols: list[str],
+    xsectional_cols: list[str],
+    include_momentum: bool,
+    history_base: pd.DataFrame | None = None,
+) -> pd.DataFrame | None:
+    """Use target-only streaming path when momentum is disabled."""
+    if not include_momentum:
+        log.info("  using target-only streaming audit path (no momentum)")
+        return _build_streaming_targets_no_momentum(
+            batch,
+            sampled_dates,
+            strict_cols + xsectional_cols,
+            history_base=history_base,
+        )
+    return None
+
+
+def _compare_one_streaming_date(
+    original_df: pd.DataFrame,
+    batch: pd.DataFrame,
+    streaming_targets: pd.DataFrame | None,
+    date: pd.Timestamp,
+    price_cache_dir: Path,
+    tier: str,
+    include_momentum: bool,
+    strict_cols: list[str],
+    xsectional_cols: list[str],
+    rtol: float,
+    atol: float,
+) -> tuple[pd.DataFrame | None, pd.DataFrame | None, int, bool]:
+    """Compare one sampled date between batch and streaming results."""
+    if streaming_targets is None:
+        orig_mask = original_df["availability_date"] <= date
+        if orig_mask.sum() < 2:
+            return None, None, 0, False
+        subset = original_df.loc[orig_mask]
+        try:
+            streaming = _build_safe(subset, price_cache_dir, tier, include_momentum)
+        except Exception:
+            log.exception("streaming build failed for date %s", date)
+            return None, None, 0, False
+    else:
+        subset = None
+        streaming = streaming_targets
+
+    batch_test = batch
+    streaming_test = streaming.loc[streaming["availability_date"] == date]
+
+    if len(batch_test) == 0 and len(streaming_test) == 0:
+        return None, None, 0, False
+
+    if len(batch_test) != len(streaming_test):
+        log.error(
+            "date %s: row-count mismatch batch=%d streaming=%d",
+            date, len(batch_test), len(streaming_test),
+        )
+        rc_df = pd.DataFrame([{
+            "column": "__ROW_COUNT__",
+            "n_mismatch": abs(len(batch_test) - len(streaming_test)),
+            "max_abs_diff": np.nan,
+            "feature_group": "strict",
+        }])
+        return rc_df, None, 0, True
+
+    batch_test = batch_test.reset_index(drop=True)
+    streaming_test = streaming_test.reset_index(drop=True)
+
+    strict_mismatch_df: pd.DataFrame | None = None
+    mm_strict = _compare_parity(batch_test, streaming_test, rtol, atol,
+                                columns=strict_cols)
+    if len(mm_strict):
+        mm_strict.insert(0, "date", str(date.date()))
+        mm_strict["feature_group"] = "strict"
+        strict_mismatch_df = mm_strict
+
+    xsec_mismatch_df: pd.DataFrame | None = None
+    if xsectional_cols:
+        mm_xsec = _compare_parity(batch_test, streaming_test, rtol, atol,
+                                  columns=xsectional_cols)
+        if len(mm_xsec):
+            mm_xsec.insert(0, "date", str(date.date()))
+            mm_xsec["feature_group"] = "xsectional"
+            xsec_mismatch_df = mm_xsec
+
+    rows_compared = len(batch_test)
+
+    if streaming_targets is None:
+        del subset, streaming
+    del batch_test, streaming_test
+
+    return strict_mismatch_df, xsec_mismatch_df, rows_compared, False
+
+
+def _summarize_streaming_mismatches(
+    strict_parts: list[pd.DataFrame],
+    xsectional_parts: list[pd.DataFrame],
+    n_dates_tested: int,
+    n_rows_compared: int,
+    n_row_count_mismatch: int,
+    elapsed_s: float,
+) -> tuple[bool, pd.DataFrame, dict[str, Any]]:
+    """Combine mismatch tables and return the public audit tuple."""
+    all_parts = strict_parts + xsectional_parts
+    if all_parts:
+        combined = pd.concat(all_parts, ignore_index=True)
+    else:
+        combined = pd.DataFrame(
+            columns=["date", "column", "n_mismatch", "max_abs_diff", "feature_group"],
+        )
+
+    n_strict_mismatch = int(
+        combined.loc[combined["feature_group"] == "strict", "n_mismatch"].sum()
+        if len(combined) else 0
+    )
+    n_xsectional_mismatch = int(
+        combined.loc[combined["feature_group"] == "xsectional", "n_mismatch"].sum()
+        if len(combined) else 0
+    )
+
+    passed = n_strict_mismatch == 0 and n_row_count_mismatch == 0
+
+    stats: dict[str, Any] = {
+        "n_dates_tested": n_dates_tested,
+        "n_rows_compared": n_rows_compared,
+        "n_strict_mismatch": n_strict_mismatch,
+        "n_xsectional_mismatch": n_xsectional_mismatch,
+        "n_row_count_mismatch": n_row_count_mismatch,
+        "elapsed_s": elapsed_s,
+    }
+
+    return passed, combined, stats
+
+
 def run_streaming_vs_batch_test(
     df: pd.DataFrame,
     price_cache_dir: Path = PRICE_CACHE_DIR,
@@ -135,6 +422,7 @@ def run_streaming_vs_batch_test(
     include_momentum: bool = True,
     rtol: float = 1e-9,
     atol: float = 1e-12,
+    batch_features_path: Path | None = None,
 ) -> tuple[bool, pd.DataFrame, dict[str, Any]]:
     """Compare batch feature computation against per-day streaming fits.
 
@@ -163,34 +451,37 @@ def run_streaming_vs_batch_test(
         from features.engineer import compute_timestamps
         df = compute_timestamps(df)
 
-    n_rows = len(df)
-
-    # 1.  Batch — fit once on the full sample
-    log.info("  [1/2] batch on %d rows …", n_rows)
-    batch = _build_safe(df, price_cache_dir, tier, include_momentum)
-    log.info("  batch done: %d rows x %d cols", len(batch), len(batch.columns))
-
-    # 2.  Partition feature columns
-    all_feat = _feature_cols(batch)
-    strict_cols, xsectional_cols = _partition_feature_cols(all_feat)
-    log.info("  strict features: %d  cross-sectional: %d",
-             len(strict_cols), len(xsectional_cols))
-
-    # 3.  Sample dates
-    if "availability_date" not in batch.columns:
-        raise RuntimeError("batch output missing availability_date")
-
-    dates = pd.DatetimeIndex(batch["availability_date"].dropna().unique())
+    # 1. Sample dates from availability metadata.
+    dates = pd.DatetimeIndex(df["availability_date"].dropna().unique())
     sampled = _sample_availability_dates(dates, n_sample_dates or len(dates))
+
+    history_base: pd.DataFrame | None = None
+    if batch_features_path is not None and not include_momentum:
+        batch, history_base, strict_cols, xsectional_cols = _build_artifact_features_for_audit(
+            batch_features_path,
+            sampled,
+        )
+    else:
+        # 2. Batch — fit once on the full sample
+        batch, strict_cols, xsectional_cols = _build_batch_features_for_audit(
+            df, price_cache_dir, tier, include_momentum,
+        )
+        if "availability_date" not in batch.columns:
+            raise RuntimeError("batch output missing availability_date")
+
     log.info("  [2/2] streaming on %d / %d dates …", len(sampled), len(dates))
 
-    streaming_targets: pd.DataFrame | None = None
-    if not include_momentum:
-        log.info("  using target-only streaming audit path (no momentum)")
-        streaming_targets = _build_streaming_targets_no_momentum(
-            batch, sampled, strict_cols + xsectional_cols
-        )
+    # 3. Prepare streaming targets (no-momentum path)
+    streaming_targets = _prepare_streaming_targets_for_audit(
+        batch,
+        sampled,
+        strict_cols,
+        xsectional_cols,
+        include_momentum,
+        history_base=history_base,
+    )
 
+    # 4. Filter batch to sampled dates for comparison
     compare_cols = ["availability_date"] + strict_cols + xsectional_cols
     batch = batch.loc[
         batch["availability_date"].isin(sampled),
@@ -198,100 +489,41 @@ def run_streaming_vs_batch_test(
     ].copy()
     gc.collect()
 
-    # 4.  Per-date streaming comparison
+    # 5. Per-date streaming comparison
     all_strict_mm: list[pd.DataFrame] = []
     all_xsec_mm: list[pd.DataFrame] = []
-    stats: dict[str, Any] = {
-        "n_dates_tested": 0, "n_rows_compared": 0,
-        "n_strict_mismatch": 0, "n_xsectional_mismatch": 0,
-        "n_row_count_mismatch": 0,
-    }
+    n_rows_compared = 0
+    n_row_count_mismatch = 0
+
+    batch_by_date = dict(list(batch.groupby("availability_date")))
 
     for d in sampled:
-        if streaming_targets is None:
-            orig_mask = df["availability_date"] <= d
-            if orig_mask.sum() < 2:
-                continue
-
-            subset = df.loc[orig_mask]
-            try:
-                streaming = _build_safe(subset, price_cache_dir, tier, include_momentum)
-            except Exception:
-                log.exception("streaming build failed for date %s", d)
-                continue
-        else:
-            subset = None
-            streaming = streaming_targets
-
-        batch_test = batch.loc[batch["availability_date"] == d]
-        streaming_test = streaming.loc[streaming["availability_date"] == d]
-
-        if len(batch_test) == 0 and len(streaming_test) == 0:
+        batch_d = batch_by_date.get(d)
+        if batch_d is None:
             continue
-
-        if len(batch_test) != len(streaming_test):
-            log.error(
-                "date %s: row-count mismatch batch=%d streaming=%d",
-                d, len(batch_test), len(streaming_test),
-            )
-            all_strict_mm.append(pd.DataFrame([{
-                "column": "__ROW_COUNT__",
-                "n_mismatch": abs(len(batch_test) - len(streaming_test)),
-                "max_abs_diff": np.nan,
-                "feature_group": "strict",
-            }]))
-            stats["n_row_count_mismatch"] += 1
-            continue
-
-        batch_test = batch_test.reset_index(drop=True)
-        streaming_test = streaming_test.reset_index(drop=True)
-
-        # Strict comparison
-        mm_strict = _compare_parity(batch_test, streaming_test, rtol, atol,
-                                    columns=strict_cols)
-        if len(mm_strict):
-            mm_strict.insert(0, "date", str(d.date()))
-            mm_strict["feature_group"] = "strict"
-            all_strict_mm.append(mm_strict)
-
-        # Cross-sectional comparison (informational only)
-        if xsectional_cols:
-            mm_xsec = _compare_parity(batch_test, streaming_test, rtol, atol,
-                                      columns=xsectional_cols)
-            if len(mm_xsec):
-                mm_xsec.insert(0, "date", str(d.date()))
-                mm_xsec["feature_group"] = "xsectional"
-                all_xsec_mm.append(mm_xsec)
-
-        stats["n_rows_compared"] += len(batch_test)
-
-        if streaming_targets is None:
-            del subset, streaming
-        del batch_test, streaming_test
-        gc.collect()
-
-    stats["n_dates_tested"] = len(sampled)
-    stats["elapsed_s"] = round(time.time() - t0, 1)
-
-    # Combine all mismatches
-    all_parts = all_strict_mm + all_xsec_mm
-    if all_parts:
-        combined = pd.concat(all_parts, ignore_index=True)
-    else:
-        combined = pd.DataFrame(
-            columns=["date", "column", "n_mismatch", "max_abs_diff", "feature_group"]
+        strict_df, xsec_df, rows_cmp, row_cnt_flag = _compare_one_streaming_date(
+            df, batch_d, streaming_targets, d,
+            price_cache_dir, tier, include_momentum,
+            strict_cols, xsectional_cols, rtol, atol,
         )
+        if strict_df is not None:
+            all_strict_mm.append(strict_df)
+        if xsec_df is not None:
+            all_xsec_mm.append(xsec_df)
+        n_rows_compared += rows_cmp
+        n_row_count_mismatch += int(row_cnt_flag)
 
-    stats["n_strict_mismatch"] = int(
-        combined.loc[combined["feature_group"] == "strict", "n_mismatch"].sum()
-        if len(combined) else 0
-    )
-    stats["n_xsectional_mismatch"] = int(
-        combined.loc[combined["feature_group"] == "xsectional", "n_mismatch"].sum()
-        if len(combined) else 0
-    )
+    gc.collect()
 
-    passed = stats["n_strict_mismatch"] == 0 and stats["n_row_count_mismatch"] == 0
+    # 6. Summarize
+    elapsed_s = round(time.time() - t0, 1)
+    passed, combined, stats = _summarize_streaming_mismatches(
+        all_strict_mm, all_xsec_mm,
+        n_dates_tested=len(sampled),
+        n_rows_compared=n_rows_compared,
+        n_row_count_mismatch=n_row_count_mismatch,
+        elapsed_s=elapsed_s,
+    )
 
     if not passed:
         log.warning("  FAIL: %d strict + %d xsectional mismatches",
@@ -352,6 +584,7 @@ def _build_streaming_targets_no_momentum(
     batch: pd.DataFrame,
     sampled_dates: list[pd.Timestamp],
     feature_columns: list[str],
+    history_base: pd.DataFrame | None = None,
 ) -> pd.DataFrame:
     """Build streaming-equivalent rows only for sampled audit dates.
 
@@ -365,17 +598,24 @@ def _build_streaming_targets_no_momentum(
         "BESTTICKER", "SECTOR", "availability_date",
         "call_entry_date", "MOSTIMPORTANTDATEUTC", "SignalType",
     ]
-    keep_cols = [
-        c for c in id_cols + feature_columns
-        if c in batch.columns and c not in generated
-    ]
-    keep_cols = list(dict.fromkeys(keep_cols))
-
-    base = batch[keep_cols].copy()
+    source = history_base if history_base is not None else batch
+    base_cols = _audit_history_base_columns(source.columns)
+    base = source[base_cols].copy()
     base["_audit_row_id"] = np.arange(len(base), dtype="int64")
 
-    target_mask = base["availability_date"].isin(sampled_dates)
-    target = base.loc[target_mask].copy()
+    target_keep_cols = [
+        c for c in (
+            id_cols
+            + feature_columns
+            + _audit_timeseries_input_cols(source)
+            + _audit_pit_input_cols(source)
+        )
+        if c in batch.columns and c not in generated
+    ]
+    target_keep_cols = list(dict.fromkeys(target_keep_cols))
+
+    target_mask = batch["availability_date"].isin(sampled_dates)
+    target = batch.loc[target_mask, target_keep_cols].copy()
     if target.empty:
         return target.drop(columns=["_audit_row_id"], errors="ignore")
 
@@ -481,15 +721,19 @@ def _compute_target_pit_percentiles(
     target_cutoff_dt = pd.to_datetime(target["call_entry_date"]).to_numpy(dtype="datetime64[ns]")
     target_index = target.index.to_numpy()
 
-    for col in available:
-        result = pd.Series(np.nan, index=target.index, dtype="float64")
-        base_vals = pd.to_numeric(base[col], errors="coerce").to_numpy(dtype="float64")
-        target_vals = pd.to_numeric(target[col], errors="coerce").to_numpy(dtype="float64")
+    results = {
+        col: pd.Series(np.nan, index=target.index, dtype="float64")
+        for col in available
+    }
 
-        for key, target_pos in target_groups.items():
-            hist_pos = base_groups.get(key)
-            if hist_pos is None or len(hist_pos) == 0:
-                continue
+    for key, target_pos in target_groups.items():
+        hist_pos = base_groups.get(key)
+        if hist_pos is None or len(hist_pos) == 0:
+            continue
+
+        for col in available:
+            base_vals = pd.to_numeric(base[col], errors="coerce").to_numpy(dtype="float64")
+            target_vals = pd.to_numeric(target[col], errors="coerce").to_numpy(dtype="float64")
 
             pct = _strict_historical_percentile_queries(
                 history_values=base_vals[hist_pos],
@@ -497,9 +741,10 @@ def _compute_target_pit_percentiles(
                 query_values=target_vals[target_pos],
                 cutoff_dates=target_cutoff_dt[target_pos],
             )
-            result.loc[target_index[target_pos]] = pct
+            results[col].loc[target_index[target_pos]] = pct
 
-        out[f"{col}_sector_pct"] = result
+    for col in available:
+        out[f"{col}_sector_pct"] = results[col]
 
     return out
 
@@ -575,44 +820,6 @@ def _strict_historical_percentile_queries(
 
 
 # ---------------------------------------------------------------------------
-# 3.2  Assertion 1 — Feature parity  (driven by 3.1 above + targeted checks)
-# ---------------------------------------------------------------------------
-
-def assert_feature_parity(
-    batch: pd.DataFrame,
-    streaming_results: list[tuple[pd.Timestamp, pd.DataFrame]],
-    rtol: float = 1e-9,
-    atol: float = 1e-12,
-) -> pd.DataFrame:
-    """Run streaming-vs-batch on pre-computed streaming frames.
-
-    Returns a DataFrame of mismatches (empty if all clear).  Only strict
-    (non-cross-sectional) features are checked; cross-sectional differences
-    are omitted from this assertion because they are expected to change as
-    the ticker universe expands.
-    """
-    strict_cols, _ = _partition_feature_cols(_feature_cols(batch))
-    all_mm: list[pd.DataFrame] = []
-    for d, streaming in streaming_results:
-        batch_test = batch.loc[batch["availability_date"] == d].reset_index(drop=True)
-        streaming_test = streaming.loc[streaming["availability_date"] == d].reset_index(drop=True)
-        if len(batch_test) != len(streaming_test):
-            all_mm.append(pd.DataFrame([{
-                "column": "__ROW_COUNT__",
-                "n_mismatch": abs(len(batch_test) - len(streaming_test)),
-                "max_abs_diff": np.nan,
-            }]))
-            continue
-        mm = _compare_parity(batch_test, streaming_test, rtol, atol, columns=strict_cols)
-        if len(mm):
-            mm.insert(0, "date", str(d.date()))
-            all_mm.append(mm)
-    if all_mm:
-        return pd.concat(all_mm, ignore_index=True)
-    return pd.DataFrame()
-
-
-# ---------------------------------------------------------------------------
 # 3.2  Assertion 2 — Fold boundary + label purge
 # ---------------------------------------------------------------------------
 
@@ -620,10 +827,8 @@ def assert_fold_boundaries(
     fold_train_start: pd.Timestamp,
     fold_train_end: pd.Timestamp,
     fold_test_start: pd.Timestamp,
-    fold_test_end: pd.Timestamp,
     max_train_feature_date: pd.Timestamp,
     max_train_target_available: pd.Timestamp | None = None,
-    horizon_days: int = 5,
 ) -> list[str]:
     """Check fold boundary constraints.  Returns a list of violation messages.
 
@@ -854,8 +1059,12 @@ def assert_forward_return_isolation(feature_columns: list[str]) -> list[str]:
     """
     violations: list[str] = []
     for col in feature_columns:
-        if RETURN_COL_PATTERN.match(col):
-            violations.append(f"return column leaked into features: {col}")
+        if (
+            RETURN_COL_PATTERN.match(col)
+            or FORWARD_RETURN_COL_PATTERN.match(col)
+            or TARGET_DATE_COL_PATTERN.match(col)
+        ):
+            violations.append(f"target/return column leaked into features: {col}")
     return violations
 
 
@@ -886,20 +1095,20 @@ def assert_timestamp_boundaries() -> pd.DataFrame:
     # etc.).  numpy.busday_offset only rolls Saturdays and Sundays; exchange
     # holidays are deferred to price-aware execution (plan 2.1).
     fixtures = [
-        # (utc_str,                    expected_call_entry,       notes)
-        ("2020-01-14 12:59:00+00:00",  "2020-01-14", "BMO — same business day"),
-        ("2020-01-14 13:00:00+00:00",  "2020-01-15", "AMC — next business day"),
-        ("2020-01-14 15:59:00+00:00",  "2020-01-15", "AMC — late afternoon"),
-        ("2020-01-14 16:00:00+00:00",  "2020-01-15", "AMC — gray zone cutoff"),
-        ("2020-01-14 22:30:00+00:00",  "2020-01-15", "AMC — after market close"),
+        # (utc_str,                    expected_call_entry,  expected_avail,  notes)
+        ("2020-01-14 12:59:00+00:00",  "2020-01-14", "2020-01-16", "BMO — same business day"),
+        ("2020-01-14 13:00:00+00:00",  "2020-01-15", "2020-01-17", "AMC — next business day"),
+        ("2020-01-14 15:59:00+00:00",  "2020-01-15", "2020-01-17", "AMC — late afternoon"),
+        ("2020-01-14 16:00:00+00:00",  "2020-01-15", "2020-01-17", "AMC — gray zone cutoff"),
+        ("2020-01-14 22:30:00+00:00",  "2020-01-15", "2020-01-17", "AMC — after market close"),
         # Friday AMC -> Monday  (2020-03-13 has no Mon holiday)
-        ("2020-03-13 13:00:00+00:00",  "2020-03-16", "Friday AMC -> Monday"),
+        ("2020-03-13 13:00:00+00:00",  "2020-03-16", "2020-03-18", "Friday AMC -> Monday"),
         # Saturday BMO -> Monday
-        ("2020-03-14 10:00:00+00:00",  "2020-03-16", "Saturday BMO -> Monday"),
+        ("2020-03-14 10:00:00+00:00",  "2020-03-16", "2020-03-18", "Saturday BMO -> Monday"),
     ]
 
     rows = []
-    for utc_str, expected_call, notes in fixtures:
+    for utc_str, expected_call, expected_avail, notes in fixtures:
         df = pd.DataFrame({
             "MOSTIMPORTANTDATEUTC": [utc_str],
             "INGESTDATEUTC": [utc_str],
@@ -912,8 +1121,10 @@ def assert_timestamp_boundaries() -> pd.DataFrame:
             "utc_input": utc_str,
             "expected_call_entry": expected_call,
             "actual_call_entry": actual_call,
+            "expected_availability_date": expected_avail,
             "actual_availability_date": actual_avail,
             "call_ok": actual_call == expected_call,
+            "availability_ok": actual_avail == expected_avail,
             "notes": notes,
         })
 
@@ -923,13 +1134,17 @@ def assert_timestamp_boundaries() -> pd.DataFrame:
         "INGESTDATEUTC": ["2020-01-15 16:00:00+00:00"],
     })
     result_cross = compute_timestamps(df_cross)
+    actual_call = str(result_cross["call_entry_date"].iloc[0].date())
+    actual_avail = str(result_cross["availability_date"].iloc[0].date())
     rows.append({
         "utc_input": "call=2020-01-14T10:00  ingest=2020-01-15T16:00",
         "expected_call_entry": "2020-01-14",
-        "actual_call_entry": str(result_cross["call_entry_date"].iloc[0].date()),
-        "actual_availability_date": str(result_cross["availability_date"].iloc[0].date()),
-        "call_ok": str(result_cross["call_entry_date"].iloc[0].date()) == "2020-01-14",
-        "notes": "cross-day: call BMO + ingest next-day AMC -> avail = max(call, ingest)",
+        "actual_call_entry": actual_call,
+        "expected_availability_date": "2020-01-16",
+        "actual_availability_date": actual_avail,
+        "call_ok": actual_call == "2020-01-14",
+        "availability_ok": actual_avail == "2020-01-16",
+        "notes": "cross-day: call BMO + ingest next-day AMC -> avail = max(call, ingest) (pre-cutoff: call_entry+2bd)",
     })
 
     return pd.DataFrame(rows)
@@ -1017,8 +1232,9 @@ def validate_trade_log(log_df: pd.DataFrame) -> pd.DataFrame:
     - ``actual_entry_date >= planned_entry_date``
     - ``actual_exit_date >= planned_exit_date``
     - skip reasons have matching price evidence
-    - ``right_censored_no_exit_quote`` and ``delisting_exit_used`` have
-      supporting evidence
+    - ``right_censored_no_exit_quote`` has no exit price
+    - ``delisting_exit_used`` has gap-accounting evidence (NaN actual_exit_date,
+      non-NaN entry_price indicating the position was entered)
     """
     violations: list[dict[str, Any]] = []
 
@@ -1073,6 +1289,21 @@ def validate_trade_log(log_df: pd.DataFrame) -> pd.DataFrame:
                     "detail": f"skip_reason=censored_no_exit but exit_price={row['exit_price']}",
                 })
 
+        delisting_used = log_df[log_df["skip_reason"] == "delisting_exit_used"]
+        for _, row in delisting_used.iterrows():
+            if "actual_exit_date" in log_df.columns and pd.notna(row.get("actual_exit_date")):
+                violations.append({
+                    "trade_id": row.get("trade_id", "?"),
+                    "check": "delisting_exit_has_exit_date",
+                    "detail": f"skip_reason=delisting_exit_used but actual_exit_date={row['actual_exit_date']}",
+                })
+            if "entry_price" in log_df.columns and pd.isna(row.get("entry_price")):
+                violations.append({
+                    "trade_id": row.get("trade_id", "?"),
+                    "check": "delisting_exit_no_entry_price",
+                    "detail": "skip_reason=delisting_exit_used but entry_price is NaN (position was never entered)",
+                })
+
     return pd.DataFrame(violations)
 
 
@@ -1099,6 +1330,243 @@ def _small_subset(df: pd.DataFrame, n_tickers: int = 50, n_months: int = 12) -> 
         subset = subset.drop(columns=["_tmp_avail"])
     log.info("small subset: %d rows, %d tickers", len(subset), subset["BESTTICKER"].nunique())
     return subset
+
+
+# ---------------------------------------------------------------------------
+# 3.2  Assertion 11 — Fluff/Filler control  (requirement §1.6)
+# ---------------------------------------------------------------------------
+
+FLUFF_FILLER_CACHE: Path = CACHE_DIR / "fluff_filler.parquet"
+
+_FLUFF_FILLER_ID_COLS: list[str] = [
+    "BESTTICKER", "MOSTIMPORTANTDATEUTC", "INGESTDATEUTC",
+    "SignalType", "SECTOR",
+]
+
+_SENTIMENT_SIGN: dict[str, int] = {"Positive": 1, "Neutral": 0, "Negative": -1}
+_MAGNITUDE_WEIGHT: dict[str, int] = {"High": 3, "Medium": 2, "Low": 1}
+
+
+def _load_fluff_filler_df() -> pd.DataFrame:
+    """Load Fluff/Filler AspectTheme columns from raw CSV, cached to parquet."""
+    if FLUFF_FILLER_CACHE.exists():
+        return pd.read_parquet(FLUFF_FILLER_CACHE)
+
+    csv_path = RAW_SIGNAL_CSV if RAW_SIGNAL_CSV.exists() else None
+    zip_path = RAW_SIGNAL_ZIP if RAW_SIGNAL_ZIP.exists() else None
+
+    if csv_path is None and zip_path is None:
+        raise FileNotFoundError(
+            f"Neither {RAW_SIGNAL_CSV} nor {RAW_SIGNAL_ZIP} found"
+        )
+
+    src = csv_path if csv_path is not None else zip_path
+    log.info("scanning raw CSV header for Fluff/Filler columns …")
+    header = pd.read_csv(src, nrows=0)
+    all_cols = list(header.columns)
+    fluff_cols = [
+        c for c in all_cols
+        if c.startswith("AspectTheme_Fluff_") or c.startswith("AspectTheme_Filler_")
+    ]
+    log.info("found %d Fluff/Filler AspectTheme columns", len(fluff_cols))
+
+    usecols = _FLUFF_FILLER_ID_COLS + fluff_cols
+
+    parts: list[pd.DataFrame] = []
+    chunks = pd.read_csv(src, usecols=usecols, chunksize=100_000)
+    for ch in chunks:
+        ch = ch[ch["SignalType"] != "delete"].copy()
+        for c in fluff_cols:
+            ch[c] = pd.to_numeric(ch[c], errors="coerce").fillna(0.0)
+        # Ensure consistent dtypes for pyarrow parquet writer
+        ch["BESTTICKER"] = ch["BESTTICKER"].astype(str)
+        ch["SECTOR"] = ch["SECTOR"].astype(str)
+        ch["SignalType"] = ch["SignalType"].astype(str)
+        parts.append(ch)
+
+    df = pd.concat(parts, ignore_index=True)
+    del parts
+    log.info("Fluff/Filler raw: %d rows x %d cols", len(df), len(df.columns))
+
+    FLUFF_FILLER_CACHE.parent.mkdir(parents=True, exist_ok=True)
+    df.to_parquet(FLUFF_FILLER_CACHE, index=False)
+    log.info("cached to %s", FLUFF_FILLER_CACHE)
+    return df
+
+
+def _parse_fluff_col(col_name: str) -> tuple[str, str, str, str] | None:
+    """Parse an AspectTheme column name into (aspect, theme, magnitude, sentiment)."""
+    m = re.match(
+        r"^AspectTheme_(Fluff|Filler)_(.+?) - (High|Medium|Low) - (Positive|Neutral|Negative)$",
+        col_name,
+    )
+    if m is None:
+        return None
+    return m.group(1), m.group(2), m.group(3), m.group(4)
+
+
+def _build_fluff_signal(fluff_df: pd.DataFrame) -> pd.DataFrame:
+    """Build Fluff/Filler-only aggregate signals.
+
+    Returns a DataFrame with columns:
+      [BESTTICKER, MOSTIMPORTANTDATEUTC, SignalType, SECTOR,
+       fluff_total_count, fluff_net_sentiment, fluff_mag_weighted_score]
+    """
+    fluff_cols = [
+        c for c in fluff_df.columns
+        if c.startswith("AspectTheme_Fluff_") or c.startswith("AspectTheme_Filler_")
+    ]
+
+    mag_weighted: list[float] = [0.0] * len(fluff_df)
+    net_sent: list[float] = [0.0] * len(fluff_df)
+    total_count: list[float] = [0.0] * len(fluff_df)
+
+    for col in fluff_cols:
+        parsed = _parse_fluff_col(col)
+        if parsed is None:
+            continue
+        _, _, magnitude, sentiment = parsed
+        sign = _SENTIMENT_SIGN.get(sentiment, 0)
+        w = _MAGNITUDE_WEIGHT.get(magnitude, 1)
+        vals = fluff_df[col].to_numpy(dtype="float64")
+        total_count = [t + v for t, v in zip(total_count, vals)]
+        net_sent = [s + sign * v for s, v in zip(net_sent, vals)]
+        mag_weighted = [m + sign * w * v for m, v in zip(mag_weighted, vals)]
+
+    result = fluff_df[_FLUFF_FILLER_ID_COLS].copy()
+    result["fluff_total_count"] = total_count
+    result["fluff_net_sentiment"] = net_sent
+    result["fluff_mag_weighted_score"] = mag_weighted
+    return result
+
+
+def _newey_west_t_stat(ic_series: np.ndarray, lag: int) -> float:
+    """Compute Newey-West adjusted t-statistic (Bartlett kernel)."""
+    n = len(ic_series)
+    if n < 2:
+        return np.nan
+    mean_ic = float(np.mean(ic_series))
+    if mean_ic == 0.0 and np.allclose(ic_series, 0.0):
+        return 0.0
+
+    residuals = ic_series - mean_ic
+    var = np.sum(residuals ** 2) / (n - 1)
+    nw_var = var
+    for k in range(1, min(lag + 1, n - 1)):
+        w = 1.0 - k / (lag + 1.0)  # Bartlett kernel
+        auto_cov = np.sum(residuals[k:] * residuals[:-k]) / (n - k)
+        nw_var += 2.0 * w * auto_cov
+    nw_var = max(nw_var, 1e-15)
+    return float(mean_ic / np.sqrt(nw_var / n))
+
+
+def assert_fluff_filler_no_alpha(
+    price_cache_dir: Path = PRICE_CACHE_DIR,
+) -> dict[str, Any]:
+    """Requirement §1.6: Fluff/Filler-only signal must generate ≈0 alpha.
+
+    Loads raw Fluff/Filler columns, builds a simple aggregate signal, computes
+    forward returns, and checks that Spearman IC is not statistically
+    distinguishable from zero at any horizon.
+    """
+    horizons = [1, 3, 5, 10, 20]
+    result: dict[str, Any] = {
+        "passed": True,
+        "violations": [],
+        "horizons": {},
+    }
+
+    # 1. Load and build Fluff signal
+    try:
+        fluff_df = _load_fluff_filler_df()
+    except FileNotFoundError:
+        result["passed"] = False
+        result["violations"].append(
+            "Raw CSV/zip not found — cannot run Fluff/Filler control"
+        )
+        return result
+
+    fluff_signal = _build_fluff_signal(fluff_df)
+    fluff_total = fluff_signal[fluff_signal["SignalType"] == "Total"].copy()
+    if len(fluff_total) == 0:
+        result["violations"].append("No Total SignalType rows in Fluff/Filler data")
+        return result
+
+    # 2. Compute entry timestamps
+    from features.engineer import compute_timestamps
+    fluff_total = compute_timestamps(fluff_total)
+
+    # 3. Compute forward returns (anchored on call_entry_date)
+    from backtest.splits import compute_forward_returns as compute_fwd
+    fwd_returns = compute_fwd(
+        fluff_total,
+        price_cache_dir=price_cache_dir,
+        horizons=horizons,
+        entry_date_col="call_entry_date",
+    )
+    for h in horizons:
+        col = f"forward_return_{h}d"
+        if col in fwd_returns.columns:
+            fluff_total[col] = fwd_returns[col].values
+
+    # 4. Compute monthly cross-sectional Spearman IC per horizon
+    fluff_total["_year_month"] = fluff_total["call_entry_date"].dt.to_period("M")
+    months = sorted(fluff_total["_year_month"].dropna().unique())
+
+    for h in horizons:
+        col = f"forward_return_{h}d"
+        if col not in fluff_total.columns:
+            result["horizons"][f"h{h}d"] = {
+                "n_samples": 0, "n_months": 0,
+                "mean_ic": None, "nw_t_stat": None,
+                "warning": f"column {col} not found",
+            }
+            continue
+
+        monthly_ics: list[float] = []
+        for ym in months:
+            mask = fluff_total["_year_month"] == ym
+            subset = fluff_total.loc[mask, [col, "fluff_mag_weighted_score"]].dropna()
+            if len(subset) < 10:
+                continue
+            from scipy.stats import spearmanr
+            ic, _pv = spearmanr(
+                subset["fluff_mag_weighted_score"].to_numpy(),
+                subset[col].to_numpy(),
+                nan_policy="omit",
+            )
+            if not np.isnan(ic):
+                monthly_ics.append(float(ic))
+
+        if len(monthly_ics) < 6:
+            result["horizons"][f"h{h}d"] = {
+                "n_samples": int(fluff_total[[col, "fluff_mag_weighted_score"]].dropna().shape[0]),
+                "n_months": len(monthly_ics),
+                "mean_ic": None, "nw_t_stat": None,
+                "warning": f"insufficient months ({len(monthly_ics)})",
+            }
+            continue
+
+        ic_arr = np.array(monthly_ics, dtype="float64")
+        mean_ic = float(np.mean(ic_arr))
+        nw_t = _newey_west_t_stat(ic_arr, lag=min(h, len(ic_arr) - 1))
+
+        result["horizons"][f"h{h}d"] = {
+            "n_samples": int(fluff_total[[col, "fluff_mag_weighted_score"]].dropna().shape[0]),
+            "n_months": len(monthly_ics),
+            "mean_ic": mean_ic,
+            "nw_t_stat": float(nw_t),
+        }
+
+        if abs(mean_ic) > 0.02 and abs(nw_t) > 2.0:
+            result["passed"] = False
+            result["violations"].append(
+                f"h{h}d: mean monthly IC={mean_ic:.4f}, NW t-stat={nw_t:.2f} — "
+                f"Fluff/Filler signal shows significant alpha "
+                f"(requirement §1.6 violation)"
+            )
+
+    return result
 
 
 def run_all_audits(
@@ -1137,11 +1605,23 @@ def run_all_audits(
         from features.engineer import compute_timestamps
         df = compute_timestamps(df)
 
+    audit_dates = df[["availability_date"]].copy()
+    rebalance_events = audit_dates.copy()
+    feature_artifact = RESULTS_DIR / f"features_{tier}.parquet"
+    batch_features_path = feature_artifact if feature_artifact.exists() else None
+
     # ------------------------------------------------------------------
     # 3.1  Streaming vs batch — small subset (always run)
     # ------------------------------------------------------------------
     log.info("--- 3.1  Streaming vs batch (small subset) ---")
     small_df = _small_subset(df, n_tickers=50, n_months=12)
+    if small_only or batch_features_path is not None:
+        full_audit_df = audit_dates
+        del df
+        gc.collect()
+    else:
+        full_audit_df = df
+
     passed_small, mm_small, stats_small = run_streaming_vs_batch_test(
         small_df,
         price_cache_dir=price_cache_dir,
@@ -1167,12 +1647,18 @@ def run_all_audits(
     # ------------------------------------------------------------------
     if not small_only:
         log.info("--- 3.1  Streaming vs batch (full sample, no momentum) ---")
+        if batch_features_path is None:
+            log.warning(
+                "feature artifact %s missing; falling back to in-memory batch build",
+                feature_artifact,
+            )
         passed_full, mm_full, stats_full = run_streaming_vs_batch_test(
-            df,
+            full_audit_df,
             price_cache_dir=price_cache_dir,
             tier=tier,
             n_sample_dates=full_dates,
             include_momentum=False,
+            batch_features_path=batch_features_path,
         )
         summary["assertions"]["streaming_vs_batch_full"] = {
             "passed": passed_full,
@@ -1203,11 +1689,18 @@ def run_all_audits(
     # 3.2  Assertion 5 — Forward-return isolation
     # ------------------------------------------------------------------
     log.info("--- 3.2  Assertion 5: Forward-return isolation ---")
-    feat_cols = _feature_cols(df)
-    ret_violations = assert_forward_return_isolation(feat_cols)
+    isolation_df = _build_safe(
+        small_df,
+        price_cache_dir=price_cache_dir,
+        tier=tier,
+        include_momentum=False,
+    )
+    feature_candidates = _non_identifier_columns(isolation_df)
+    ret_violations = assert_forward_return_isolation(feature_candidates)
     summary["assertions"]["forward_return_isolation"] = {
         "passed": len(ret_violations) == 0,
         "violations": ret_violations,
+        "n_generated_columns_checked": len(feature_candidates),
     }
 
     # ------------------------------------------------------------------
@@ -1215,14 +1708,19 @@ def run_all_audits(
     # ------------------------------------------------------------------
     log.info("--- 3.2  Assertion 6: Timestamp boundaries ---")
     ts_fixtures = assert_timestamp_boundaries()
-    ts_passed = ts_fixtures["call_ok"].all()
-    if not ts_passed:
-        bad = ts_fixtures[~ts_fixtures["call_ok"]]
-        log.warning("timestamp boundary failures:\n%s", bad.to_string())
+    call_passed = ts_fixtures["call_ok"].all()
+    avail_passed = ts_fixtures["availability_ok"].all() if "availability_ok" in ts_fixtures.columns else True
+    ts_passed = bool(call_passed and avail_passed)
+    if not call_passed:
+        bad_call = ts_fixtures[~ts_fixtures["call_ok"]]
+        log.warning("timestamp boundary failures (call_entry_date):\n%s", bad_call.to_string())
+    if not avail_passed:
+        bad_avail = ts_fixtures[~ts_fixtures["availability_ok"]]
+        log.warning("timestamp boundary failures (availability_date):\n%s", bad_avail.to_string())
     summary["assertions"]["timestamp_boundaries"] = {
-        "passed": bool(ts_passed),
+        "passed": ts_passed,
         "n_fixtures": len(ts_fixtures),
-        "n_failures": int((~ts_fixtures["call_ok"]).sum()),
+        "n_failures": int((~ts_fixtures.get("call_ok", pd.Series(True, index=ts_fixtures.index))).sum()),
     }
 
     # ------------------------------------------------------------------
@@ -1230,12 +1728,53 @@ def run_all_audits(
     # ------------------------------------------------------------------
     log.info("--- 3.2  Assertion 7: Rebalance eligibility ---")
     reb_violations = assert_rebalance_eligibility(
-        df, dt.date(2020, 6, 30),
+        rebalance_events, dt.date(2020, 6, 30),
     )
     summary["assertions"]["rebalance_eligibility"] = {
         "passed": len(reb_violations) == 0,
         "violations": reb_violations,
     }
+
+    # Synthetic fixture with edge cases
+    log.info("--- 3.2  Assertion 7: Rebalance eligibility (synthetic edge cases) ---")
+    synthetic_fixture = pd.DataFrame({
+        "BESTTICKER": ["A", "B", "C", "D", "E", "F"],
+        "availability_date": pd.to_datetime([
+            "2020-06-30",   # boundary — exactly on rebalance date
+            "2020-06-25",   # well before — should be eligible
+            "2020-07-05",   # after — should be ineligible
+            pd.NaT,         # NaN — should be dropped from candidates
+            "2020-06-30",   # duplicate ticker on same date (same as A)
+            "2020-06-30",   # duplicate ticker on same date (same as A)
+        ]),
+        "SECTOR": ["X"] * 6,
+    })
+    synthetic_violations = assert_rebalance_eligibility(
+        synthetic_fixture, dt.date(2020, 6, 30),
+    )
+    log.info("  synthetic fixture: 6 rows (boundary=1, before=1, after=1, NaN=1, dup=2)")
+    if synthetic_violations:
+        log.warning("  synthetic fixture violations:\n%s", synthetic_violations)
+    else:
+        log.info("  synthetic fixture PASSED")
+    summary["assertions"]["rebalance_eligibility_synthetic"] = {
+        "passed": len(synthetic_violations) == 0,
+        "violations": synthetic_violations,
+        "n_rows": len(synthetic_fixture),
+    }
+
+    # ------------------------------------------------------------------
+    # 3.2  Assertion 11 — Fluff/Filler control  (requirement §1.6)
+    # ------------------------------------------------------------------
+    log.info("--- 3.2  Assertion 11: Fluff/Filler control (IC ≈ 0) ---")
+    fluff_result = assert_fluff_filler_no_alpha(
+        price_cache_dir=price_cache_dir,
+    )
+    summary["assertions"]["fluff_filler_control"] = fluff_result
+    if fluff_result["passed"]:
+        log.info("  PASSED")
+    else:
+        log.warning("  FAILED: %s", fluff_result["violations"])
 
     # ------------------------------------------------------------------
     # Summary
@@ -1247,9 +1786,11 @@ def run_all_audits(
     summary["total_elapsed_s"] = round(time.time() - t0, 1)
 
     # Write summary JSON
-    parity_path = AUDIT_DIR / "feature_parity_summary.json"
+    parity_path = AUDIT_DIR / f"feature_parity_summary_{tier}.json"
     parity_path.write_text(json.dumps(summary, indent=2, default=str))
     log.info("summary written to %s", parity_path)
+
+    _write_validation_summary(summary)
 
     # Write one-pager checklist
     _write_checklist(summary)
@@ -1259,7 +1800,84 @@ def run_all_audits(
     else:
         log.warning("SOME AUDITS FAILED — see %s", AUDIT_DIR)
 
+    # Write cache manifest for resume / skip support.
+    _write_audit_cache_manifest(tier, small_only, full_dates)
+
     return summary
+
+
+def _write_audit_cache_manifest(
+    tier: str,
+    small_only: bool,
+    full_dates: int,
+) -> None:
+    """Write a content-addressed cache manifest for Phase 3."""
+    feature_artifact = RESULTS_DIR / f"features_{tier}.parquet"
+    manifest = build_cache_manifest(
+        phase=f"3_{tier}",
+        parameters={"tier": tier, "small_only": small_only, "full_dates": full_dates},
+        input_paths=[
+            SIGNALS_PARQUET,
+            PRICE_MANIFEST,
+            feature_artifact,
+        ],
+        source_funcs=[run_all_audits, run_streaming_vs_batch_test],
+    )
+    manifest_path = CACHE_MANIFEST_DIR / f"3_{tier}.json"
+    write_cache_manifest(manifest, manifest_path)
+    log.info("cache manifest written to %s", manifest_path)
+
+
+def _write_validation_summary(summary: dict[str, Any]) -> Path:
+    """Write the generic Phase 6 validation-summary artifact."""
+    checks: dict[str, Any] = {}
+    n_pass = 0
+    n_fail = 0
+    n_pending = 0
+
+    # Map each assertion name to its specific evidence file.
+    evidence_map = {
+        "streaming_vs_batch_small": "feature_parity_summary.json",
+        "streaming_vs_batch_full": "feature_parity_summary.json",
+        "pit_universe_defense": "pit_universe_defense_results.json",
+        "forward_return_isolation": "forward_return_isolation_results.json",
+        "timestamp_boundaries": "timestamp_boundary_results.json",
+        "rebalance_eligibility": "rebalance_eligibility_results.json",
+        "fluff_filler_control": "feature_parity_summary.json",
+    }
+
+    for name, info in summary.get("assertions", {}).items():
+        passed = info.get("passed")
+        if passed is True:
+            status = "pass"
+            n_pass += 1
+        elif passed is False:
+            status = "fail"
+            n_fail += 1
+        else:
+            status = "pending"
+            n_pending += 1
+        checks[name] = {
+            "status": status,
+            "evidence": evidence_map.get(name, "feature_parity_summary.json"),
+            "details": info,
+        }
+
+    validation = {
+        "summary": {
+            "passed": n_pass,
+            "failed": n_fail,
+            "pending": n_pending,
+            "total": n_pass + n_fail + n_pending,
+        },
+        "checks": checks,
+        "generated_at": summary.get("timestamp"),
+        "tier": summary.get("tier"),
+    }
+    path = AUDIT_DIR / "validation_summary.json"
+    path.write_text(json.dumps(validation, indent=2, default=str))
+    log.info("validation summary written to %s", path)
+    return path
 
 
 def _write_checklist(summary: dict[str, Any]) -> None:
@@ -1312,23 +1930,29 @@ def _write_checklist(summary: dict[str, Any]) -> None:
          "features/audit.py : validate_trade_log (executed in Phase 5)",
          ),
         ("10. R8 rolling beta data window",
-         True,   # enforced in the feature engineering code
-         "features/engineer.py : beta shifted by 4 trading rows (T-5 end)",
+         "ENFORCED AT BUILD TIME",
+         "features/engineer.py : beta shifted by 4 trading rows (T-5 end) — design guarantee, no runtime assertion",
+         ),
+        ("11. Fluff/Filler control (requirement §1.6)",
+         summary["assertions"].get("fluff_filler_control", {}).get("passed"),
+         "features/audit.py : assert_fluff_filler_no_alpha (IC on Fluff/Filler-only signal must be ≈0)",
          ),
     ]
 
     n_failed = 0
     n_pending = 0
-    for name, passed, evidence in checklist_items:
+    for i, (name, passed, evidence) in enumerate(checklist_items, start=1):
         if passed is True:
             icon = "PASS"
+        elif passed == "ENFORCED AT BUILD TIME":
+            icon = "DESIGN"
         elif passed is False:
             icon = "FAIL"
             n_failed += 1
         else:
             icon = "PEND"
             n_pending += 1
-        lines.append(f"| {name} | {icon} | {evidence} |")
+        lines.append(f"| {i} | {name} | {icon} | {evidence} |")
 
     lines.append("")
     if n_failed:

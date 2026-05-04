@@ -11,13 +11,16 @@ Every operation that depends on historical ordering respects PIT constraints:
 from __future__ import annotations
 
 import logging
+import re
 import time
+from collections.abc import Iterable
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 
-from data.config import PRICE_CACHE_DIR, SIGNALS_PARQUET
+from data.cache_utils import build_cache_manifest, write_cache_manifest
+from data.config import CACHE_MANIFEST_DIR, PRICE_CACHE_DIR, PRICE_MANIFEST, SIGNALS_PARQUET
 from data.progress import progress
 
 try:
@@ -59,10 +62,6 @@ EVENT_SCORE_VARIANTS = [
     "EventsScore_3_1_0", "EventsScore_1_1_0",
 ]
 
-IDENTIFIER_COLS = [
-    "SignalType", "BESTTICKER", "SECTOR", "MOSTIMPORTANTDATEUTC",
-    "INGESTDATEUTC", "call_hour_utc", "QTR_YEAR",
-]
 
 
 # ---------------------------------------------------------------------------
@@ -190,10 +189,9 @@ def _group_aspect_theme_cols(df: pd.DataFrame) -> dict[str, dict[str, list[str]]
 # 2.2  Row-level enhanced features  (60 columns)
 # ---------------------------------------------------------------------------
 
-def _aspect_features(df: pd.DataFrame) -> pd.DataFrame:
+def _aspect_features(df: pd.DataFrame, at_groups: dict) -> pd.DataFrame:
     """Per-Aspect totals / net sentiment / magnitude-weighted  (5 x 3 = 15 cols)."""
     out = pd.DataFrame(index=df.index)
-    at_groups = _group_aspect_theme_cols(df)
     for aspect in ASPECTS:
         cols: list[str] = []
         for theme in THEMES:
@@ -221,17 +219,16 @@ def _aspect_features(df: pd.DataFrame) -> pd.DataFrame:
         med_cols = [c for c in cols if "Medium" in c]
         low_cols = [c for c in cols if "Low" in c]
         out[f"aspect_{aspect}_mag_weighted"] = (
-            3 * sub[high_cols].sum(axis=1)
-            + 2 * sub[med_cols].sum(axis=1)
-            + 1 * sub[low_cols].sum(axis=1)
+            MAGNITUDE_WEIGHT["High"] * sub[high_cols].sum(axis=1)
+            + MAGNITUDE_WEIGHT["Medium"] * sub[med_cols].sum(axis=1)
+            + MAGNITUDE_WEIGHT["Low"] * sub[low_cols].sum(axis=1)
         )
     return out
 
 
-def _theme_features(df: pd.DataFrame) -> pd.DataFrame:
+def _theme_features(df: pd.DataFrame, at_groups: dict) -> pd.DataFrame:
     """Per-Theme totals / net sentiment / magnitude-weighted  (9 x 3 = 27 cols)."""
     out = pd.DataFrame(index=df.index)
-    at_groups = _group_aspect_theme_cols(df)
     for theme in THEMES:
         cols: list[str] = []
         for aspect in ASPECTS:
@@ -256,20 +253,23 @@ def _theme_features(df: pd.DataFrame) -> pd.DataFrame:
         med_cols = [c for c in cols if "Medium" in c]
         low_cols = [c for c in cols if "Low" in c]
         out[f"theme_{theme}_mag_weighted"] = (
-            3 * sub[high_cols].sum(axis=1)
-            + 2 * sub[med_cols].sum(axis=1)
-            + 1 * sub[low_cols].sum(axis=1)
+            MAGNITUDE_WEIGHT["High"] * sub[high_cols].sum(axis=1)
+            + MAGNITUDE_WEIGHT["Medium"] * sub[med_cols].sum(axis=1)
+            + MAGNITUDE_WEIGHT["Low"] * sub[low_cols].sum(axis=1)
         )
     return out
 
 
 def _sector_onehot(df: pd.DataFrame) -> pd.DataFrame:
     """One-hot encode GICS 11 sectors. Missing/unknown sectors -> all zeros."""
-    out = pd.DataFrame(index=df.index)
-    for sector in GICS_SECTORS:
-        col = f"sector_{sector.replace(' ', '_')}"
-        out[col] = (df["SECTOR"] == sector).astype("int8")
-    return out
+    sector_clean = df["SECTOR"].str.replace(" ", "_", regex=False)
+    dummies = pd.get_dummies(sector_clean, prefix="sector")
+    dummies = dummies.astype("int8")
+    expected_cols = [f"sector_{s.replace(' ', '_')}" for s in GICS_SECTORS]
+    for col in expected_cols:
+        if col not in dummies.columns:
+            dummies[col] = 0
+    return dummies[expected_cols]
 
 
 def compute_row_features(df: pd.DataFrame) -> pd.DataFrame:
@@ -298,12 +298,14 @@ def compute_row_features(df: pd.DataFrame) -> pd.DataFrame:
         else:
             out[ev_col] = np.nan
 
+    at_groups = _group_aspect_theme_cols(df)
+
     # Per-Aspect features  (15)
-    af = _aspect_features(df)
+    af = _aspect_features(df, at_groups)
     out[af.columns] = af
 
     # Per-Theme features  (27)
-    tf = _theme_features(df)
+    tf = _theme_features(df, at_groups)
     out[tf.columns] = tf
 
     # Call-length controls  (2)
@@ -321,30 +323,26 @@ def compute_row_features(df: pd.DataFrame) -> pd.DataFrame:
 # 2.2  Time-series features  (16 columns)
 # ---------------------------------------------------------------------------
 
-def compute_qoq_deltas(df: pd.DataFrame) -> pd.DataFrame:
-    """QoQ deltas: within each ticker, diff vs most-recent prior event.
+def _prepare_timeseries_base(
+    df: pd.DataFrame,
+    extra_cols: list[str],
+) -> tuple[pd.DataFrame, list[str], list[str]]:
+    """Sort and annotate the base DataFrame for time-series operations.
 
-    Uses ``(BESTTICKER, SignalType, availability_date)`` with a strict prior
-    availability date. Rows that become available on the same date never chain
-    into each other.
+    Both ``compute_qoq_deltas`` and ``compute_4q_trend`` independently sort by
+    the same keys, groupby-collapse, and hash-merge.  This helper factors out
+    the shared sort + annotation step.
+
+    Returns ``(work, keys, block_cols)`` where *work* is already sorted and has
+    ``_orig_idx`` and ``_sort_tiebreaker`` columns, and *keys* / *block_cols*
+    define the grouping hierarchy.
     """
-    out = pd.DataFrame(index=df.index)
-    qoq_cols = (
-        ["ATCClassifierScore"]
-        + [f"aspect_{a}_total" for a in ASPECTS]
-        + [f"theme_{t}_total" for t in THEMES]
-    )
-    # Only compute for columns that exist in df (row features must be joined first)
-    available = [c for c in qoq_cols if c in df.columns]
-    if not available:
-        return out
-
     keys = ["BESTTICKER"]
     if "SignalType" in df.columns:
         keys.append("SignalType")
     block_cols = keys + ["availability_date"]
 
-    work_cols = block_cols + available
+    work_cols = block_cols + list(extra_cols)
     if "call_entry_date" in df.columns:
         work_cols.append("call_entry_date")
 
@@ -365,6 +363,29 @@ def compute_qoq_deltas(df: pd.DataFrame) -> pd.DataFrame:
         sort_cols.append("call_entry_date")
     sort_cols.append("_sort_tiebreaker")
     work = work.sort_values(sort_cols)
+
+    return work, keys, block_cols
+
+
+def compute_qoq_deltas(df: pd.DataFrame) -> pd.DataFrame:
+    """QoQ deltas: within each ticker, diff vs most-recent prior event.
+
+    Uses ``(BESTTICKER, SignalType, availability_date)`` with a strict prior
+    availability date. Rows that become available on the same date never chain
+    into each other.
+    """
+    out = pd.DataFrame(index=df.index)
+    qoq_cols = (
+        ["ATCClassifierScore"]
+        + [f"aspect_{a}_total" for a in ASPECTS]
+        + [f"theme_{t}_total" for t in THEMES]
+    )
+    # Only compute for columns that exist in df (row features must be joined first)
+    available = [c for c in qoq_cols if c in df.columns]
+    if not available:
+        return out
+
+    work, keys, block_cols = _prepare_timeseries_base(df, available)
 
     # Collapse simultaneous rows to one date-level value per ticker/slice, then
     # shift across distinct availability dates. Joining the shifted block back
@@ -395,26 +416,7 @@ def compute_4q_trend(df: pd.DataFrame) -> pd.Series:
     ``(-3*y_{t-3} - y_{t-2} + y_{t-1} + 3*y_t) / 10``, which avoids a
     per-row Python loop and ``np.polyfit`` call.
     """
-    keys = ["BESTTICKER"]
-    if "SignalType" in df.columns:
-        keys.append("SignalType")
-    block_cols = keys + ["availability_date"]
-
-    work_cols = block_cols + ["ATCClassifierScore"]
-    if "call_entry_date" in df.columns:
-        work_cols.append("call_entry_date")
-
-    work = df[work_cols].copy()
-    work["_orig_idx"] = df.index
-    if "_row_id" in df.columns:
-        work["_sort_tiebreaker"] = df["_row_id"].values
-    else:
-        work["_sort_tiebreaker"] = np.arange(len(work), dtype="int64")
-    sort_cols = keys + ["availability_date"]
-    if "call_entry_date" in work.columns:
-        sort_cols.append("call_entry_date")
-    sort_cols.append("_sort_tiebreaker")
-    work = work.sort_values(sort_cols)
+    work, keys, block_cols = _prepare_timeseries_base(df, ["ATCClassifierScore"])
 
     atc_by_date = work.groupby(block_cols, sort=False)["ATCClassifierScore"].last()
     lagged = pd.concat(
@@ -509,86 +511,103 @@ else:
     _strict_historical_percentile_numba = None
 
 
-def compute_pit_percentiles(df: pd.DataFrame) -> pd.DataFrame:
-    """Sector-relative expanding percentiles of ATC + per-Aspect totals.
-
-    Implementation: compare each row against historical events in the same
-    sector and SignalType with ``availability_date < call_entry_date``. This is
-    intentionally stricter than self-inclusive expanding ranks: rows that
-    become available on the same date never rank each other, and the current
-    row never ranks itself.
-
-    Returns 6 columns (1 ATC + 5 Aspects).
-    """
-    out = pd.DataFrame(index=df.index)
-    percentile_cols = ["ATCClassifierScore"] + [f"aspect_{a}_total" for a in ASPECTS]
-    available = [c for c in percentile_cols if c in df.columns]
-    if not available:
-        return out
-
-    group_keys = ["SECTOR"]
-    if "SignalType" in df.columns:
-        group_keys.append("SignalType")
-
-    work = df[group_keys + ["availability_date", "call_entry_date"] + available].copy()
-    work["_orig_idx"] = df.index
-
-    for col in available:
-        result = pd.Series(np.nan, index=df.index, dtype="float64")
-        for _, grp in work.groupby(group_keys, dropna=False, sort=False):
-            pct = _strict_historical_percentile(
-                values=grp[col],
-                history_dates=grp["availability_date"],
-                cutoff_dates=grp["call_entry_date"],
-            )
-            result.loc[grp["_orig_idx"]] = pct
-        out[f"{col}_sector_pct"] = result
-
-    return out
-
-
-def _strict_historical_percentile(
-    values: pd.Series,
+def _prepare_percentile_dates(
     history_dates: pd.Series,
     cutoff_dates: pd.Series,
-) -> np.ndarray:
-    """Empirical percentile using only rows with ``history_date < cutoff``.
+) -> dict:
+    """Pre-process date arrays for percentile computation, shared across columns.
 
-    A Fenwick tree over discretized values keeps the implementation exact while
-    avoiding an O(n^2) scan inside each sector/signal group.
+    Converts dates to numpy arrays and returns sorted history/query indices
+    once per group.  The per-column step (``_percentile_column``) applies
+    value-based filtering and the Fenwick tree walk.
+
+    Returns a dict with:
+      - ``hist_dates``, ``cutoff_dates`` — raw numpy arrays
+      - ``hist_order`` — indices that sort valid-date history rows by date
+      - ``hist_dates_sorted`` — sorted histogram dates
+      - ``query_order`` — indices that sort valid-date query rows by cutoff date
     """
-    vals = pd.to_numeric(values, errors="coerce").to_numpy(dtype="float64")
     hist = pd.to_datetime(history_dates).to_numpy(dtype="datetime64[ns]")
     cutoff = pd.to_datetime(cutoff_dates).to_numpy(dtype="datetime64[ns]")
-    pct = np.full(len(vals), np.nan, dtype="float64")
 
-    valid_hist = (~np.isnan(vals)) & (~np.isnat(hist))
-    valid_query = (~np.isnan(vals)) & (~np.isnat(cutoff))
-    if not valid_hist.any() or not valid_query.any():
+    date_valid_hist = ~np.isnat(hist)
+    date_valid_query = ~np.isnat(cutoff)
+
+    prep: dict = {
+        "hist_dates": hist,
+        "cutoff_dates": cutoff,
+        "hist_order": None,
+        "hist_dates_sorted": None,
+        "query_order": None,
+    }
+
+    if not date_valid_hist.any() or not date_valid_query.any():
+        return prep
+
+    hist_idx = np.flatnonzero(date_valid_hist)
+    hist_order = hist_idx[np.argsort(hist[hist_idx], kind="mergesort")]
+    prep["hist_order"] = hist_order
+    prep["hist_dates_sorted"] = hist[hist_order]
+
+    query_idx = np.flatnonzero(date_valid_query)
+    prep["query_order"] = query_idx[np.argsort(cutoff[query_idx], kind="mergesort")]
+
+    return prep
+
+
+def _percentile_column(
+    values: pd.Series,
+    prep: dict,
+) -> np.ndarray:
+    """Compute strict historical percentile for one value column.
+
+    Uses the pre-sorted date arrays from ``_prepare_percentile_dates`` and
+    applies value-level validity filtering, unique-value discretization, and
+    the Fenwick tree walk (Numba-accelerated when available).
+    """
+    vals = pd.to_numeric(values, errors="coerce").to_numpy(dtype="float64")
+    n = len(vals)
+    pct = np.full(n, np.nan, dtype="float64")
+
+    hist_order = prep.get("hist_order")
+    query_order = prep.get("query_order")
+    if hist_order is None or query_order is None:
         return pct
 
-    unique_vals = np.sort(np.unique(vals[valid_hist]))
+    hist = prep["hist_dates"]
+    cutoff = prep["cutoff_dates"]
+    hist_dates_sorted = prep["hist_dates_sorted"]
+
+    # Per-column value + date validity
+    value_valid = ~np.isnan(vals)
+    hist_value_valid = value_valid[hist_order]
+    query_value_valid = value_valid[query_order]
+
+    if not hist_value_valid.any() or not query_value_valid.any():
+        return pct
+
+    # Filter pre-sorted indices to value-valid rows (preserves date order)
+    hist_order_val = hist_order[hist_value_valid]
+    query_order_val = query_order[query_value_valid]
+    hist_dates_val = hist_dates_sorted[hist_value_valid]
+
+    unique_vals = np.sort(np.unique(vals[hist_order_val]))
     if len(unique_vals) == 0:
         return pct
 
-    hist_idx = np.flatnonzero(valid_hist)
-    hist_order = hist_idx[np.argsort(hist[hist_idx], kind="mergesort")]
-    hist_dates = hist[hist_order]
-    hist_codes = np.searchsorted(unique_vals, vals[hist_order], side="left") + 1
-
-    query_idx = np.flatnonzero(valid_query)
-    query_order = query_idx[np.argsort(cutoff[query_idx], kind="mergesort")]
+    hist_codes = np.searchsorted(unique_vals, vals[hist_order_val], side="left") + 1
 
     if _strict_historical_percentile_numba is not None:
         return _strict_historical_percentile_numba(
             vals,
             unique_vals,
-            hist_dates.astype("int64"),
+            hist_dates_val.astype("int64"),
             hist_codes.astype("int64"),
-            query_order.astype("int64"),
+            query_order_val.astype("int64"),
             cutoff.astype("int64"),
         )
 
+    # Python Fenwick tree (fallback when Numba is unavailable)
     bit = np.zeros(len(unique_vals) + 1, dtype=np.int64)
     total = 0
 
@@ -605,9 +624,9 @@ def _strict_historical_percentile(
         return s
 
     add_pos = 0
-    for qi in query_order:
+    for qi in query_order_val:
         q_cutoff = cutoff[qi]
-        while add_pos < len(hist_order) and hist_dates[add_pos] < q_cutoff:
+        while add_pos < len(hist_order_val) and hist_dates_val[add_pos] < q_cutoff:
             add(int(hist_codes[add_pos]))
             total += 1
             add_pos += 1
@@ -617,6 +636,74 @@ def _strict_historical_percentile(
         pct[qi] = prefix_sum(q_code) / total
 
     return pct
+
+
+def compute_pit_percentiles(df: pd.DataFrame) -> pd.DataFrame:
+    """Sector-relative expanding percentiles of ATC + per-Aspect totals.
+
+    Implementation: compare each row against historical events in the same
+    sector and SignalType with ``availability_date < call_entry_date``. This is
+    intentionally stricter than self-inclusive expanding ranks: rows that
+    become available on the same date never rank each other, and the current
+    row never ranks itself.
+
+    Uses a two-step approach to avoid redundant date conversion and sorting:
+    ``_prepare_percentile_dates`` pre-processes dates once per group, and
+    ``_percentile_column`` computes the Fenwick-tree walk per column using
+    pre-sorted indices.
+
+    Returns 6 columns (1 ATC + 5 Aspects).
+    """
+    out = pd.DataFrame(index=df.index)
+    percentile_cols = ["ATCClassifierScore"] + [f"aspect_{a}_total" for a in ASPECTS]
+    available = [c for c in percentile_cols if c in df.columns]
+    if not available:
+        return out
+
+    group_keys = ["SECTOR"]
+    if "SignalType" in df.columns:
+        group_keys.append("SignalType")
+
+    work = df[group_keys + ["availability_date", "call_entry_date"] + available].copy()
+    work["_orig_idx"] = df.index
+
+    results = {
+        col: pd.Series(np.nan, index=df.index, dtype="float64")
+        for col in available
+    }
+    grouped = work.groupby(group_keys, dropna=False, sort=False)
+    for _, grp in grouped:
+        orig_idx = grp["_orig_idx"]
+        # Pre-process dates once per group
+        prep = _prepare_percentile_dates(
+            grp["availability_date"],
+            grp["call_entry_date"],
+        )
+        for col in available:
+            pct = _percentile_column(grp[col], prep)
+            results[col].loc[orig_idx] = pct
+
+    for col, result in results.items():
+        out[f"{col}_sector_pct"] = result
+
+    return out
+
+
+def _strict_historical_percentile(
+    values: pd.Series,
+    history_dates: pd.Series,
+    cutoff_dates: pd.Series,
+) -> np.ndarray:
+    """Empirical percentile using only rows with ``history_date < cutoff``.
+
+    A Fenwick tree over discretized values keeps the implementation exact while
+    avoiding an O(n^2) scan inside each sector/signal group.
+
+    This is a backward-compatible wrapper around ``_prepare_percentile_dates``
+    + ``_percentile_column``.
+    """
+    prep = _prepare_percentile_dates(history_dates, cutoff_dates)
+    return _percentile_column(values, prep)
 
 
 # ---------------------------------------------------------------------------
@@ -656,35 +743,25 @@ def _daily_returns(prices: pd.DataFrame) -> pd.Series:
     return prices["adj_close"].pct_change().dropna()
 
 
-def compute_momentum_features(
-    df: pd.DataFrame,
-    price_cache_dir: Path = PRICE_CACHE_DIR,
-    ticker_col: str = "BESTTICKER",
-) -> pd.DataFrame:
-    """Pre-event price momentum (3 columns) — fully vectorized.
+# ---------------------------------------------------------------------------
+# Momentum helpers
+# ---------------------------------------------------------------------------
 
-    * T = date part of ``MOSTIMPORTANTDATEUTC`` (not entry_date).
-    * All price bars are strictly ``<= T-1``.
 
-    Strategy:
-      1. Pre-compute n-day returns and rolling-beta for every (ticker, date).
-      2. Compute anchor_date for every event (trading day before T).
-      3. ``merge_asof`` to join each event with its pre-computed metrics.
-      4. Compute residual features from the merged frame.
-    """
-    out = pd.DataFrame(index=df.index, dtype="float64")
+def _initialize_momentum_output(index: pd.Index) -> pd.DataFrame:
+    """Create the three-column all-NaN momentum output frame."""
+    out = pd.DataFrame(index=index, dtype="float64")
     out["pre_event_ret_21d"] = np.nan
     out["pre_event_ret_21d_sector_rel"] = np.nan
     out["pre_event_idio_resid_5d"] = np.nan
+    return out
 
-    if not price_cache_dir.exists():
-        log.warning("price cache dir %s missing — skipping momentum features", price_cache_dir)
-        return out
 
-    has_sector = "SECTOR" in df.columns
-
-    # -- 1. Load all prices and compute daily returns --
-    unique_tickers = df[ticker_col].dropna().unique()
+def _load_ticker_price_cache(
+    unique_tickers: np.ndarray,
+    price_cache_dir: Path,
+) -> tuple[dict[str, pd.DataFrame], dict[str, pd.Series], pd.DatetimeIndex]:
+    """Load per-ticker prices, daily returns, and the union trading calendar."""
     price_cache: dict[str, pd.DataFrame] = {}
     daily_ret_cache: dict[str, pd.Series] = {}
     loaded = 0
@@ -697,65 +774,96 @@ def compute_momentum_features(
             loaded += 1
     log.info("loaded prices for %d / %d tickers", loaded, len(unique_tickers))
     if not price_cache:
-        return out
-
-    # Build global trading calendar
-    all_dates = pd.DatetimeIndex(
+        return price_cache, daily_ret_cache, pd.DatetimeIndex([])
+    calendar = pd.DatetimeIndex(
         np.unique(np.concatenate([p.index.values for p in price_cache.values()]))
     ).sort_values()
+    return price_cache, daily_ret_cache, calendar
 
-    # -- 2. Map ticker -> sector (vectorized: O(n_rows), not O(n_tickers × n_rows)) --
-    ticker_sector_map: dict[str, str] = {}
-    if has_sector:
-        ticker_sector_map = (
-            df.groupby(ticker_col)["SECTOR"]
-            .first()
-            .astype(str)
-            .to_dict()
-        )
 
-    # -- 3. Sector median daily returns --
+def _build_ticker_sector_map(
+    df: pd.DataFrame,
+    ticker_col: str,
+) -> dict[str, str]:
+    """Map ticker to first observed sector using one groupby pass."""
+    if "SECTOR" not in df.columns:
+        return {}
+    return (
+        df.groupby(ticker_col)["SECTOR"]
+        .first()
+        .astype(str)
+        .to_dict()
+    )
+
+
+def _build_sector_return_metrics(
+    daily_ret_cache: dict[str, pd.Series],
+    ticker_to_sector: dict[str, str],
+) -> tuple[dict[str, pd.Series], dict[str, pd.DataFrame]]:
+    """Build sector median daily returns and 5d/21d sector return metrics."""
     sector_daily_rets: dict[str, pd.Series] = {}
-    # Also pre-compute cumprod + shifted ratios for fast n-day return lookup
-    sector_metrics: dict[str, pd.DataFrame] = {}  # date index, cols: ret_5d, ret_21d
-    all_sectors = sorted(set(ticker_sector_map.values()))
+    sector_metrics: dict[str, pd.DataFrame] = {}
+    all_sectors = sorted(set(ticker_to_sector.values()))
     for sector in progress(all_sectors, desc="sector returns", unit="sec"):
-        sector_tkrs = [t for t, s in ticker_sector_map.items()
+        sector_tkrs = [t for t, s in ticker_to_sector.items()
                        if s == sector and t in daily_ret_cache]
         if not sector_tkrs:
             continue
         sector_ret = pd.DataFrame({t: daily_ret_cache[t] for t in sector_tkrs}).median(axis=1)
         sector_ret = sector_ret.dropna().sort_index()
         sector_daily_rets[sector] = sector_ret
-        # Pre-compute n-day returns using log-returns (avoids cumprod overflow)
         log_rets = np.log(1.0 + sector_ret)
         cum_log = log_rets.cumsum()
         sec_metrics = pd.DataFrame(index=sector_ret.index)
         sec_metrics["sector_ret_5d"] = np.exp(cum_log - cum_log.shift(5)) - 1.0
         sec_metrics["sector_ret_21d"] = np.exp(cum_log - cum_log.shift(21)) - 1.0
         sector_metrics[sector] = sec_metrics
+    return sector_daily_rets, sector_metrics
 
-    # -- 4. Build per-ticker metrics, merge_asof with events --
-    # Parse anchor dates: trading day strictly before T, via searchsorted
-    # (vectorized O(n log m), not per-row O(n×m))
+
+def _build_event_anchor_frame(
+    df: pd.DataFrame,
+    ticker_col: str,
+    calendar: pd.DatetimeIndex,
+) -> pd.DataFrame:
+    """Build event rows with _orig_idx, ticker, parsed T, and anchor_date.
+
+    The anchor is the last trading day strictly before the calendar date of the
+    call.  This keeps pre-event price features to T-1 or earlier even for BMO
+    calls whose UTC timestamp falls before the US close on the call date.
+    """
     t_dt = _parse_utc(df["MOSTIMPORTANTDATEUTC"]).dt.tz_localize(None)
+    call_day = t_dt.dt.normalize()
     events = pd.DataFrame({
         "_orig_idx": df.index,
         ticker_col: df[ticker_col].astype(str).values,
         "_t": t_dt.values,
+        "_call_day": call_day.values,
     })
-    anchor_idx = all_dates.searchsorted(events["_t"].values) - 1
-    valid_anchor = (anchor_idx >= 0) & events["_t"].notna().values
+    anchor_idx = calendar.searchsorted(events["_call_day"].values, side="left") - 1
+    valid_anchor = (anchor_idx >= 0) & events["_call_day"].notna().values
     events["anchor_date"] = pd.NaT
-    events.loc[valid_anchor, "anchor_date"] = all_dates[anchor_idx[valid_anchor]]
+    events.loc[valid_anchor, "anchor_date"] = calendar[anchor_idx[valid_anchor]]
     events = events[events["anchor_date"].notna()].copy()
+    return events
 
-    # Build ticker metrics in batches to control memory
-    batch_size = 500
+
+def _precompute_ticker_momentum_metrics(
+    price_cache: dict[str, pd.DataFrame],
+    daily_ret_cache: dict[str, pd.Series],
+    sector_daily_rets: dict[str, pd.Series],
+    sector_metrics: dict[str, pd.DataFrame],
+    ticker_to_sector: dict[str, str],
+    ticker_col: str,
+    batch_size: int = 500,
+    beta_window: int = 60,
+    beta_min_periods: int = 30,
+    beta_lag: int = 4,
+) -> pd.DataFrame:
+    """Precompute stock returns, sector returns, and shifted rolling beta by ticker/date."""
     ticker_list = sorted(price_cache.keys())
     all_metrics_parts: list[pd.DataFrame] = []
     total_batches = (len(ticker_list) + batch_size - 1) // batch_size
-
     for batch_idx in progress(range(0, len(ticker_list), batch_size),
                               desc="pre-computing metrics", total=total_batches,
                               unit="batch"):
@@ -764,10 +872,8 @@ def compute_momentum_features(
         for tkr in batch_tkrs:
             px = price_cache[tkr]
             stock_rets = daily_ret_cache[tkr]
-            sector = ticker_sector_map.get(tkr, "")
-
+            sector = ticker_to_sector.get(tkr, "")
             tkr_metrics = pd.DataFrame(index=stock_rets.index)
-            # Stock n-day returns from price ratios (fast, vectorized)
             tkr_metrics["stock_ret_5d"] = (
                 px["adj_close"] / px["adj_close"].shift(5) - 1.0
             )
@@ -776,56 +882,53 @@ def compute_momentum_features(
             )
             tkr_metrics[ticker_col] = tkr
             tkr_metrics["date"] = tkr_metrics.index
-
             if sector and sector in sector_metrics:
                 sec_m = sector_metrics[sector]
-                # Align: join sector metrics onto the stock's date index
                 tkr_metrics = tkr_metrics.join(
                     sec_m[["sector_ret_5d", "sector_ret_21d"]], how="left"
                 )
-                # Rolling beta: 60-trading-day OLS of stock on sector
                 sec_rets = sector_daily_rets[sector]
                 common_idx = stock_rets.index.intersection(sec_rets.index)
-                if len(common_idx) >= 30:
+                min_periods = min(beta_min_periods, beta_window)
+                if len(common_idx) >= min_periods:
                     s_aligned = stock_rets.reindex(common_idx)
                     m_aligned = sec_rets.reindex(common_idx)
-                    rolling_cov = s_aligned.rolling(60, min_periods=30).cov(m_aligned)
-                    rolling_var = m_aligned.rolling(60, min_periods=30).var()
+                    rolling_cov = s_aligned.rolling(
+                        beta_window, min_periods=min_periods
+                    ).cov(m_aligned)
+                    rolling_var = m_aligned.rolling(
+                        beta_window, min_periods=min_periods
+                    ).var()
                     beta_series = (rolling_cov / rolling_var).replace([np.inf, -np.inf], np.nan)
-                    # For an event anchored on T-1, beta must be estimated on
-                    # data ending at T-5. Shifting by 4 trading rows keeps the
-                    # T-4..T-1 interval out of the beta estimate.
-                    beta_df = beta_series.reindex(stock_rets.index).shift(4)
+                    beta_df = beta_series.reindex(stock_rets.index).shift(beta_lag)
                     tkr_metrics["beta"] = beta_df.values
                 else:
                     tkr_metrics["beta"] = np.nan
                     tkr_metrics["sector_ret_5d"] = np.nan
                     tkr_metrics["sector_ret_21d"] = np.nan
-
-            # Keep only rows with at least stock returns
             tkr_metrics = tkr_metrics.dropna(subset=["stock_ret_21d", "stock_ret_5d"])
             if len(tkr_metrics) > 0:
                 batch_parts.append(tkr_metrics)
-
         if batch_parts:
             all_metrics_parts.append(pd.concat(batch_parts, ignore_index=True))
-
     if not all_metrics_parts:
-        return out
+        return pd.DataFrame()
+    return pd.concat(all_metrics_parts, ignore_index=True)
 
-    all_metrics = pd.concat(all_metrics_parts, ignore_index=True)
 
-    # -- 5. merge_asof per ticker (pandas 3.x merge_asof by= is broken) --
-    # Pre-group by ticker to avoid O(n_tickers × n_rows) boolean masks.
+def _merge_momentum_metrics(
+    events: pd.DataFrame,
+    all_metrics: pd.DataFrame,
+    ticker_col: str,
+) -> pd.DataFrame:
+    """Per-ticker merge_asof from event anchor_date to precomputed metrics."""
     merged_parts: list[pd.DataFrame] = []
-    events_by_tkr = dict(list(events.groupby(ticker_col)))
     metrics_by_tkr = dict(list(all_metrics.groupby(ticker_col)))
-    common_tickers = sorted(set(events_by_tkr) & set(metrics_by_tkr))
-    for tkr in progress(common_tickers, desc="merging metrics", unit="tkr",
-                         mininterval=0.2):
-        ev = events_by_tkr[tkr].sort_values("anchor_date")
+    for tkr, ev in events.groupby(ticker_col):
+        if tkr not in metrics_by_tkr:
+            continue
+        ev = ev.sort_values("anchor_date")
         mt = metrics_by_tkr[tkr].sort_values("date")
-        # Ensure matching datetime resolution (parquet round-trips can flip ns<->s)
         ev["anchor_date"] = ev["anchor_date"].astype("datetime64[ns]")
         mt["date"] = mt["date"].astype("datetime64[ns]")
         mg = pd.merge_asof(
@@ -835,24 +938,26 @@ def compute_momentum_features(
             tolerance=pd.Timedelta(days=10),
         )
         merged_parts.append(mg)
-
     if not merged_parts:
-        return out
-    merged = pd.concat(merged_parts, ignore_index=True)
+        return pd.DataFrame()
+    return pd.concat(merged_parts, ignore_index=True)
 
-    # -- 6. Compute final features --
+
+def _fill_momentum_output(
+    out: pd.DataFrame,
+    merged: pd.DataFrame,
+) -> pd.DataFrame:
+    """Fill the three final momentum columns from merged metrics."""
     valid_mask = merged["stock_ret_21d"].notna()
     out.loc[merged.loc[valid_mask, "_orig_idx"], "pre_event_ret_21d"] = (
         merged.loc[valid_mask, "stock_ret_21d"].values
     )
-
     sec_valid = valid_mask & merged["sector_ret_21d"].notna()
     idx_sec = merged.loc[sec_valid, "_orig_idx"]
     out.loc[idx_sec, "pre_event_ret_21d_sector_rel"] = (
         merged.loc[sec_valid, "stock_ret_21d"].values
         - merged.loc[sec_valid, "sector_ret_21d"].values
     )
-
     resid_valid = sec_valid & merged["beta"].notna() & merged["sector_ret_5d"].notna()
     idx_resid = merged.loc[resid_valid, "_orig_idx"]
     out.loc[idx_resid, "pre_event_idio_resid_5d"] = (
@@ -860,6 +965,62 @@ def compute_momentum_features(
         - merged.loc[resid_valid, "beta"].values
         * merged.loc[resid_valid, "sector_ret_5d"].values
     )
+    return out
+
+
+def compute_momentum_features(
+    df: pd.DataFrame,
+    price_cache_dir: Path = PRICE_CACHE_DIR,
+    ticker_col: str = "BESTTICKER",
+    beta_window: int = 60,
+    beta_min_periods: int = 30,
+    beta_lag: int = 4,
+) -> pd.DataFrame:
+    """Pre-event price momentum (3 columns) — fully vectorized.
+
+    * T = date part of ``MOSTIMPORTANTDATEUTC`` (not entry_date).
+    * All price bars are strictly ``<= T-1``.
+
+    Strategy:
+      1. Pre-compute n-day returns and rolling-beta for every (ticker, date).
+      2. Compute anchor_date for every event (trading day before T).
+      3. ``merge_asof`` to join each event with its pre-computed metrics.
+      4. Compute residual features from the merged frame.
+    """
+    out = _initialize_momentum_output(df.index)
+
+    if not price_cache_dir.exists():
+        log.warning("price cache dir %s missing — skipping momentum features", price_cache_dir)
+        return out
+
+    unique_tickers = df[ticker_col].dropna().unique()
+    price_cache, daily_ret_cache, calendar = _load_ticker_price_cache(unique_tickers, price_cache_dir)
+
+    if not price_cache:
+        return out
+
+    ticker_to_sector = _build_ticker_sector_map(df, ticker_col)
+    sector_daily_rets, sector_metrics = _build_sector_return_metrics(daily_ret_cache, ticker_to_sector)
+    events = _build_event_anchor_frame(df, ticker_col, calendar)
+
+    all_metrics = _precompute_ticker_momentum_metrics(
+        price_cache, daily_ret_cache,
+        sector_daily_rets, sector_metrics,
+        ticker_to_sector, ticker_col,
+        beta_window=beta_window,
+        beta_min_periods=beta_min_periods,
+        beta_lag=beta_lag,
+    )
+
+    if all_metrics.empty:
+        return out
+
+    merged = _merge_momentum_metrics(events, all_metrics, ticker_col)
+
+    if merged.empty:
+        return out
+
+    out = _fill_momentum_output(out, merged)
 
     return out
 
@@ -868,14 +1029,14 @@ def compute_momentum_features(
 # 2.3  Stretch features
 # ---------------------------------------------------------------------------
 
-def stretch_feature_cols(df: pd.DataFrame) -> list[str]:
-    """Return the list of AspectTheme column names (non-Fluff/Filler).
+def stretch_feature_col_names(columns: Iterable[str]) -> list[str]:
+    """Return stretch-tier AspectTheme column names from an iterable of names.
 
-    These are the candidate pool for LassoCV selection inside each
-    walk-forward fold (Phase 4). No full-sample pre-screening.
+    These are the candidate pool for LassoCV selection inside each walk-forward
+    fold (Phase 4). No full-sample pre-screening.
     """
     cols: list[str] = []
-    for col in df.columns:
+    for col in columns:
         parsed = parse_aspect_theme_column(col)
         if parsed is None:
             continue
@@ -883,6 +1044,112 @@ def stretch_feature_cols(df: pd.DataFrame) -> list[str]:
             continue
         cols.append(col)
     return cols
+
+
+def stretch_feature_cols(df: pd.DataFrame) -> list[str]:
+    """Return the stretch-tier AspectTheme column names in *df*."""
+    return stretch_feature_col_names(df.columns)
+
+
+def write_stretch_features_from_enhanced(
+    signals_path: Path,
+    enhanced_path: Path,
+    output_path: Path,
+    *,
+    batch_size: int = 65_536,
+    max_rows: int | None = None,
+) -> tuple[int, int]:
+    """Write stretch features by streaming enhanced + raw AspectTheme columns.
+
+    Stretch is defined as the enhanced feature table plus the raw, eligible
+    ``AspectTheme_*`` columns. Building it by recomputing the full enhanced
+    pipeline doubles peak memory for ``--tier both``. This writer instead
+    combines the two parquet inputs in aligned Arrow batches and never holds
+    either full table in pandas memory.
+
+    Returns ``(rows_written, columns_written)``.
+    """
+    import pyarrow as pa
+    import pyarrow.parquet as pq
+
+    if batch_size <= 0:
+        raise ValueError("batch_size must be positive")
+    if max_rows is not None and max_rows < 0:
+        raise ValueError("max_rows must be non-negative")
+
+    signals_pf = pq.ParquetFile(signals_path)
+    enhanced_pf = pq.ParquetFile(enhanced_path)
+
+    if signals_pf.metadata.num_rows != enhanced_pf.metadata.num_rows:
+        raise ValueError(
+            "signals and enhanced feature parquet row counts differ: "
+            f"{signals_pf.metadata.num_rows} != {enhanced_pf.metadata.num_rows}"
+        )
+
+    total_rows = enhanced_pf.metadata.num_rows
+    rows_to_write = total_rows if max_rows is None else min(max_rows, total_rows)
+
+    enhanced_cols = enhanced_pf.schema_arrow.names
+    stretch_cols = stretch_feature_col_names(signals_pf.schema_arrow.names)
+    overlap = sorted(set(enhanced_cols).intersection(stretch_cols))
+    if overlap:
+        raise ValueError(
+            "stretch columns overlap enhanced columns: "
+            + ", ".join(overlap[:10])
+        )
+
+    fields = (
+        [enhanced_pf.schema_arrow.field(c) for c in enhanced_cols]
+        + [signals_pf.schema_arrow.field(c) for c in stretch_cols]
+    )
+    output_schema = pa.schema(fields)
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    tmp_path = output_path.with_name(f"{output_path.name}.tmp")
+    tmp_path.unlink(missing_ok=True)
+
+    left_iter = enhanced_pf.iter_batches(batch_size=batch_size, columns=enhanced_cols)
+    right_iter = signals_pf.iter_batches(batch_size=batch_size, columns=stretch_cols)
+    left_batch = next(left_iter, None)
+    right_batch = next(right_iter, None)
+    left_offset = 0
+    right_offset = 0
+    rows_written = 0
+
+    writer = pq.ParquetWriter(tmp_path, output_schema, compression="zstd")
+    try:
+        while rows_written < rows_to_write:
+            if left_batch is None or right_batch is None:
+                raise RuntimeError("input parquet streams ended before expected row count")
+
+            left_remaining = left_batch.num_rows - left_offset
+            right_remaining = right_batch.num_rows - right_offset
+            n_rows = min(left_remaining, right_remaining, rows_to_write - rows_written)
+
+            left_slice = left_batch.slice(left_offset, n_rows)
+            right_slice = right_batch.slice(right_offset, n_rows)
+            arrays = [
+                left_slice.column(i) for i in range(left_slice.num_columns)
+            ] + [
+                right_slice.column(i) for i in range(right_slice.num_columns)
+            ]
+            writer.write_table(pa.Table.from_arrays(arrays, schema=output_schema))
+
+            rows_written += n_rows
+            left_offset += n_rows
+            right_offset += n_rows
+
+            if left_offset == left_batch.num_rows:
+                left_batch = next(left_iter, None)
+                left_offset = 0
+            if right_offset == right_batch.num_rows:
+                right_batch = next(right_iter, None)
+                right_offset = 0
+    finally:
+        writer.close()
+
+    tmp_path.replace(output_path)
+    return rows_written, len(output_schema.names)
 
 
 # ---------------------------------------------------------------------------
@@ -932,6 +1199,12 @@ def build_features(
     row_feat = compute_row_features(df)
     log.info("2.2 row features (%d cols): %.1fs", len(row_feat.columns), time.time() - t0)
 
+    stretch_df: pd.DataFrame | None = None
+    stretch_cols: list[str] = []
+    if tier == "stretch":
+        stretch_cols = stretch_feature_cols(df)
+        stretch_df = df[["_row_id"] + stretch_cols].copy()
+
     # Combine identifiers + timestamps + row features into one frame for
     # time-series / PIT steps which need SECTOR / BESTTICKER / availability_date
     id_cols = [
@@ -943,6 +1216,9 @@ def build_features(
         df[available_ids + ["_row_id"]].reset_index(drop=True),
         row_feat.reset_index(drop=True),
     ], axis=1)
+    del row_feat
+    if tier != "stretch":
+        del df
 
     # Sort by availability_date for PIT-safe time-series operations
     base = base.sort_values("availability_date").reset_index(drop=True)
@@ -971,9 +1247,9 @@ def build_features(
     # --- 2.3 Stretch columns ---
     if tier == "stretch":
         t0 = time.time()
-        stretch_cols = stretch_feature_cols(df)
-        stretch_df = df[["_row_id"] + stretch_cols].copy()
+        assert stretch_df is not None
         base = base.merge(stretch_df, on="_row_id", how="left")
+        del stretch_df, df
         log.info("2.3 stretch columns (%d cols): %.1fs", len(stretch_cols), time.time() - t0)
 
     # --- Clean up ---
@@ -984,6 +1260,13 @@ def build_features(
     cols_to_drop = [c for c in EXCLUDED_FEATURE_COLS if c in base.columns]
     if cols_to_drop:
         base = base.drop(columns=cols_to_drop)
+
+    # --- Drop columns matching EXCLUDED_FEATURE_PATTERN (defense-in-depth) ---
+    pattern_cols = [c for c in base.columns if re.match(EXCLUDED_FEATURE_PATTERN, c)]
+    if pattern_cols:
+        log.warning("dropping %d column(s) matching %s: %s",
+                     len(pattern_cols), EXCLUDED_FEATURE_PATTERN, pattern_cols)
+        base = base.drop(columns=pattern_cols)
 
     log.info("total build_features: %.1fs  (%d rows x %d cols)",
              time.time() - t_total, len(base), len(base.columns))
@@ -1009,6 +1292,10 @@ def main() -> None:
     parser.add_argument("--tier", choices=["enhanced", "stretch"], default="enhanced")
     parser.add_argument("--no-momentum", action="store_true",
                         help="Skip pre-event momentum features")
+    parser.add_argument("--enhanced-input", type=Path, default=None,
+                        help="Existing enhanced parquet to stream-append stretch columns")
+    parser.add_argument("--stream-batch-size", type=int, default=65_536,
+                        help="Arrow batch size for --enhanced-input stretch writes")
     parser.add_argument("--output", type=Path, default=None,
                         help="Parquet output path (optional)")
     parser.add_argument("--sample", type=int, default=0,
@@ -1017,6 +1304,41 @@ def main() -> None:
 
     set_global_seed()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+
+    if args.tier == "stretch" and args.enhanced_input is not None:
+        if args.output is None:
+            parser.error("--enhanced-input requires --output")
+        t0 = time.time()
+        rows, cols = write_stretch_features_from_enhanced(
+            args.signals,
+            args.enhanced_input,
+            args.output,
+            batch_size=args.stream_batch_size,
+            max_rows=args.sample or None,
+        )
+        log.info(
+            "wrote %s from %s + stretch columns: %d rows x %d cols in %.1fs",
+            args.output, args.enhanced_input, rows, cols, time.time() - t0,
+        )
+
+        # Write cache manifest for content-addressed skip support
+        manifest = build_cache_manifest(
+            phase="2_stretch",
+            parameters={
+                "tier": args.tier,
+                "enhanced_input": str(args.enhanced_input),
+                "sample_size": args.sample,
+            },
+            input_paths=[args.signals, args.enhanced_input, PRICE_MANIFEST],
+            source_funcs=[
+                write_stretch_features_from_enhanced,
+                stretch_feature_col_names,
+            ],
+        )
+        manifest_path = CACHE_MANIFEST_DIR / "2_stretch.json"
+        write_cache_manifest(manifest, manifest_path)
+        log.info("wrote cache manifest %s", manifest_path)
+        return
 
     log.info("loading signals from %s", args.signals)
     df = load_signals_df(args.signals)
@@ -1035,6 +1357,28 @@ def main() -> None:
     if args.output:
         features.to_parquet(args.output, compression="zstd")
         log.info("wrote %s", args.output)
+
+        # Write cache manifest for content-addressed skip support
+        manifest = build_cache_manifest(
+            phase=f"2_{args.tier}",
+            parameters={
+                "tier": args.tier,
+                "include_momentum": not args.no_momentum,
+                "sample_size": args.sample,
+            },
+            input_paths=[args.signals, PRICE_MANIFEST],
+            source_funcs=[
+                build_features,
+                compute_timestamps,
+                compute_row_features,
+                compute_timeseries_features,
+                compute_pit_percentiles,
+                compute_momentum_features,
+            ],
+        )
+        manifest_path = CACHE_MANIFEST_DIR / f"2_{args.tier}.json"
+        write_cache_manifest(manifest, manifest_path)
+        log.info("wrote cache manifest %s", manifest_path)
     else:
         print(features.head())
         print(f"\nColumns ({len(features.columns)}):")

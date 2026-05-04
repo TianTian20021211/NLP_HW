@@ -192,7 +192,7 @@ Verification: ``python -m compileall backtest`` passes. ``python -m backtest.por
 
 ### Finding
 
-Portfolio entry currently requires a quote exactly on the rebalance date. If the quote is missing, the trade is skipped immediately. The plan requires `next_valid_close_on_or_after(planned_entry_date)` with up to 3 consecutive trading days of roll-forward before skipping.
+Portfolio entry currently requires a quote exactly on the rebalance date. If the quote is missing, the trade is skipped immediately. The plan requires `next_valid_close_on_or_after(planned_entry_date)` with up to 5 consecutive trading days of roll-forward before skipping.
 
 Current risk:
 
@@ -212,11 +212,11 @@ Correct. This should be implemented both for entry and exit, and the trade log m
 - Add a helper such as `next_valid_close(ticker, planned_date, max_bdays=3)`.
 - Entry:
   - planned entry = rebalance date;
-  - actual entry = first valid close on or after planned entry, within 3 business days;
+  - actual entry = first valid close on or after planned entry, within 5 business days;
   - if none, mark `skip_no_entry_quote`.
 - Exit:
   - planned exit = next rebalance date or target holding date;
-  - actual exit = first valid close on or after planned exit, within 3 business days;
+  - actual exit = first valid close on or after planned exit, within 5 business days;
   - if none, mark `right_censored_no_exit_quote`.
 - Record planned/actual entry and exit dates, prices, and skip reason.
 - Keep trades with missing exits out of ordinary return statistics but summarize them separately.
@@ -230,9 +230,9 @@ For a rebalanced portfolio, exiting usually happens through weight changes at th
 Entry and exit quote handling has been fully implemented in ``backtest/portfolio.py`` and ``features/audit.py``:
 
 - **``backtest/portfolio.py``**:
-  - ``_next_valid_quote()`` scans up to 3 **trading days** forward in the trading calendar (not calendar days), checking the planned date plus offsets of 1, 2, and 3 trading days in the price-derived trading calendar.
-  - **Entry**: At each rebalance, every ticker with non-zero aggregated weight is looked up via ``_next_valid_quote()``. ``planned_entry_date`` is the rebalance date. If no valid quote is found within 3 trading days, the ticker's weight is removed, re-scaling remaining weights to gross=2.0, and a trade log entry is recorded with ``skip_reason="skip_no_entry_quote"``.
-  - **Exit**: For each entered position, ``planned_exit_date`` is the next rebalance date. ``_next_valid_quote()`` looks up the exit price at that date with the same 3-trading-day tolerance. If no valid exit quote is found, the trade is marked ``right_censored_no_exit_quote``.
+  - ``_next_valid_quote()`` scans up to 5 **trading days** forward in the trading calendar (not calendar days), checking the planned date plus offsets of 1 through 5 trading days in the price-derived trading calendar.
+  - **Entry**: At each rebalance, every ticker with non-zero aggregated weight is looked up via ``_next_valid_quote()``. ``planned_entry_date`` is the rebalance date. If no valid quote is found within 5 trading days, the ticker's weight is removed, re-scaling remaining weights to gross=2.0, and a trade log entry is recorded with ``skip_reason="skip_no_entry_quote"``.
+  - **Exit**: For each entered position, ``planned_exit_date`` is the next rebalance date. ``_next_valid_quote()`` looks up the exit price at that date with the same 5-trading-day tolerance. If no valid exit quote is found, the trade is marked ``right_censored_no_exit_quote``.
   - **Trade log persistence**: ``trade_execution_log_{suffix}.parquet`` and ``trade_execution_log.parquet`` contain ``planned_entry_date``, ``actual_entry_date``, ``entry_price``, ``planned_exit_date``, ``actual_exit_date``, ``exit_price``, and ``skip_reason`` (``None`` for normal trades).
   - **Per-rebalance-period logging**: Each rebalance period creates a separate trade log entry. Positions that persist across rebalances receive a new entry at each rebalance with that period's entry and the next rebalance as planned exit.
   - ``validate_trade_log()`` is called inside ``PortfolioSimulator.run()`` after the simulation loop; violations are persisted to ``trade_execution_violations_{suffix}.parquet``.
@@ -315,7 +315,7 @@ The daily P&L computation in ``backtest/portfolio.py`` has been upgraded with bo
     - **Normal return**: valid price at ``next_date`` — standard P&L contribution.
     - **ffill_1d**: no quote at ``next_date`` but a valid quote at ``date+2`` — forward-filled (0% return), included in headline P&L.
     - **ffill_2d**: no quote at ``next_date`` or ``date+2``, but a valid quote at ``date+3`` — same logic as ffill_1d.
-    - **Long gap (>2 trading days)**: no quote within 3 trading days ahead — censored from headline P&L (0% contribution); recorded for the 30-day recovery audit.
+    - **Long gap (>2 trading days)**: no quote within 5 trading days ahead — censored from headline P&L (0% contribution); recorded for the 30-day recovery audit.
   - After the simulation loop, runs the recovery audit via ``_audit_long_gap_recovery()`` and updates each long-gap row with either ``long_gap_recovered_weight`` (if a quote resumed within 30 trading days) or ``possible_delisting_or_unavailable_weight`` (if not).
   - Eight new columns added to ``daily_returns`` parquet: ``ffill_1d_weight``, ``ffill_2d_weight``, ``long_gap_recovered_weight``, ``possible_delisting_or_unavailable_weight``, ``n_ffill_1d_positions``, ``n_ffill_2d_positions``, ``n_long_gap_recovered_positions``, ``n_possible_delisting_or_unavailable_positions``.
   - ``PortfolioResult`` gained a ``gap_records`` field (DataFrame with per-gap-event details).

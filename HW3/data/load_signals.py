@@ -21,6 +21,7 @@ import csv
 import logging
 import math
 import time
+import zipfile
 from pathlib import Path
 from typing import Iterable
 
@@ -28,8 +29,10 @@ import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
 
+from data._utils import setup_logger
 from data.config import (
     RAW_SIGNAL_CSV,
+    RAW_SIGNAL_ZIP,
     SIGNALS_PARQUET,
     SIGNALS_SLIM_PARQUET,
     ensure_dirs,
@@ -89,11 +92,37 @@ INTEGER_EVENT_COLS = [c for c in EVENT_SCORE_COLS if not c.startswith("EventsSco
 FLOAT_EVENT_COLS = [c for c in EVENT_SCORE_COLS if c.startswith("EventsScore_")]
 FLOAT_COLS = FLOAT_EVENT_COLS + HEADLINE_NUMERIC_COLS
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s",
-)
-log = logging.getLogger("load_signals")
+log = setup_logger("load_signals")
+
+
+def ensure_signal_csv(csv_path: Path = RAW_SIGNAL_CSV) -> Path:
+    """Return an extracted signal CSV path, extracting the raw zip if needed."""
+    if csv_path.exists():
+        return csv_path
+
+    if csv_path == RAW_SIGNAL_CSV and RAW_SIGNAL_ZIP.exists():
+        log.info("signal CSV missing; extracting %s", RAW_SIGNAL_ZIP)
+        with zipfile.ZipFile(RAW_SIGNAL_ZIP) as zf:
+            member = next(
+                (m for m in zf.namelist() if Path(m).name == csv_path.name),
+                None,
+            )
+            if member is None:
+                member = next((m for m in zf.namelist() if m.lower().endswith(".csv")), None)
+            if member is None:
+                raise FileNotFoundError(
+                    f"no CSV member found inside {RAW_SIGNAL_ZIP}"
+                )
+            csv_path.parent.mkdir(parents=True, exist_ok=True)
+            with zf.open(member) as src, csv_path.open("wb") as dst:
+                while True:
+                    chunk = src.read(1024 * 1024)
+                    if not chunk:
+                        break
+                    dst.write(chunk)
+        return csv_path
+
+    raise FileNotFoundError(f"signal CSV not found at {csv_path}")
 
 
 def read_header(path: Path) -> list[str]:
@@ -125,12 +154,16 @@ def classify_columns(all_columns: Iterable[str]) -> tuple[list[str], list[str]]:
 
 
 def parse_call_hour(series: pd.Series) -> pd.Series:
-    """Parse MOSTIMPORTANTDATEUTC -> hour (UTC). NaN rows become -1."""
+    """Parse MOSTIMPORTANTDATEUTC -> hour (UTC). NaN stays as NaN (nullable Int8).
+
+    Downstream code must check for pd.NA before using the value, rather than
+    relying on a -1 sentinel.
+    """
     try:
         parsed = pd.to_datetime(series, utc=True, errors="coerce", format="mixed")
     except TypeError:  # pandas < 2.0 has no format="mixed"
         parsed = pd.to_datetime(series, utc=True, errors="coerce")
-    hours = parsed.dt.hour.fillna(-1).astype("int8")
+    hours = parsed.dt.hour.astype("Int8")
     return hours
 
 
@@ -248,6 +281,11 @@ def stream_chunks(
                 })
                 continue
 
+            # Normalize ticker format: dots -> dashes for consistency with
+            # universe PIT data and price cache keys.
+            chunk["BESTTICKER"] = chunk["BESTTICKER"].str.replace(".", "-", regex=False)
+            chunk["Ticker"] = chunk["Ticker"].str.replace(".", "-", regex=False)
+
             chunk = coerce_chunk_types(chunk, int_aspect_cols)
             call_hour = parse_call_hour(chunk["MOSTIMPORTANTDATEUTC"])
 
@@ -300,8 +338,7 @@ def stream_chunks(
 def run(csv_path: Path = RAW_SIGNAL_CSV, chunksize: int = CHUNKSIZE) -> dict:
     set_global_seed()
     ensure_dirs()
-    if not csv_path.exists():
-        raise FileNotFoundError(f"signal CSV not found at {csv_path}")
+    csv_path = ensure_signal_csv(csv_path)
 
     header = read_header(csv_path)
     keep_aspect, drop_aspect = classify_columns(header)
@@ -342,6 +379,19 @@ def run(csv_path: Path = RAW_SIGNAL_CSV, chunksize: int = CHUNKSIZE) -> dict:
         f"{stats['rows_written']:,}",
         stats["chunks"],
     )
+
+    # Sanity check: documented delete count is ~2,231; warn on >20% deviation.
+    expected_delete = 2_231
+    actual_delete = stats["rows_dropped_delete"]
+    if actual_delete > 0:
+        deviation = abs(actual_delete - expected_delete) / expected_delete
+        if deviation > 0.20:
+            log.warning(
+                "delete rows %s deviates >20%% from documented %s — "
+                "CSV format may have changed",
+                f"{actual_delete:,}",
+                f"{expected_delete:,}",
+            )
     return stats
 
 

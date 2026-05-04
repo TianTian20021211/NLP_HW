@@ -1,48 +1,63 @@
-# HW3 — Backtesting the ProntoNLP Earnings-Call ATC Signal
+# ProntoNLP Earnings-Call ATC Signal Backtest
 
-Backtest framework for the ATC signal across S&P 500 / S&P 1500 / Russell 3000
-at daily / weekly / monthly rebalance cadences. The hard constraint is a
-clean, look-ahead-free pipeline (see `docs/requirement.md` §3 and `ideas/plan.md`).
+Reproducible backtest of the ProntoNLP ATC signal across SP500/SP1500/RU3K at
+daily/weekly/monthly rebalance cadences.
 
-## Repo layout
+## Quick start
 
-```text
-HW3/
-├── data/                        # raw input + per-stage parquet caches (caches gitignored)
-│   ├── load_signals.py          # Phase 1.1 - ATC CSV -> Parquet
-│   ├── load_universes.py        # Phase 1.2 - PIT membership for SP500 / SP1500 / RU3K
-│   ├── load_prices.py           # Phase 1.3 - yfinance adj_close + volume per ticker
-│   ├── load_shares.py           # Phase 1.4 - historical shares outstanding
-│   ├── cache/                   # generated artifacts (parquet, manifest, etc.)
-│   └── universe_raw/            # raw universe snapshots (Wikipedia, iShares CSVs)
-├── features/
-│   ├── engineer.py              # Phase 2 - feature engineering
-│   └── audit.py                 # Phase 3 - look-ahead audit assertions
-├── backtest/
-│   ├── splits.py                # Phase 4 - walk-forward splits
-│   ├── model.py                 # Phase 4/5 - Ridge / LightGBM / XGBoost wrapper
-│   ├── single_feature_ic.py     # Phase 5.1 - IC analysis
-│   ├── quintile.py              # Phase 5.2 - quintile / decile portfolios
-│   └── portfolio.py             # Phase 5.4 - rebalanced portfolio simulation
-├── reports/
-│   ├── charts.py                # Phase 7 - matplotlib charts
-│   └── pdf.py                   # Phase 7 - reportlab writer
-├── results/                     # outputs (gitignored)
-│   └── audit/                   # mandated audit artifacts
-├── docs/
-│   ├── requirement.md           # course requirements
-│   └── report.md                # research write-up draft
-└── ideas/
-    ├── understanding.md         # personal notes on data + task
-    └── plan.md                  # execution plan / checklist
+1. Place `Earnings_ATC_until_2026-04-21.csv.zip` in the project root.
+2. Install dependencies:
+
+   ```bash
+   pip install pandas numpy scipy scikit-learn lightgbm xgboost yfinance \
+               matplotlib weasyprint markdown pygments pyarrow numba joblib
+   ```
+3. Run the full pipeline:
+
+   ```bash
+   python run_all.py --tier both
+   ```
+4. Output: `reports/final_report.pdf`
+
+## Phased execution
+
+```bash
+python run_all.py --from-phase 1 --stop-at-phase 1   # data loading only
+python run_all.py --from-phase 4 --stop-at-phase 5   # walk-forward + experiments
+python run_all.py --tier enhanced                     # enhanced tier only (85 cols)
+python run_all.py --tier both                         # enhanced + stretch tiers
+python run_all.py --dry-run --tier both               # preview without executing
 ```
 
-## Inputs
+## Data sources
 
-- `data/Earnings_ATC_until_2026-04-21.csv` (~4.47 GB, ~2.74M rows). Loaded
-  in 100k-row chunks by `data/load_signals.py`; never read whole into memory.
-- yfinance for prices and historical shares outstanding.
-- Wikipedia + iShares (IJH / IJR / IWV) monthly holdings for PIT universe membership.
+- Signal data: `Earnings_ATC_until_2026-04-21.csv.zip` (instructor-provided)
+- Price data: yfinance (auto-fetched and cached to `data/cache/prices/`)
+- Universe membership:
+  - SP500: Wikipedia historical constituent changes
+  - SP1500: iShares IJH + IJR monthly holdings + SP500
+  - RU3K: iShares IWV monthly holdings
+
+## Expected runtime
+
+~30-60 minutes for enhanced tier, ~60-90 minutes for both tiers (all 3
+universes) on a machine with 8+ cores and 16 GB RAM. Price fetching dominates
+the first run; subsequent runs use cached data and complete in ~15-30 minutes.
+
+## Key artifacts
+
+| Path | Description |
+|------|-------------|
+| `data/cache/signals.parquet` | Cleaned signal data |
+| `data/cache/prices/` | Per-ticker price parquet files |
+| `results/features_enhanced.parquet` | 85 engineered features |
+| `results/ic/` | IC analysis outputs |
+| `results/quintile/` | Quintile/decile portfolio outputs |
+| `results/portfolio/` | Rebalanced portfolio simulation outputs |
+| `results/robustness/` | Robustness check outputs |
+| `results/audit/` | Look-ahead audit artifacts |
+| `reports/figures/` | Chart PNGs |
+| `reports/final_report.pdf` | Final research PDF |
 
 ## Configuration
 
@@ -52,32 +67,13 @@ locations used by every later step:
 ```python
 # data/config.py
 SEED = 42
-CACHE_DIR        = ".../HW3/data/cache"
-UNIVERSE_RAW_DIR = ".../HW3/data/universe_raw"
-RESULTS_DIR      = ".../HW3/results"
-AUDIT_DIR        = ".../HW3/results/audit"
 ```
 
 Import `from data.config import SEED` everywhere and seed numpy / random / torch
-from that single source — this is the one place to change it.
-
-## Reproduction (one command)
-
-> Filled in at Phase 8. Will be either `make all` or `python run_all.py` and
-> will run: raw zip -> universes -> prices -> shares -> features -> audit
-> tests -> walk-forward -> experiments -> charts -> PDF, from a clean clone.
-
-Until Phase 8 is wired up, run each loader directly:
-
-```bash
-python -m data.load_signals
-python -m data.load_universes
-python -m data.load_prices
-python -m data.load_shares
-```
+from that single source.
 
 ## Look-ahead audit
 
-`features/audit.py` runs the eight assertion classes from `ideas/plan.md` §3.2.
-Any failure turns CI red. The signed one-page checklist lives at
-`results/audit/lookahead_checklist_onepager.md` and is appended to the final PDF.
+`features/audit.py` runs look-ahead audit assertions. Any failure turns CI red.
+The signed one-page checklist lives at `results/audit/lookahead_checklist_onepager.md`
+and is appended to the final PDF.

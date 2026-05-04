@@ -13,7 +13,9 @@ from __future__ import annotations
 
 import json
 import logging
+import pickle
 import time
+import warnings
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -21,13 +23,19 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
-from data.config import RESULTS_DIR, AUDIT_DIR, SEED
+warnings.filterwarnings("ignore", message=".*does not have valid feature names.*")
+
+from data.cache_utils import build_cache_manifest, write_cache_manifest
+from data.config import RESULTS_DIR, AUDIT_DIR, SEED, PRICE_CACHE_DIR, CACHE_MANIFEST_DIR
 from data.progress import progress
+
+from backtest._stats import make_median_imputer, spearman
 
 from backtest.splits import (
     HORIZONS,
     Fold,
     HPARAMS_DIR,
+    ensure_forward_returns,
     generate_folds,
     purge_train_for_horizon,
     get_feature_cols,
@@ -42,15 +50,6 @@ log = logging.getLogger("backtest.model")
 # ---------------------------------------------------------------------------
 # Preprocessing
 # ---------------------------------------------------------------------------
-
-def _make_median_imputer() -> Any:
-    from sklearn.impute import SimpleImputer
-
-    try:
-        return SimpleImputer(strategy="median", keep_empty_features=True)
-    except TypeError:  # pragma: no cover - older scikit-learn fallback
-        return SimpleImputer(strategy="median")
-
 
 def _impute_and_scale(
     X_train: pd.DataFrame | np.ndarray,
@@ -69,7 +68,7 @@ def _impute_and_scale(
     else:
         input_cols = [f"x{i}" for i in range(X_train.shape[1])]
 
-    imp = _make_median_imputer()
+    imp = make_median_imputer()
     X_tr_arr = imp.fit_transform(X_train)
     X_te_arr = imp.transform(X_test)
     out_cols = input_cols if len(input_cols) == X_tr_arr.shape[1] else [
@@ -134,7 +133,7 @@ def _select_stretch_features(
         cv=cv_splits,
         random_state=SEED,
         max_iter=5000,
-        n_jobs=-1,
+        n_jobs=4,
     )
     lasso.fit(X_train, y_train)
 
@@ -229,7 +228,7 @@ def _make_model(model_name: str, hparams: dict[str, Any]) -> Any:
             colsample_bytree=float(hparams.get("colsample_bytree", 0.8)),
             random_state=SEED,
             verbose=-1,
-            n_jobs=-1,
+            n_jobs=4,
         )
 
     if model_name == "xgboost":
@@ -247,7 +246,7 @@ def _make_model(model_name: str, hparams: dict[str, Any]) -> Any:
             reg_lambda=float(hparams.get("reg_lambda", 10.0)),
             random_state=SEED,
             verbosity=0,
-            n_jobs=-1,
+            n_jobs=4,
         )
 
     raise ValueError(f"unknown model: {model_name}")
@@ -273,23 +272,35 @@ class FoldResult:
     fit_violations: list[str] | None = None
     fit_log: list[dict[str, Any]] | None = None
 
+@dataclass
+class FoldSample:
+    train_idx: np.ndarray
+    test_idx: np.ndarray
+    X_train: pd.DataFrame
+    X_test: pd.DataFrame
+    y_train: np.ndarray
+    y_test: np.ndarray
+    train_start: pd.Timestamp
+    train_end: pd.Timestamp
+    target_col: str
+    target_date_col: str
 
-def _run_one_fold(
+
+
+def _prepare_fold_sample(
     df: pd.DataFrame,
     fold: Fold,
-    model_name: str,
-    hparams: dict[str, Any],
     horizon: int,
-    tier: str,
     availability_col: str,
-    feature_names: list[str] | None = None,
-) -> FoldResult | None:
-    """Fit one model on one fold for one horizon.
+    feature_names: list[str],
+) -> FoldSample | None:
+    """Apply G11 purge, sort training by availability date, and build X/y.
 
-    Returns a FoldResult with predictions, or None if the purged training set
-    or test set is empty.
+    Training rows still require realized targets.  Test rows do not: OOS
+    predictions are tradable signals, so target availability must only affect
+    evaluation metrics, never whether a signal is emitted.
     """
-    # ----- G11 purge -----
+    # G11 purge
     train_idx = purge_train_for_horizon(fold, df, horizon)
     test_idx = fold.test_indices
 
@@ -298,73 +309,107 @@ def _run_one_fold(
                  fold.fold_id, horizon, len(train_idx), len(test_idx))
         return None
 
-    # ----- Build feature matrix -----
-    if feature_names is None:
-        feature_names = get_feature_cols(df)
-
     target_col = f"forward_return_{horizon}d"
     target_date_col = f"target_available_date_{horizon}d"
 
-    train_dates = pd.to_datetime(
+    # Convert availability dates once for reuse
+    train_avail_dates = pd.to_datetime(
         df[availability_col].iloc[train_idx], errors="coerce"
-    ).to_numpy(dtype="datetime64[ns]")
-    train_order = np.argsort(train_dates, kind="mergesort")
-    train_idx = train_idx[train_order]
+    )
 
+    # Sort training by availability date
+    train_order = np.argsort(
+        train_avail_dates.to_numpy(dtype="datetime64[ns]"), kind="mergesort"
+    )
+    train_idx = train_idx[train_order]
+    train_avail_dates = train_avail_dates.iloc[train_order]
+
+    # Drop NaN training targets
     y_train_all = df[target_col].iloc[train_idx].to_numpy(dtype="float64")
     train_valid = np.isfinite(y_train_all)
     if not train_valid.all():
         train_idx = train_idx[train_valid]
+        train_avail_dates = train_avail_dates.iloc[train_valid]
         y_train_all = y_train_all[train_valid]
 
+    # Keep every test event for OOS signal generation — right-censored test
+    # events (NaN y_true because target_available_date_{h}d is beyond the
+    # price-data extent) are retained so that the model emits a tradable
+    # prediction for every event.  Missing future returns are excluded only
+    # from IC/MSE evaluation (via eval_mask), never from portfolio signal
+    # generation.  This is an intentional design choice (see Phase 4.4).
     y_test_all = df[target_col].iloc[test_idx].to_numpy(dtype="float64")
-    test_valid = np.isfinite(y_test_all)
 
     if len(train_idx) < 10:
         log.info("  fold %d h=%d: skip after target filter (train=%d)",
                  fold.fold_id, horizon, len(train_idx))
         return None
-    if not test_valid.any():
-        log.info("  fold %d h=%d: all test targets NaN — skip",
-                 fold.fold_id, horizon)
-        return None
 
-    test_idx_valid = test_idx[test_valid]
     y_train = y_train_all
-    y_test = y_test_all[test_valid]
+    y_test = y_test_all
 
-    X_train_all = df[feature_names].iloc[train_idx].copy()
-    X_test_all = df[feature_names].iloc[test_idx_valid].copy()
-    X_train_all.index = pd.DatetimeIndex(
-        pd.to_datetime(df[availability_col].iloc[train_idx], errors="coerce")
-    )
-    X_test_all.index = pd.DatetimeIndex(
-        pd.to_datetime(df[availability_col].iloc[test_idx_valid], errors="coerce")
+    # Build X matrices with DatetimeIndex for fit monitoring
+    X_train = df[feature_names].iloc[train_idx].copy()
+    X_test = df[feature_names].iloc[test_idx].copy()
+    X_train.index = pd.DatetimeIndex(train_avail_dates)
+    X_test.index = pd.DatetimeIndex(
+        pd.to_datetime(df[availability_col].iloc[test_idx], errors="coerce")
     )
 
-    # ----- Fit audit: intercept every fit() call (Plan §3.2 assertion 3) -----
+    train_start = pd.Timestamp(train_avail_dates.min())
+    train_end = pd.Timestamp(train_avail_dates.max())
+
+    return FoldSample(
+        train_idx=train_idx,
+        test_idx=test_idx,
+        X_train=X_train,
+        X_test=X_test,
+        y_train=y_train,
+        y_test=y_test,
+        train_start=train_start,
+        train_end=train_end,
+        target_col=target_col,
+        target_date_col=target_date_col,
+    )
+
+
+def _fit_select_predict_with_audit(
+    sample: FoldSample,
+    fold: Fold,
+    model_name: str,
+    hparams: dict[str, Any],
+    tier: str,
+    horizon: int,
+    feature_names: list[str],
+    df: pd.DataFrame,
+    availability_col: str,
+    model_checkpoint_path: Path | None = None,
+) -> tuple[np.ndarray, list[str] | None, float, list[str], list[dict[str, Any]]] | None:
+    """Impute, scale, optionally select stretch features, fit model, predict, and audit fit calls.
+
+    Returns None when the stretch inner purged CV is empty (can happen for
+    small folds with many NaN targets after G11 purge).  Callers must handle
+    this by skipping the fold.
+    """
     from features.audit import monitor_fit_calls, get_fit_log, assert_fit_callstack, assert_fold_boundaries
 
-    train_start = pd.Timestamp(
-        pd.to_datetime(df[availability_col].iloc[train_idx], errors="coerce").min()
-    )
-    train_end = pd.Timestamp(
-        pd.to_datetime(df[availability_col].iloc[train_idx], errors="coerce").max()
-    )
+    X_tr = sample.X_train
+    X_te = sample.X_test
+    y_train = sample.y_train
     fit_violations: list[str] = []
 
     with monitor_fit_calls():
-        # ----- Impute + scale (fit on train only) -----
-        X_tr, X_te, imp, scl = _impute_and_scale(X_train_all, X_test_all)
+        # Impute + scale (fit on train only)
+        X_tr, X_te, imp, scl = _impute_and_scale(X_tr, X_te)
 
-        # ----- Stretch tier: LassoCV column selection -----
+        # Stretch tier: LassoCV column selection
         selected_features = None
         if tier == "stretch":
             train_feature_dates = pd.to_datetime(
-                df[availability_col].iloc[train_idx], errors="coerce"
+                df[availability_col].iloc[sample.train_idx], errors="coerce"
             ).to_numpy(dtype="datetime64[ns]")
             train_target_dates = pd.to_datetime(
-                df[target_date_col].iloc[train_idx], errors="coerce"
+                df[sample.target_date_col].iloc[sample.train_idx], errors="coerce"
             ).to_numpy(dtype="datetime64[ns]")
             lasso_cv = _purged_time_series_splits(
                 train_feature_dates, train_target_dates, n_splits=3
@@ -385,21 +430,25 @@ def _run_one_fold(
             log.info("  fold %d h=%d: stretch selection kept %d features",
                      fold.fold_id, horizon, len(kept_names))
 
-        # ----- Fit model -----
+        # Fit model
         t0 = time.time()
         model = _make_model(model_name, hparams)
         model.fit(X_tr, y_train)
+        if model_checkpoint_path is not None:
+            model_checkpoint_path.parent.mkdir(parents=True, exist_ok=True)
+            with open(model_checkpoint_path, "wb") as f:
+                pickle.dump(model, f)
         fit_time = time.time() - t0
 
-    # ----- Verify fit-call boundaries -----
+    # Verify fit-call boundaries
     fit_log = get_fit_log()
     for entry in fit_log:
         entry["fold_id"] = fold.fold_id
         entry["horizon"] = horizon
-        entry["train_start"] = str(train_start.date())
-        entry["train_end"] = str(train_end.date())
+        entry["train_start"] = str(sample.train_start.date())
+        entry["train_end"] = str(sample.train_end.date())
     fit_violations = assert_fit_callstack(
-        fit_log, train_start, train_end,
+        fit_log, sample.train_start, sample.train_end,
         fold_id=f"fold_{fold.fold_id}_h{horizon}d",
     )
     if fit_violations:
@@ -408,16 +457,14 @@ def _run_one_fold(
         for v in fit_violations:
             log.warning("    %s", v)
 
-    # ----- Fold boundary validation (Plan §3.2 assertion 2) -----
+    # Fold boundary validation
     max_train_target = fold.max_train_target_date.get(horizon)
     boundary_violations = assert_fold_boundaries(
         fold_train_start=fold.train_start,
         fold_train_end=fold.train_end,
         fold_test_start=fold.test_start,
-        fold_test_end=fold.test_end,
-        max_train_feature_date=train_end,
+        max_train_feature_date=sample.train_end,
         max_train_target_available=max_train_target,
-        horizon_days=horizon,
     )
     if boundary_violations:
         log.warning("  fold %d h=%d: %d fold-boundary violation(s)",
@@ -428,20 +475,223 @@ def _run_one_fold(
 
     y_pred = model.predict(X_te)
 
+    return y_pred, selected_features, fit_time, fit_violations, fit_log
+
+
+def _build_fold_result(
+    fold: Fold,
+    horizon: int,
+    model_name: str,
+    sample: FoldSample,
+    y_pred: np.ndarray,
+    selected_features: list[str] | None,
+    fit_time_s: float,
+    fit_violations: list[str],
+    fit_log: list[dict[str, Any]],
+) -> FoldResult:
+    """Pack fold outputs into FoldResult."""
     return FoldResult(
         fold_id=fold.fold_id,
         horizon=horizon,
         model_name=model_name,
-        n_train=len(train_idx),
-        n_test=len(test_idx_valid),
-        test_indices=test_idx_valid,
+        n_train=len(sample.train_idx),
+        n_test=len(sample.test_idx),
+        test_indices=sample.test_idx,
         y_pred=y_pred,
-        y_true=y_test,
+        y_true=sample.y_test,
         selected_features=selected_features,
-        fit_time_s=fit_time,
+        fit_time_s=fit_time_s,
         fit_violations=fit_violations if fit_violations else None,
         fit_log=fit_log,
     )
+
+
+def _build_oos_predictions_df(
+    df: pd.DataFrame,
+    fold_results: list[FoldResult],
+    horizon: int,
+    model_name: str,
+    tier: str,
+    universe_name: str,
+    signal_type: str,
+) -> tuple[pd.DataFrame | None, float, float]:
+    """Concatenate fold predictions and compute aggregate OOS IC/MSE."""
+    if not fold_results:
+        return None, float("nan"), float("nan")
+
+    all_pred = np.concatenate([f.y_pred for f in fold_results])
+    all_true = np.concatenate([f.y_true for f in fold_results])
+    all_indices = np.concatenate([f.test_indices for f in fold_results])
+    eval_mask = np.isfinite(all_pred) & np.isfinite(all_true)
+    if eval_mask.any():
+        oos_ic = spearman(all_pred[eval_mask], all_true[eval_mask])
+        oos_mse = float(np.mean((all_pred[eval_mask] - all_true[eval_mask]) ** 2))
+    else:
+        oos_ic = float("nan")
+        oos_mse = float("nan")
+
+    if "_orig_df_index" in df.columns:
+        df_indices = df["_orig_df_index"].iloc[all_indices].to_numpy(dtype=np.int64)
+    else:
+        df_indices = all_indices
+
+    oos_df = pd.DataFrame({
+        "df_index": df_indices,
+        "horizon": horizon,
+        "model": model_name,
+        "tier": tier,
+        "universe": universe_name,
+        "signal_type": signal_type,
+        "y_pred": all_pred,
+        "y_true": all_true,
+    })
+    log.info("  aggregate OOS: n_pred=%d  n_eval=%d  IC=%.6f  MSE=%.6f",
+             len(all_pred), int(eval_mask.sum()), oos_ic, oos_mse)
+    return oos_df, oos_ic, oos_mse
+
+
+def _write_oos_predictions(
+    oos_df: pd.DataFrame | None,
+    audit_dir: Path,
+    model_name: str,
+    tier: str,
+    universe_name: str,
+    signal_type: str,
+    horizon: int,
+) -> Path | None:
+    """Write one horizon's OOS prediction parquet using the existing filename scheme."""
+    if oos_df is None:
+        return None
+    suffix_parts = [model_name, tier]
+    if universe_name and universe_name != "all":
+        suffix_parts.append(universe_name)
+    if signal_type and signal_type != "all":
+        suffix_parts.append(signal_type.lower())
+    suffix_parts.append(f"h{horizon}d")
+    pred_path = audit_dir / f"oos_pred_{'_'.join(suffix_parts)}.parquet"
+    oos_df.to_parquet(pred_path, index=False)
+    log.info("  wrote %s", pred_path)
+    return pred_path
+
+
+def _write_walk_forward_audit_outputs(
+    df: pd.DataFrame,
+    folds: list[Fold],
+    results: dict[int, WalkForwardResult],
+    model_name: str,
+    tier: str,
+    horizons: list[int],
+    audit_dir: Path,
+    universe_name: str,
+    signal_type: str,
+) -> None:
+    """Write fold manifest and sample-size audit files."""
+    manifest_suffix = "_".join(
+        p for p in [model_name, tier, universe_name, signal_type.lower()] if p and p != "all"
+    )
+    fold_manifest_path = audit_dir / f"fold_manifest_{manifest_suffix}.parquet"
+    sample_audit_path = audit_dir / f"sample_size_by_quarter_{manifest_suffix}.parquet"
+    write_fold_manifest(
+        folds,
+        output_path=fold_manifest_path,
+        model=model_name,
+        tier=tier,
+        horizons=horizons,
+    )
+    write_sample_size_audit(
+        df,
+        folds,
+        output_path=sample_audit_path,
+        universe=universe_name,
+        signal_type=signal_type,
+    )
+    # Keep the generic evidence filenames populated for the one-page checklist;
+    # these intentionally reflect the most recent walk-forward invocation.
+    write_fold_manifest(folds, output_path=audit_dir / "fold_manifest.parquet",
+                        model=model_name, tier=tier, horizons=horizons)
+    write_sample_size_audit(df, folds, output_path=audit_dir / "sample_size_by_quarter.parquet",
+                            universe=universe_name, signal_type=signal_type)
+
+
+def _run_one_fold(
+    df: pd.DataFrame,
+    fold: Fold,
+    model_name: str,
+    hparams: dict[str, Any],
+    horizon: int,
+    tier: str,
+    availability_col: str,
+    feature_names: list[str] | None = None,
+    checkpoint_dir: Path | None = None,
+    universe_name: str = "all",
+) -> FoldResult | None:
+    """Fit one model on one fold for one horizon.
+
+    When *checkpoint_dir* is provided, per-fold model and prediction
+    checkpoint files are saved.  On subsequent calls with the same
+    parameters, the predictions are loaded from disk and training is
+    skipped, enabling resume within a horizon.
+
+    Returns a FoldResult with predictions, or None if the purged training set
+    or test set is empty.
+    """
+    if feature_names is None:
+        feature_names = get_feature_cols(df)
+
+    # Compute checkpoint paths when caching is enabled
+    model_checkpoint_path: Path | None = None
+    pred_checkpoint_path: Path | None = None
+    if checkpoint_dir is not None:
+        stem = f"{model_name}_{tier}_{universe_name}_h{horizon}d_fold{fold.fold_id}"
+        model_checkpoint_path = checkpoint_dir / f"{stem}.pkl"
+        pred_checkpoint_path = checkpoint_dir / f"{stem}_pred.parquet"
+
+    # Attempt checkpoint resume — skip training if prediction parquet exists
+    if pred_checkpoint_path is not None and pred_checkpoint_path.exists():
+        sample = _prepare_fold_sample(df, fold, horizon, availability_col, feature_names)
+        if sample is None:
+            return None
+        try:
+            pred_df = pd.read_parquet(pred_checkpoint_path)
+            y_pred = pred_df["y_pred"].to_numpy(dtype="float64")
+            log.info("  fold %d: loaded checkpoint (%d preds)",
+                     fold.fold_id, len(y_pred))
+            return _build_fold_result(
+                fold, horizon, model_name, sample, y_pred,
+                selected_features=None, fit_time_s=0.0,
+                fit_violations=[], fit_log=[],
+            )
+        except Exception:
+            log.warning("  fold %d: corrupt checkpoint, retraining", fold.fold_id)
+
+    # Fresh training path
+    sample = _prepare_fold_sample(df, fold, horizon, availability_col, feature_names)
+    if sample is None:
+        return None
+
+    result = _fit_select_predict_with_audit(
+        sample, fold, model_name, hparams, tier, horizon, feature_names,
+        df, availability_col,
+        model_checkpoint_path=model_checkpoint_path,
+    )
+    if result is None:
+        return None
+
+    y_pred, selected_features, fit_time_s, fit_violations, fit_log = result
+    fr = _build_fold_result(
+        fold, horizon, model_name, sample, y_pred, selected_features,
+        fit_time_s, fit_violations, fit_log,
+    )
+
+    # Save prediction checkpoint
+    if pred_checkpoint_path is not None:
+        pred_checkpoint_path.parent.mkdir(parents=True, exist_ok=True)
+        pd.DataFrame({"y_pred": y_pred}).to_parquet(pred_checkpoint_path, index=False)
+
+    return fr
+
+
+
 
 
 # ---------------------------------------------------------------------------
@@ -471,29 +721,34 @@ def run_walk_forward(
     availability_col: str = "availability_date",
     universe_name: str = "all",
     signal_type: str = "all",
+    features_path: Path | None = None,
 ) -> dict[int, WalkForwardResult]:
     """Run the full walk-forward backtest for one model + tier.
 
     Parameters
     ----------
-    df: Feature DataFrame with ``forward_return_{h}d`` and
-        ``target_available_date_{h}d`` columns already joined.
-    model_name: ``"ridge"`` | ``"lightgbm"`` | ``"xgboost"``.
-    tier: ``"enhanced"`` | ``"stretch"``.
+    df: Feature DataFrame with forward_return_{h}d and
+        target_available_date_{h}d columns already joined.
+    model_name: "ridge" | "lightgbm" | "xgboost".
+    tier: "enhanced" | "stretch".
     horizons: List of forward-return horizons (default: [1,3,5,10,20]).
-    hparams_dir: Directory containing ``{tier}/h{horizon}d/frozen_hparams_{model}.json``.
+    hparams_dir: Directory containing {tier}/h{horizon}d/frozen_hparams_{model}.json.
     audit_dir: Directory for audit output files.
     availability_col: Column for PIT availability filtering of training data
-        (default ``"availability_date"``).
+        (default "availability_date").
 
     Returns
     -------
-    Dict mapping horizon → WalkForwardResult.
+    Dict mapping horizon to WalkForwardResult.
     """
     horizons = horizons or HORIZONS
     hparams_dir = hparams_dir or HPARAMS_DIR
     audit_dir = audit_dir or AUDIT_DIR
     audit_dir.mkdir(parents=True, exist_ok=True)
+
+    # Model checkpoint directory for per-fold resume
+    model_cache_dir = RESULTS_DIR / "cache" / "models"
+    model_cache_dir.mkdir(parents=True, exist_ok=True)
 
     # Generate folds (identical across horizons)
     folds = generate_folds(df, availability_col=availability_col)
@@ -519,43 +774,24 @@ def run_walk_forward(
             fr = _run_one_fold(
                 df, fold, model_name, hparams, horizon, tier,
                 availability_col, feature_names,
+                checkpoint_dir=model_cache_dir,
+                universe_name=universe_name,
             )
             if fr is not None:
                 fold_results.append(fr)
                 log.info("  fold %d: train=%d test=%d  ic=%.4f  (%.1fs)",
                          fold.fold_id, fr.n_train, fr.n_test,
-                         _spearman(fr.y_pred, fr.y_true), fr.fit_time_s)
+                         spearman(fr.y_pred, fr.y_true), fr.fit_time_s)
 
-        # Aggregate OOS predictions
-        if fold_results:
-            all_pred = np.concatenate([f.y_pred for f in fold_results])
-            all_true = np.concatenate([f.y_true for f in fold_results])
-            all_indices = np.concatenate([f.test_indices for f in fold_results])
-            oos_ic = _spearman(all_pred, all_true)
-            oos_mse = float(np.mean((all_pred - all_true) ** 2))
+        # Build OOS predictions
+        oos_df, oos_ic, oos_mse = _build_oos_predictions_df(
+            df, fold_results, horizon, model_name, tier, universe_name, signal_type,
+        )
 
-            if "_orig_df_index" in df.columns:
-                df_indices = df["_orig_df_index"].iloc[all_indices].to_numpy(dtype=np.int64)
-            else:
-                df_indices = all_indices
-
-            oos_df = pd.DataFrame({
-                "df_index": df_indices,
-                "horizon": horizon,
-                "model": model_name,
-                "tier": tier,
-                "universe": universe_name,
-                "signal_type": signal_type,
-                "y_pred": all_pred,
-                "y_true": all_true,
-            })
-            log.info("  aggregate OOS: n=%d  IC=%.6f  MSE=%.6f",
-                     len(all_pred), oos_ic, oos_mse)
-        else:
-            oos_df = None
-            oos_ic = float("nan")
-            oos_mse = float("nan")
-            log.warning("  no valid fold results for horizon=%d", horizon)
+        # Write per-horizon OOS predictions
+        _write_oos_predictions(
+            oos_df, audit_dir, model_name, tier, universe_name, signal_type, horizon,
+        )
 
         wr = WalkForwardResult(
             model_name=model_name,
@@ -570,17 +806,21 @@ def run_walk_forward(
         )
         results[horizon] = wr
 
-        # Write per-horizon OOS predictions
-        if oos_df is not None:
-            suffix_parts = [model_name, tier]
-            if universe_name and universe_name != "all":
-                suffix_parts.append(universe_name)
-            if signal_type and signal_type != "all":
-                suffix_parts.append(signal_type.lower())
-            suffix_parts.append(f"h{horizon}d")
-            pred_path = audit_dir / f"oos_pred_{'_'.join(suffix_parts)}.parquet"
-            oos_df.to_parquet(pred_path, index=False)
-            log.info("  wrote %s", pred_path)
+        # Per-horizon cache manifest
+        if features_path is not None:
+            _write_horizon_cache_manifest(
+                model_name, tier, horizon, universe_name, signal_type,
+                features_path, hparams_dir,
+            )
+
+        # Clean up per-fold checkpoint files — no longer needed after the
+        # aggregated OOS parquet has been written.
+        for fold in folds:
+            stem = f"{model_name}_{tier}_{universe_name}_h{horizon}d_fold{fold.fold_id}"
+            for suffix in [".pkl", "_pred.parquet"]:
+                cp = model_cache_dir / f"{stem}{suffix}"
+                if cp.exists():
+                    cp.unlink()
 
         elapsed = time.time() - t_start
         log.info("  horizon=%dd done (%.0fs)  OOS_IC=%.6f", horizon, elapsed, oos_ic)
@@ -592,38 +832,60 @@ def run_walk_forward(
                  h, wr.oos_ic, wr.oos_mse, len(wr.fold_results))
 
     # Write audit outputs
-    manifest_suffix = "_".join(
-        p for p in [model_name, tier, universe_name, signal_type.lower()] if p and p != "all"
+    _write_walk_forward_audit_outputs(
+        df, folds, results, model_name, tier, horizons, audit_dir, universe_name, signal_type,
     )
-    fold_manifest_path = audit_dir / f"fold_manifest_{manifest_suffix}.parquet"
-    sample_audit_path = audit_dir / f"sample_size_by_quarter_{manifest_suffix}.parquet"
-    write_fold_manifest(
-        folds,
-        output_path=fold_manifest_path,
-        model=model_name,
-        tier=tier,
-        horizons=horizons,
-    )
-    write_sample_size_audit(
-        df,
-        folds,
-        output_path=sample_audit_path,
-    )
-    # Keep the generic evidence filenames populated for the one-page checklist;
-    # these intentionally reflect the most recent walk-forward invocation.
-    write_fold_manifest(folds, output_path=audit_dir / "fold_manifest.parquet",
-                        model=model_name, tier=tier, horizons=horizons)
-    write_sample_size_audit(df, folds, output_path=audit_dir / "sample_size_by_quarter.parquet")
 
     return results
+
+
+
 
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _spearman(a: np.ndarray, b: np.ndarray) -> float:
-    return float(pd.Series(a).corr(pd.Series(b), method="spearman"))
+def _write_horizon_cache_manifest(
+    model_name: str,
+    tier: str,
+    horizon: int,
+    universe_name: str,
+    signal_type: str,
+    features_path: Path,
+    hparams_dir: Path,
+) -> None:
+    """Build and write a cache manifest for one completed horizon.
+
+    Captures input file hashes (feature parquet, frozen hparams JSON, price
+    manifest) and source-code hashes for the key walk-forward functions so
+    that ``run_all.py`` can skip the phase when nothing changed.
+    """
+    phase = (
+        f"4_{model_name}_{tier}_{universe_name}"
+        f"_{signal_type.lower()}_h{horizon}d"
+    )
+    hparams_path = (
+        Path(hparams_dir) / tier / f"h{horizon}d"
+        / f"frozen_hparams_{model_name}.json"
+    )
+    price_manifest_path = PRICE_CACHE_DIR / "_manifest.json"
+
+    manifest = build_cache_manifest(
+        phase=phase,
+        parameters={
+            "model": model_name,
+            "tier": tier,
+            "universe": universe_name,
+            "signal_type": signal_type,
+            "horizon": horizon,
+        },
+        input_paths=[features_path, hparams_path, price_manifest_path],
+        source_funcs=[run_walk_forward, _run_one_fold],
+    )
+    manifest_path = CACHE_MANIFEST_DIR / f"{phase}.json"
+    write_cache_manifest(manifest, manifest_path)
+    log.info("wrote cache manifest: %s", manifest_path)
 
 
 # ---------------------------------------------------------------------------
@@ -635,8 +897,8 @@ def write_fit_audit_log(
     output_path: Path | None = None,
 ) -> Path:
     """Write one JSONL line per fold result for the audit trail."""
+    first = next(iter(results.values()), None)
     if output_path is None:
-        first = next(iter(results.values()), None)
         if first is None:
             output_path = AUDIT_DIR / "fit_audit_log.jsonl"
         else:
@@ -663,7 +925,7 @@ def write_fit_audit_log(
                 "n_train": fr.n_train,
                 "n_test": fr.n_test,
                 "fit_time_s": round(fr.fit_time_s, 3),
-                "fold_ic": round(_spearman(fr.y_pred, fr.y_true), 6),
+                "fold_ic": round(spearman(fr.y_pred, fr.y_true), 6),
                 "n_selected_features": (
                     len(fr.selected_features) if fr.selected_features else -1
                 ),
@@ -674,6 +936,11 @@ def write_fit_audit_log(
 
     output_path.write_text("\n".join(lines) + "\n")
     log.info("wrote fit audit log: %s", output_path)
+    if first is not None:
+        legacy_path = AUDIT_DIR / f"fit_audit_log_{first.model_name}_{first.tier}.jsonl"
+        if legacy_path != output_path:
+            legacy_path.write_text("\n".join(lines) + "\n")
+            log.info("wrote compatibility fit audit log: %s", legacy_path)
     return output_path
 
 
@@ -695,7 +962,7 @@ def filter_model_sample(
     """
     from backtest.universe import filter_to_universe
 
-    out = df.copy()
+    out = df
     if "_orig_df_index" not in out.columns:
         out["_orig_df_index"] = np.arange(len(out), dtype=np.int64)
 
@@ -723,6 +990,113 @@ def filter_model_sample(
 # ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
+
+def _load_features_with_forward_returns(args: argparse.Namespace) -> pd.DataFrame:
+    """Load feature parquet and ensure requested forward returns are present."""
+    log.info("loading features from %s", args.features)
+    feat_df = pd.read_parquet(args.features)
+    log.info("features: %d rows x %d cols", len(feat_df), len(feat_df.columns))
+
+    feat_df = ensure_forward_returns(
+        feat_df, args.features, horizons=args.horizons,
+        entry_date_col=args.availability_col,
+    )
+
+    feat_df = filter_model_sample(
+        feat_df,
+        universe_name=args.universe,
+        signal_type=args.signal_type,
+        universe_date_col="call_entry_date",
+    )
+    if feat_df.empty:
+        raise RuntimeError(
+            f"model sample is empty after universe={args.universe}, "
+            f"signal_type={args.signal_type} filtering"
+        )
+    log.info(
+        "model sample after filters: %d rows x %d cols",
+        len(feat_df),
+        len(feat_df.columns),
+    )
+    return feat_df
+
+
+def _models_to_run(model_arg: str) -> list[str]:
+    """Expand 'all' into ridge/lightgbm/xgboost."""
+    if model_arg == "all":
+        return ["ridge", "lightgbm", "xgboost"]
+    return [model_arg]
+
+
+def _tune_missing_hparams(
+    args: argparse.Namespace,
+    feat_df: pd.DataFrame,
+    models_to_run: list[str],
+) -> None:
+    """Tune missing or requested frozen hyperparameters for all horizons."""
+    from backtest.splits import tune_all_models
+
+    hparams_dir = args.hparams_dir or HPARAMS_DIR
+    horizons_to_tune = args.horizons if args.tune_only else args.horizons
+    for tune_h in horizons_to_tune:
+        target_col = f"forward_return_{tune_h}d"
+        target_avail_col = f"target_available_date_{tune_h}d"
+
+        if target_col not in feat_df.columns:
+            raise RuntimeError(
+                f"{target_col} not in feature columns — run "
+                f"compute_forward_returns first or set --horizons"
+            )
+
+        missing_hparams = [
+            m for m in models_to_run
+            if not (hparams_dir / args.tier / f"h{tune_h}d" / f"frozen_hparams_{m}.json").exists()
+        ]
+        if not missing_hparams and not args.tune_only:
+            continue
+
+        to_tune = models_to_run if args.tune_only else missing_hparams
+        log.info(
+            "tuning models %s (tier=%s, horizon=%dd, availability_col=%s) …",
+            to_tune, args.tier, tune_h, args.availability_col,
+        )
+        tune_all_models(
+            feat_df,
+            target_col,
+            target_avail_col,
+            output_dir=hparams_dir,
+            availability_col=args.availability_col,
+            models=to_tune,
+            tier=args.tier,
+            horizon=tune_h,
+        )
+
+    for h in args.horizons:
+        for m in models_to_run:
+            hparam_path = hparams_dir / args.tier / f"h{h}d" / f"frozen_hparams_{m}.json"
+            log.info("frozen hparams for %s h=%dd: %s", m, h, hparam_path)
+
+
+def _run_walk_forward_models(
+    args: argparse.Namespace,
+    feat_df: pd.DataFrame,
+    models_to_run: list[str],
+) -> None:
+    """Run walk-forward and write fit audit logs for all selected models."""
+    for m in models_to_run:
+        results = run_walk_forward(
+            feat_df,
+            model_name=m,
+            tier=args.tier,
+            horizons=args.horizons,
+            hparams_dir=args.hparams_dir,
+            availability_col=args.availability_col,
+            universe_name=args.universe,
+            signal_type=args.signal_type,
+            features_path=args.features,
+        )
+        write_fit_audit_log(results)
+
 
 def main() -> None:
     import argparse
@@ -787,112 +1161,21 @@ def main() -> None:
         format="%(asctime)s [%(levelname)s] %(message)s",
     )
 
-    # Load features
-    log.info("loading features from %s", args.features)
-    feat_df = pd.read_parquet(args.features)
-    log.info("features: %d rows x %d cols", len(feat_df), len(feat_df.columns))
+    # Load features with forward returns
+    feat_df = _load_features_with_forward_returns(args)
 
-    # Compute forward returns if not already present
-    has_returns = any(
-        c.startswith("forward_return_") for c in feat_df.columns
-    )
-    if not has_returns:
-        log.info("computing forward returns (cached) …")
-        from backtest.splits import get_forward_returns_cached
-        fwd = get_forward_returns_cached(
-            args.features, feat_df, horizons=args.horizons,
-            entry_date_col=args.availability_col,
-        )
-        feat_df = pd.concat([feat_df.reset_index(drop=True),
-                             fwd.reset_index(drop=True)], axis=1)
-        log.info("forward returns joined: %d cols", len(feat_df.columns))
+    # Determine which models to run
+    models_to_run = _models_to_run(args.model)
 
-    feat_df = filter_model_sample(
-        feat_df,
-        universe_name=args.universe,
-        signal_type=args.signal_type,
-        universe_date_col="call_entry_date",
-    )
-    if feat_df.empty:
-        raise RuntimeError(
-            f"model sample is empty after universe={args.universe}, "
-            f"signal_type={args.signal_type} filtering"
-        )
-    log.info(
-        "model sample after filters: %d rows x %d cols",
-        len(feat_df),
-        len(feat_df.columns),
-    )
-
-    models_to_run = (
-        ["ridge", "lightgbm", "xgboost"] if args.model == "all"
-        else [args.model]
-    )
-
-    # ------------------------------------------------------------------
-    # Hyperparameter tuning (one-time, on 2010-2019)
-    # ------------------------------------------------------------------
-    hparams_dir = args.hparams_dir or HPARAMS_DIR
-    horizons_to_tune = args.horizons if args.tune_only else args.horizons
-    for tune_h in horizons_to_tune:
-        target_col = f"forward_return_{tune_h}d"
-        target_avail_col = f"target_available_date_{tune_h}d"
-
-        if target_col not in feat_df.columns:
-            raise RuntimeError(
-                f"{target_col} not in feature columns — run "
-                f"compute_forward_returns first or set --horizons"
-            )
-
-        missing_hparams = [
-            m for m in models_to_run
-            if not (hparams_dir / args.tier / f"h{tune_h}d" / f"frozen_hparams_{m}.json").exists()
-        ]
-        if not missing_hparams and not args.tune_only:
-            continue
-
-        from backtest.splits import tune_all_models
-
-        to_tune = models_to_run if args.tune_only else missing_hparams
-        log.info(
-            "tuning models %s (tier=%s, horizon=%dd, availability_col=%s) …",
-            to_tune, args.tier, tune_h, args.availability_col,
-        )
-        tune_all_models(
-            feat_df,
-            target_col,
-            target_avail_col,
-            output_dir=hparams_dir,
-            availability_col=args.availability_col,
-            models=to_tune,
-            tier=args.tier,
-            horizon=tune_h,
-        )
-
-    for h in args.horizons:
-        for m in models_to_run:
-            hparam_path = hparams_dir / args.tier / f"h{h}d" / f"frozen_hparams_{m}.json"
-            log.info("frozen hparams for %s h=%dd: %s", m, h, hparam_path)
+    # Tune missing hyperparameters
+    _tune_missing_hparams(args, feat_df, models_to_run)
 
     if args.tune_only:
         log.info("--tune-only: done")
         return
 
-    # ------------------------------------------------------------------
-    # Walk-forward backtest
-    # ------------------------------------------------------------------
-    for m in models_to_run:
-        results = run_walk_forward(
-            feat_df,
-            model_name=m,
-            tier=args.tier,
-            horizons=args.horizons,
-            hparams_dir=args.hparams_dir,
-            availability_col=args.availability_col,
-            universe_name=args.universe,
-            signal_type=args.signal_type,
-        )
-        write_fit_audit_log(results)
+    # Run walk-forward backtest
+    _run_walk_forward_models(args, feat_df, models_to_run)
 
     log.info("Phase 4 done.")
 

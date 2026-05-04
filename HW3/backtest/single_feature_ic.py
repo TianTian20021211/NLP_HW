@@ -1,7 +1,7 @@
 """Phase 5.1 — Single-Feature IC Analysis.
 
-Cross-sectional Spearman IC for the 14-column short list, computed by month
-and sector, with Newey-West adjusted t-statistics.
+Cross-sectional Spearman IC for the 14-column short list, computed by month,
+year, and sector, with Newey-West adjusted t-statistics.
 
 Usage::
 
@@ -13,9 +13,12 @@ Usage::
 from __future__ import annotations
 
 import argparse
+import gc
 import itertools
 import json
 import logging
+import os
+from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 from typing import Any
 
@@ -23,7 +26,10 @@ import numpy as np
 import pandas as pd
 from scipy.stats import spearmanr
 
+from backtest.universe import filter_to_universe
+from data.cache_utils import build_cache_manifest, write_cache_manifest
 from data.config import (
+    CACHE_MANIFEST_DIR,
     PRICE_CACHE_DIR,
     RESULTS_DIR,
     UNIVERSE_CACHE_DIR,
@@ -113,11 +119,7 @@ def _compute_cross_sectional_ic(
     for gname, gdf in sub.groupby(group_col, observed=True):
         if len(gdf) < min_samples:
             continue
-        # Deduplicate: keep latest event per ticker within each group
-        gdf = (
-            gdf.sort_values("call_entry_date")
-            .drop_duplicates(subset=["BESTTICKER"], keep="last")
-        )
+        gdf = gdf.sort_values("call_entry_date").groupby("BESTTICKER").last()
         if len(gdf) < min_samples:
             continue
         ic, _ = spearmanr(gdf[feature_col].values, gdf[return_col].values)
@@ -131,26 +133,46 @@ def _compute_cross_sectional_ic(
     return pd.DataFrame(records)
 
 
-# ---------------------------------------------------------------------------
-# Universe membership filter
-# ---------------------------------------------------------------------------
-
-
-def _filter_to_universe(
+def _compute_sector_monthly_ic(
     df: pd.DataFrame,
-    universe_name: str,
-    tolerance_days: int | None = None,
+    feature_col: str,
+    return_col: str,
+    signal_type: str,
+    min_samples: int = 10,
 ) -> pd.DataFrame:
-    """Add ``_in_universe`` bool column using global PIT snapshots."""
-    from backtest.universe import filter_to_universe
+    """Monthly Spearman IC within each sector.
 
-    return filter_to_universe(
-        df,
-        universe_name,
-        date_col="call_entry_date",
-        ticker_col="BESTTICKER",
-        tolerance_days=tolerance_days,
+    This keeps the sector split cross-sectional at each point in time instead
+    of computing one all-history correlation per sector.
+    """
+    sub = df[df["SignalType"] == signal_type]
+    mask = (
+        sub[feature_col].notna()
+        & sub[return_col].notna()
+        & sub["SECTOR"].notna()
+        & sub["year_month"].notna()
     )
+    sub = sub[mask]
+    if sub.empty:
+        return pd.DataFrame(columns=["sector", "year_month", "ic", "n_samples"])
+
+    records: list[dict[str, Any]] = []
+    for (sector, month), gdf in sub.groupby(["SECTOR", "year_month"], observed=True):
+        if len(gdf) < min_samples:
+            continue
+        gdf = gdf.sort_values("call_entry_date").groupby("BESTTICKER").last()
+        if len(gdf) < min_samples:
+            continue
+        ic, _ = spearmanr(gdf[feature_col].values, gdf[return_col].values)
+        records.append(
+            {
+                "sector": sector,
+                "year_month": month,
+                "ic": ic if not np.isnan(ic) else np.nan,
+                "n_samples": len(gdf),
+            }
+        )
+    return pd.DataFrame(records)
 
 
 # ---------------------------------------------------------------------------
@@ -187,31 +209,101 @@ def _ic_summary(ic_series: pd.Series, nw_lag: int) -> dict[str, float]:
 # Main entry point
 # ---------------------------------------------------------------------------
 
+# Module-level global set before ProcessPoolExecutor context so forked
+# children inherit the filtered DataFrame without pickling it.
+_IC_GLOBAL_DF: pd.DataFrame | None = None
+
+
+def _ic_full_worker(args: tuple) -> tuple[dict[str, Any], list[dict[str, Any]], list[dict[str, Any]]]:
+    """Compute monthly, yearly, and sector IC for one (feature, horizon, signal_type) combo.
+
+    Returns (monthly_summary, yearly_rows, sector_rows).
+    Yearly IC is derived from monthly IC by grouping by year and taking the mean.
+    Sector IC is computed from per-sector-per-month cross-sectional IC.
+    """
+    feat, horizon, sig_type = args
+    df = _IC_GLOBAL_DF
+    ret_col = f"forward_return_{horizon}d"
+
+    # ---- Monthly IC (cross-sectional per year_month) ----
+    ic_df = _compute_cross_sectional_ic(
+        df, feat, ret_col, sig_type, group_col="year_month", min_samples=10
+    )
+    nw_lag = max(horizon, 1)
+    monthly_summary = _ic_summary(ic_df["ic"], nw_lag)
+    monthly_summary["feature"] = feat
+    monthly_summary["horizon"] = horizon
+    monthly_summary["signal_type"] = sig_type
+    monthly_summary["total_events"] = int(ic_df["n_samples"].sum()) if len(ic_df) > 0 else 0
+
+    # ---- Yearly IC (derived from monthly IC by grouping by year) ----
+    yearly_rows: list[dict[str, Any]] = []
+    if not ic_df.empty and "year_month" in ic_df.columns:
+        ic_df["year"] = ic_df["year_month"].dt.year
+        for year_val, year_group in ic_df.groupby("year"):
+            if pd.isna(year_val):
+                continue
+            yearly_rows.append({
+                "feature": feat,
+                "horizon": horizon,
+                "signal_type": sig_type,
+                "year": int(year_val),
+                "ic": float(year_group["ic"].mean()),
+                "n_samples": int(year_group["n_samples"].sum()),
+            })
+
+    # ---- Sector IC (per-sector-per-month, derive summary) ----
+    sector_rows: list[dict[str, Any]] = []
+    sec_ic_df = _compute_sector_monthly_ic(df, feat, ret_col, sig_type, min_samples=10)
+    if not sec_ic_df.empty:
+        for sector, sector_ic in sec_ic_df.groupby("sector", observed=True):
+            summary = _ic_summary(sector_ic["ic"], nw_lag)
+            sector_rows.append({
+                "horizon": horizon,
+                "signal_type": sig_type,
+                "feature": feat,
+                "sector": sector,
+                "total_events": int(sector_ic["n_samples"].sum()),
+                **summary,
+            })
+
+    return monthly_summary, yearly_rows, sector_rows
+
 
 def run_single_feature_ic(
     features_path: Path,
     universe_name: str,
     price_cache_dir: Path = PRICE_CACHE_DIR,
     output_dir: Path | None = None,
+    tier: str = "enhanced",
+    n_jobs: int = 0,
 ) -> dict[str, pd.DataFrame]:
     """Run single-feature IC analysis for one universe.
 
     Returns dict ``SignalType -> summary DataFrame``, plus ``_sector`` key
     for the sector-split table.
     """
-    from backtest.splits import get_forward_returns_cached
+    from backtest.splits import ensure_forward_returns, read_feature_columns
 
     log.info("Loading features from %s", features_path)
-    df = pd.read_parquet(features_path)
+    required_cols = [
+        "SignalType", "call_entry_date", "availability_date", "BESTTICKER", "SECTOR",
+    ]
+    df = read_feature_columns(
+        features_path,
+        [*required_cols, *SHORT_LIST_FEATURES],
+        required_columns=required_cols,
+    )
     n_total = len(df)
 
-    log.info("Computing forward returns (cached)")
-    fwd = get_forward_returns_cached(features_path, df, price_cache_dir, entry_date_col="availability_date")
-    for col in fwd.columns:
-        df[col] = fwd[col]
+    log.info("Ensuring forward returns")
+    df = ensure_forward_returns(
+        df, features_path, price_cache_dir,
+        entry_date_col="availability_date",
+    )
 
     log.info("Filtering to universe %s", universe_name)
-    df = _filter_to_universe(df, universe_name)
+    df = filter_to_universe(df, universe_name)
     in_univ = df["_in_universe"]
     log.info(
         "Universe filter: %d / %d rows in-universe (%.1f%%)",
@@ -228,24 +320,43 @@ def run_single_feature_ic(
         log.warning("Missing features (will be skipped): %s", missing)
     features = [f for f in SHORT_LIST_FEATURES if f in df.columns]
 
+    needed_cols = [
+        "SignalType", "year_month", "call_entry_date", "BESTTICKER", "SECTOR"
+    ] + features + [
+        f"forward_return_{h}d" for h in HORIZONS
+    ]
+    needed_cols = list(dict.fromkeys(c for c in needed_cols if c in df.columns))
+    df = df.loc[:, needed_cols].copy()
+    gc.collect()
+
     total_tasks = len(features) * len(HORIZONS) * len(SIGNAL_TYPES)
-    task_iter = itertools.product(features, HORIZONS, SIGNAL_TYPES)
+    tasks = list(itertools.product(features, HORIZONS, SIGNAL_TYPES))
+
+    _n_jobs = n_jobs if n_jobs > 0 else min(os.cpu_count() or 4, 2)
+
+    # ---- Monthly / yearly / sector IC combined (single pass per combo) ----
+    global _IC_GLOBAL_DF
+    _IC_GLOBAL_DF = df
+    try:
+        if _n_jobs > 1:
+            with ProcessPoolExecutor(max_workers=_n_jobs) as ex:
+                all_results = list(ex.map(_ic_full_worker, tasks))
+        else:
+            all_results = []
+            for feat, horizon, sig_type in progress(
+                tasks, total=total_tasks, desc="IC analysis"
+            ):
+                all_results.append(_ic_full_worker((feat, horizon, sig_type)))
+    finally:
+        _IC_GLOBAL_DF = None
 
     all_rows: list[dict[str, Any]] = []
-    for feat, horizon, sig_type in progress(
-        task_iter, total=total_tasks, desc="IC analysis"
-    ):
-        ret_col = f"forward_return_{horizon}d"
-        ic_df = _compute_cross_sectional_ic(
-            df, feat, ret_col, sig_type, group_col="year_month", min_samples=10
-        )
-        nw_lag = max(horizon, 1)
-        summary = _ic_summary(ic_df["ic"], nw_lag)
-        summary["feature"] = feat
-        summary["horizon"] = horizon
-        summary["signal_type"] = sig_type
-        summary["total_events"] = int(ic_df["n_samples"].sum()) if len(ic_df) > 0 else 0
-        all_rows.append(summary)
+    yearly_rows: list[dict[str, Any]] = []
+    sector_rows: list[dict[str, Any]] = []
+    for monthly, yearly, sector in all_results:
+        all_rows.append(monthly)
+        yearly_rows.extend(yearly)
+        sector_rows.extend(sector)
 
     summary_df = pd.DataFrame(all_rows)
     results: dict[str, pd.DataFrame] = {}
@@ -255,34 +366,7 @@ def run_single_feature_ic(
             .drop(columns=["signal_type"])
             .reset_index(drop=True)
         )
-
-    # ---- sector-split IC for ATCClassifierScore only ----
-    log.info("Computing sector-split IC for ATCClassifierScore")
-    sector_rows: list[dict[str, Any]] = []
-    for horizon, sig_type in progress(
-        itertools.product(HORIZONS, SIGNAL_TYPES),
-        total=len(HORIZONS) * len(SIGNAL_TYPES),
-        desc="IC sector-split",
-    ):
-        ret_col = f"forward_return_{horizon}d"
-        ic_df = _compute_cross_sectional_ic(
-            df,
-            "ATCClassifierScore",
-            ret_col,
-            sig_type,
-            group_col="SECTOR",
-            min_samples=10,
-        )
-        for _, row in ic_df.iterrows():
-            sector_rows.append(
-                {
-                    "horizon": horizon,
-                    "signal_type": sig_type,
-                    "sector": row["SECTOR"],
-                    "ic": row["ic"],
-                    "n_samples": int(row["n_samples"]),
-                }
-            )
+    results["_year"] = pd.DataFrame(yearly_rows)
     results["_sector"] = pd.DataFrame(sector_rows)
 
     # ---- persist ----
@@ -291,6 +375,11 @@ def run_single_feature_ic(
         output_dir.mkdir(parents=True, exist_ok=True)
 
         summary_df.to_parquet(output_dir / f"ic_summary_{universe_name}.parquet")
+
+        if not results["_year"].empty:
+            results["_year"].to_parquet(
+                output_dir / f"ic_yearly_{universe_name}.parquet"
+            )
 
         if not results["_sector"].empty:
             results["_sector"].to_parquet(
@@ -307,10 +396,41 @@ def run_single_feature_ic(
                     "signal_types": SIGNAL_TYPES,
                     "n_total_events": n_total,
                     "n_in_universe": int(in_univ.sum()),
+                    "split_outputs": {
+                        "monthly_summary": f"ic_summary_{universe_name}.parquet",
+                        "yearly": f"ic_yearly_{universe_name}.parquet",
+                        "sector": f"ic_sector_split_{universe_name}.parquet",
+                    },
                 },
                 indent=2,
                 default=str,
             )
+        )
+
+        manifest = build_cache_manifest(
+            phase=f"5a_{tier}_{universe_name}",
+            parameters={
+                "universe_name": universe_name,
+                "features": features,
+                "horizons": HORIZONS,
+                "signal_types": SIGNAL_TYPES,
+            },
+            input_paths=[
+                features_path,
+                price_cache_dir / "_manifest.json",
+            ],
+            source_funcs=[
+                run_single_feature_ic,
+                _compute_cross_sectional_ic,
+                _compute_sector_monthly_ic,
+                _ic_summary,
+                _ic_full_worker,
+                _newey_west_se,
+            ],
+        )
+        write_cache_manifest(
+            manifest,
+            CACHE_MANIFEST_DIR / f"5a_{tier}_{universe_name}.json",
         )
 
     return results
@@ -347,6 +467,10 @@ def main() -> None:
         help="Output directory for IC results",
     )
     p.add_argument("--price-cache", type=Path, default=PRICE_CACHE_DIR)
+    p.add_argument("--tier", type=str, default="enhanced",
+                   help="Feature tier name for cache manifest isolation")
+    p.add_argument("--n-jobs", type=int, default=0,
+                   help="Parallel workers for IC combos (0=memory-safe auto)")
     args = p.parse_args()
 
     universes = list(UNIVERSE_NAMES) if args.universe == "all" else [args.universe]
@@ -357,6 +481,8 @@ def main() -> None:
             universe_name=univ,
             price_cache_dir=args.price_cache,
             output_dir=args.output_dir,
+            tier=args.tier,
+            n_jobs=args.n_jobs,
         )
         log.info("Results written to %s/ic_summary_%s.parquet", args.output_dir, univ)
 

@@ -12,15 +12,26 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
-import json
 import logging
 import random
+import threading
 import time
-from dataclasses import dataclass
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 import pandas as pd
 
+from data._utils import (
+    FetchResult,
+    apply_failed_log_results,
+    exponential_backoff,
+    load_failed_log,
+    load_manifest,
+    save_failed_log,
+    save_manifest,
+    setup_logger,
+    suppress_yfinance_logging,
+)
 from data.config import (
     AUDIT_DIR,
     SHARES_CACHE_DIR,
@@ -32,11 +43,7 @@ from data.config import (
 from data.progress import progress
 
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s",
-)
-log = logging.getLogger("load_shares")
+log = setup_logger("load_shares")
 
 
 SHARES_MANIFEST = SHARES_CACHE_DIR / "_manifest.json"
@@ -47,75 +54,11 @@ DEFAULT_START = "2009-01-01"
 BASE_SLEEP = 0.6
 MAX_BACKOFF = 60.0
 MAX_RETRIES = 4
+MAX_WORKERS = 3
 COVERAGE_FLOOR = 0.70
 
-
-@dataclass
-class FetchResult:
-    ticker: str
-    status: str  # "success" | "empty" | "error"
-    rows: int
-    first_date: str | None
-    last_date: str | None
-    error: str | None = None
-
-
-# ---------------------------------------------------------------------------
-# Manifest helpers
-# ---------------------------------------------------------------------------
-
-def load_manifest() -> dict:
-    if SHARES_MANIFEST.exists():
-        return json.loads(SHARES_MANIFEST.read_text())
-    return {"updated_at": None, "tickers": {}}
-
-
-def save_manifest(manifest: dict) -> None:
-    from data.config import utc_now_iso
-    manifest["updated_at"] = utc_now_iso()
-    SHARES_MANIFEST.parent.mkdir(parents=True, exist_ok=True)
-    SHARES_MANIFEST.write_text(json.dumps(manifest, indent=2, sort_keys=True))
-
-
-def update_failed_log(result: FetchResult) -> None:
-    """Keep one latest non-success row per ticker; clear stale rows on success."""
-    columns = ["ticker", "status", "rows", "first_date", "last_date", "error"]
-    SHARES_FAILED_TICKERS.parent.mkdir(parents=True, exist_ok=True)
-    if SHARES_FAILED_TICKERS.exists():
-        existing = pd.read_csv(SHARES_FAILED_TICKERS, dtype=str)
-    else:
-        existing = pd.DataFrame(columns=columns)
-
-    existing = apply_failed_log_result(existing, result)
-    existing.to_csv(SHARES_FAILED_TICKERS, index=False)
-
-
-def load_failed_log() -> pd.DataFrame:
-    columns = ["ticker", "status", "rows", "first_date", "last_date", "error"]
-    if SHARES_FAILED_TICKERS.exists():
-        return pd.read_csv(SHARES_FAILED_TICKERS, dtype=str)
-    return pd.DataFrame(columns=columns)
-
-
-def save_failed_log(existing: pd.DataFrame) -> None:
-    SHARES_FAILED_TICKERS.parent.mkdir(parents=True, exist_ok=True)
-    existing.to_csv(SHARES_FAILED_TICKERS, index=False)
-
-
-def apply_failed_log_result(existing: pd.DataFrame, result: FetchResult) -> pd.DataFrame:
-    """Apply one fetch result to an in-memory failed ticker log."""
-    existing = existing[existing["ticker"] != result.ticker].copy()
-    if result.status != "success":
-        row = pd.DataFrame([{
-            "ticker": result.ticker,
-            "status": result.status,
-            "rows": str(result.rows),
-            "first_date": result.first_date or "",
-            "last_date": result.last_date or "",
-            "error": result.error or "",
-        }])
-        existing = pd.concat([existing, row], ignore_index=True)
-    return existing
+_MANIFEST_LOCK = threading.Lock()
+_FAILED_LOG_LOCK = threading.Lock()
 
 
 # ---------------------------------------------------------------------------
@@ -125,6 +68,8 @@ def apply_failed_log_result(existing: pd.DataFrame, result: FetchResult) -> pd.D
 def _yf_shares(ticker: str, start: str, end: str | None) -> pd.DataFrame:
     """Fetch via `Ticker.get_shares_full`. Returns (date, shares) frame."""
     import yfinance as yf
+
+    suppress_yfinance_logging()
 
     yt = yf.Ticker(ticker)
     series = None
@@ -177,7 +122,7 @@ def fetch_ticker(
             )
         except Exception as e:
             last_err = repr(e)
-            backoff = min(MAX_BACKOFF, base_sleep * (2 ** attempt))
+            backoff = exponential_backoff(attempt, base_sleep, MAX_BACKOFF)
             log.warning(
                 "shares %s failed (%d/%d): %s -> sleep %.1fs",
                 ticker, attempt + 1, max_retries, e, backoff,
@@ -311,18 +256,37 @@ def write_coverage(per_universe: dict[str, set[str]], manifest: dict) -> None:
 # ---------------------------------------------------------------------------
 
 def is_cached_fresh(ticker: str, manifest: dict, end: str | None = None) -> bool:
-    out = SHARES_CACHE_DIR / f"{ticker}.parquet"
-    if not out.exists():
-        return False
+    """True if the result is recent enough to skip re-fetching.
+
+    - ``success``: parquet must exist and last_date within 14 days of end.
+    - ``empty``: cached for 90 days (delisted/invalid tickers won't come back).
+    - ``error``: never cached (transient failures should be retried).
+    """
     entry = manifest.get("tickers", {}).get(ticker)
-    if not entry or entry.get("status") != "success":
+    if not entry:
         return False
-    last_date = entry.get("last_date")
-    if not last_date:
-        return False
-    last = dt.date.fromisoformat(last_date)
+
+    status = entry.get("status", "")
     target = dt.date.fromisoformat(end) if end else dt.date.today()
-    return (target - last).days <= 14
+
+    if status == "success":
+        out = SHARES_CACHE_DIR / f"{ticker}.parquet"
+        if not out.exists():
+            return False
+        last_date = entry.get("last_date")
+        if not last_date:
+            return False
+        last = dt.date.fromisoformat(last_date)
+        return (target - last).days <= 14
+
+    if status == "empty":
+        fetched = entry.get("fetched_at")
+        if not fetched:
+            return False
+        fetched_date = dt.date.fromisoformat(fetched[:10])
+        return (target - fetched_date).days <= 90
+
+    return False
 
 
 def run(
@@ -330,6 +294,7 @@ def run(
     start: str = DEFAULT_START,
     end: str | None = None,
     sleep: float = BASE_SLEEP,
+    workers: int = MAX_WORKERS,
     limit: int | None = None,
 ) -> dict:
     from data.config import utc_now_iso
@@ -344,40 +309,78 @@ def run(
         tickers = tickers[:limit]
     log.info("ticker universe: %d", len(tickers))
 
-    manifest = load_manifest()
-    failed_log = load_failed_log()
+    manifest = load_manifest(SHARES_MANIFEST)
+    failed_log = load_failed_log(SHARES_FAILED_TICKERS)
     counts = {"success": 0, "empty": 0, "error": 0, "skipped_cached": 0}
 
-    ticker_bar = progress(tickers, desc="shares tickers", unit="ticker")
-    for i, t in enumerate(ticker_bar, 1):
+    # ---- prefilter: split cached vs stale ----
+    cached: list[str] = []
+    stale: list[str] = []
+    for t in tickers:
         if is_cached_fresh(t, manifest, end=end):
-            counts["skipped_cached"] += 1
-            failed_log = apply_failed_log_result(
-                failed_log,
-                FetchResult(t, "success", 0, None, None),
-            )
-            ticker_bar.set_postfix(counts)
-            continue
-        res = fetch_ticker(t, start=start, end=end, base_sleep=sleep)
-        manifest.setdefault("tickers", {})[t] = {
-            "status": res.status,
-            "rows": res.rows,
-            "first_date": res.first_date,
-            "last_date": res.last_date,
-            "error": res.error,
-            "fetched_at": utc_now_iso(),
+            cached.append(t)
+        else:
+            stale.append(t)
+    counts["skipped_cached"] = len(cached)
+    log.info(
+        "cached=%d  to_fetch=%d",
+        len(cached),
+        len(stale),
+    )
+
+    if not stale:
+        log.info("nothing to fetch — all tickers are fresh")
+        write_coverage(per_u, manifest)
+        return counts
+
+    # ---- parallel fetch of stale tickers ----
+    completed = 0
+    batch_results: list[FetchResult] = []
+    n_stale = len(stale)
+
+    def _process_one(t: str) -> FetchResult:
+        return fetch_ticker(t, start=start, end=end, base_sleep=sleep)
+
+    ticker_bar = progress(
+        total=n_stale, desc="shares tickers", unit="ticker"
+    )
+    with ThreadPoolExecutor(max_workers=workers) as executor:
+        future_map = {
+            executor.submit(_process_one, t): i
+            for i, t in enumerate(stale)
         }
-        counts[res.status] = counts.get(res.status, 0) + 1
-        failed_log = apply_failed_log_result(failed_log, res)
-        ticker_bar.set_postfix(counts)
+        for future in as_completed(future_map):
+            res = future.result()
+            manifest.setdefault("tickers", {})[res.ticker] = {
+                "status": res.status,
+                "rows": res.rows,
+                "first_date": res.first_date,
+                "last_date": res.last_date,
+                "error": res.error,
+                "fetched_at": utc_now_iso(),
+            }
+            counts[res.status] = counts.get(res.status, 0) + 1
+            batch_results.append(res)
+            completed += 1
+            ticker_bar.update(1)
+            ticker_bar.set_postfix(counts)
 
-        if i % 50 == 0:
-            save_manifest(manifest)
-            save_failed_log(failed_log)
-            log.info("progress %d/%d  counts=%s", i, len(tickers), counts)
+            if completed % 50 == 0:
+                failed_log = apply_failed_log_results(
+                    failed_log, batch_results
+                )
+                batch_results.clear()
+                save_manifest(manifest, SHARES_MANIFEST, _MANIFEST_LOCK)
+                save_failed_log(failed_log, SHARES_FAILED_TICKERS)
+                log.info(
+                    "progress %d/%d  counts=%s", completed, n_stale, counts
+                )
+    ticker_bar.close()
 
-    save_manifest(manifest)
-    save_failed_log(failed_log)
+    save_manifest(manifest, SHARES_MANIFEST, _MANIFEST_LOCK)
+    if batch_results:
+        failed_log = apply_failed_log_results(failed_log, batch_results)
+    save_failed_log(failed_log, SHARES_FAILED_TICKERS)
     write_coverage(per_u, manifest)
     log.info("done. counts=%s", counts)
     return counts
@@ -388,6 +391,11 @@ def main() -> None:
     parser.add_argument("--start", default=DEFAULT_START)
     parser.add_argument("--end", default=None)
     parser.add_argument("--sleep", type=float, default=BASE_SLEEP)
+    parser.add_argument("--workers", type=int, default=MAX_WORKERS)
+    parser.add_argument(
+        "--no-parallel", action="store_true",
+        help="disable parallel workers (workers=1)",
+    )
     parser.add_argument("--limit", type=int, default=None)
     parser.add_argument("--only", nargs="*", default=None)
     args = parser.parse_args()
@@ -396,6 +404,7 @@ def main() -> None:
         start=args.start,
         end=args.end,
         sleep=args.sleep,
+        workers=1 if args.no_parallel else args.workers,
         limit=args.limit,
     )
 

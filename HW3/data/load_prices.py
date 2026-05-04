@@ -23,18 +23,25 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
-import json
 import logging
 import random
-import re
 import time
 import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from dataclasses import dataclass
 from pathlib import Path
 
 import pandas as pd
 
+from data._utils import (
+    FetchResult,
+    US_TICKER_RE,
+    exponential_backoff,
+    load_manifest,
+    save_manifest,
+    setup_logger,
+    suppress_yfinance_logging,
+    update_failed_log_results,
+)
 from data.config import (
     PRICE_CACHE_DIR,
     PRICE_FAILED_TICKERS,
@@ -48,11 +55,7 @@ from data.config import (
 )
 from data.progress import progress
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s",
-)
-log = logging.getLogger("load_prices")
+log = setup_logger("load_prices")
 
 # yfinance logs "possibly delisted; no timezone found" at ERROR for every
 # delisted or invalid ticker, even though our code handles those gracefully
@@ -67,21 +70,8 @@ BASE_SLEEP = 1.0
 MAX_BACKOFF = 120.0
 MAX_RETRIES = 3
 
-# Ticker pattern: 1-5 uppercase letters, optional dot/dash + letter suffix
-_US_TICKER_RE = re.compile(r"^[A-Z]{1,5}([\.\-][A-Z])?$")
-
 _MANIFEST_LOCK = threading.Lock()
 _FAILED_LOG_LOCK = threading.Lock()
-
-
-@dataclass
-class FetchResult:
-    ticker: str
-    status: str  # "success" | "empty" | "error"
-    rows: int
-    first_date: str | None
-    last_date: str | None
-    error: str | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -112,7 +102,7 @@ def collect_tickers(use_signals: bool = False) -> list[str]:
         if sig_path.exists():
             df = pd.read_parquet(sig_path, columns=["BESTTICKER"])
             raw = df["BESTTICKER"].dropna().astype(str).str.upper().str.strip()
-            valid_mask = raw.str.match(_US_TICKER_RE)
+            valid_mask = raw.str.match(US_TICKER_RE)
             n_total = len(raw)
             n_valid = valid_mask.sum()
             log.info(
@@ -138,55 +128,9 @@ def collect_tickers(use_signals: bool = False) -> list[str]:
 # Manifest (resumable)
 # ---------------------------------------------------------------------------
 
-def load_manifest() -> dict:
-    if PRICE_MANIFEST.exists():
-        return json.loads(PRICE_MANIFEST.read_text())
-    return {"updated_at": None, "tickers": {}}
-
-
-def save_manifest(manifest: dict) -> None:
-    from data.config import utc_now_iso
-    manifest["updated_at"] = utc_now_iso()
-    PRICE_MANIFEST.parent.mkdir(parents=True, exist_ok=True)
-    with _MANIFEST_LOCK:
-        PRICE_MANIFEST.write_text(json.dumps(manifest, indent=2, sort_keys=True))
-
-
 def update_failed_log(results: list[FetchResult]) -> None:
     """Persist non-success rows; clear them when a ticker later succeeds."""
-    columns = ["ticker", "status", "rows", "first_date", "last_date", "error"]
-    PRICE_FAILED_TICKERS.parent.mkdir(parents=True, exist_ok=True)
-
-    with _FAILED_LOG_LOCK:
-        if PRICE_FAILED_TICKERS.exists():
-            existing = pd.read_csv(PRICE_FAILED_TICKERS, dtype=str)
-        else:
-            existing = pd.DataFrame(columns=columns)
-
-        succeeded = {r.ticker for r in results if r.status == "success"}
-        if succeeded:
-            existing = existing[~existing["ticker"].isin(succeeded)]
-
-        new_rows = [
-            {
-                "ticker": r.ticker,
-                "status": r.status,
-                "rows": str(r.rows),
-                "first_date": r.first_date or "",
-                "last_date": r.last_date or "",
-                "error": r.error or "",
-            }
-            for r in results
-            if r.status != "success"
-        ]
-
-        if new_rows:
-            existing = pd.concat(
-                [existing, pd.DataFrame(new_rows, columns=columns)],
-                ignore_index=True,
-            )
-
-        existing.to_csv(PRICE_FAILED_TICKERS, index=False)
+    update_failed_log_results(PRICE_FAILED_TICKERS, results, _FAILED_LOG_LOCK)
 
 
 # ---------------------------------------------------------------------------
@@ -245,11 +189,7 @@ def _download_batch(
     """
     import yfinance as yf
 
-    # yfinance re-configures its logger on import — silence it post-import.
-    # Delisted/invalid tickers are handled gracefully by our parser; we don't
-    # need yfinance screaming "possibly delisted; no timezone found" at ERROR.
-    logging.getLogger("yfinance").setLevel(logging.CRITICAL)
-    logging.getLogger("peewee").setLevel(logging.CRITICAL)
+    suppress_yfinance_logging()
 
     ticker_str = " ".join(tickers)
     last_err: str | None = None
@@ -267,7 +207,7 @@ def _download_batch(
             )
         except Exception as exc:
             last_err = str(exc)
-            backoff = min(MAX_BACKOFF, base_sleep * (2 ** attempt))
+            backoff = exponential_backoff(attempt, base_sleep, MAX_BACKOFF)
             log.warning(
                 "batch [%s…] failed (%d/%d): %s — retrying in %.1fs",
                 tickers[0],
@@ -372,7 +312,7 @@ def run(
 
     log.info("ticker universe: %d", len(tickers))
 
-    manifest = load_manifest()
+    manifest = load_manifest(PRICE_MANIFEST)
 
     # Split into fresh (skip) and stale (fetch)
     stale: list[str] = []
@@ -428,7 +368,7 @@ def run(
                 counts[r.status] = counts.get(r.status, 0) + 1
             update_failed_log(batch_results)
             if completed % 5 == 0:
-                save_manifest(manifest)
+                save_manifest(manifest, PRICE_MANIFEST, _MANIFEST_LOCK)
     else:
         # Parallel — tqdm still works but we update per-future
         batch_bar = progress(
@@ -457,10 +397,10 @@ def run(
                 batch_bar.update(1)
                 batch_bar.set_postfix(counts)
                 if completed % 10 == 0:
-                    save_manifest(manifest)
+                    save_manifest(manifest, PRICE_MANIFEST, _MANIFEST_LOCK)
         batch_bar.close()
 
-    save_manifest(manifest)
+    save_manifest(manifest, PRICE_MANIFEST, _MANIFEST_LOCK)
     log.info("done. counts=%s", counts)
     return counts
 

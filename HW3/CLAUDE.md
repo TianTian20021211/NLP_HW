@@ -6,8 +6,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - `docs/requirement.md` — everything that must be done. Strictly follow it.
 - `ideas/plan.md` — what I plan to do (execution checklist).
-- `docs/report.md` — everything that needs to go into the final report PDF (methodology choices, rationale, transparency statements).
-- When code changes are made, update `docs/report.md` and `ideas/plan.md` accordingly.
+- `docs/notes.md` — methodology choices, rationale, transparency statements, development log (working notes).
+- `docs/report.md` — clean final report for PDF generation (structured from `docs/notes.md`).
+- When code changes are made, update `docs/notes.md` and `ideas/plan.md` accordingly.
 
 ## Project
 
