@@ -95,14 +95,17 @@ FLOAT_COLS = FLOAT_EVENT_COLS + HEADLINE_NUMERIC_COLS
 log = setup_logger("load_signals")
 
 
-def ensure_signal_csv(csv_path: Path = RAW_SIGNAL_CSV) -> Path:
+def ensure_signal_csv(
+    csv_path: Path = RAW_SIGNAL_CSV, zip_path: Path | None = None
+) -> Path:
     """Return an extracted signal CSV path, extracting the raw zip if needed."""
     if csv_path.exists():
         return csv_path
 
-    if csv_path == RAW_SIGNAL_CSV and RAW_SIGNAL_ZIP.exists():
-        log.info("signal CSV missing; extracting %s", RAW_SIGNAL_ZIP)
-        with zipfile.ZipFile(RAW_SIGNAL_ZIP) as zf:
+    zip_path = zip_path or RAW_SIGNAL_ZIP
+    if zip_path.exists():
+        log.info("signal CSV missing; extracting %s", zip_path)
+        with zipfile.ZipFile(zip_path) as zf:
             member = next(
                 (m for m in zf.namelist() if Path(m).name == csv_path.name),
                 None,
@@ -335,10 +338,14 @@ def stream_chunks(
     return stats
 
 
-def run(csv_path: Path = RAW_SIGNAL_CSV, chunksize: int = CHUNKSIZE) -> dict:
+def run(
+    csv_path: Path = RAW_SIGNAL_CSV,
+    zip_path: Path | None = None,
+    chunksize: int = CHUNKSIZE,
+) -> dict:
     set_global_seed()
     ensure_dirs()
-    csv_path = ensure_signal_csv(csv_path)
+    csv_path = ensure_signal_csv(csv_path, zip_path=zip_path)
 
     header = read_header(csv_path)
     keep_aspect, drop_aspect = classify_columns(header)
@@ -398,9 +405,11 @@ def run(csv_path: Path = RAW_SIGNAL_CSV, chunksize: int = CHUNKSIZE) -> dict:
 def main() -> None:
     parser = argparse.ArgumentParser(description="ATC signal CSV -> Parquet")
     parser.add_argument("--csv", type=Path, default=RAW_SIGNAL_CSV)
+    parser.add_argument("--zip", type=Path, default=None,
+                        help="Path to the source ZIP file (extracted if CSV is missing)")
     parser.add_argument("--chunksize", type=int, default=CHUNKSIZE)
     args = parser.parse_args()
-    run(csv_path=args.csv, chunksize=args.chunksize)
+    run(csv_path=args.csv, zip_path=args.zip, chunksize=args.chunksize)
 
 
 if __name__ == "__main__":

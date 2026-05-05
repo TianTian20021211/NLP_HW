@@ -69,9 +69,9 @@ YELLOW = "\033[33m"
 
 # Phase 5 now reads column-pruned feature slices, so the default fan-out can
 # keep CPU cores busy without repeating full stretch feature-frame loads.
-PHASE5_DEFAULT_OUTER_WORKERS = 6
-PHASE5_DEFAULT_INNER_WORKERS = 8
-PHASE5_DEFAULT_ROBUSTNESS_WORKERS = 6
+PHASE5_DEFAULT_OUTER_WORKERS = 4
+PHASE5_DEFAULT_INNER_WORKERS = 6
+PHASE5_DEFAULT_ROBUSTNESS_WORKERS = 4
 
 
 def _run(cmd: list[str], desc: str, *, dry_run: bool = False) -> bool:
@@ -177,40 +177,29 @@ def _manifest_coverage_sufficient(
         return False
 
 
+def _build_signals_cmd(args) -> list[str]:
+    cmd = ["python", "-m", "data.load_signals"]
+    if args.signals_zip is not None:
+        cmd.extend(["--zip", str(args.signals_zip)])
+    return cmd
+
+
 def _run_parallel(jobs: list[tuple[str, list[str]]], max_workers: int = 3) -> bool:
-    """Run multiple subprocess commands in parallel via ThreadPoolExecutor.
+    """Run multiple subprocess commands sequentially.
 
     Each *job* is ``(description, cmd_list)``.  All must succeed — the first
-    failure cancels remaining futures and returns ``False``.
+    failure stops remaining jobs and returns ``False``.
+
+    Runs sequentially because each subprocess already uses internal
+    ProcessPoolExecutor parallelism — nesting would cause CPU oversubscription
+    and memory-pressure spikes.
     """
-    from concurrent.futures import ThreadPoolExecutor, as_completed
-
-    def _worker(desc: str, cmd: list[str]) -> tuple[str, bool, float, str]:
-        t0 = time.perf_counter()
-        result = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True)
-        elapsed = time.perf_counter() - t0
-        ok = result.returncode == 0
-        return desc, ok, elapsed, result.stderr.strip() if not ok else ""
-
     if not jobs:
         return True
 
-    n_workers = max(1, min(max_workers, len(jobs)))
-    with ThreadPoolExecutor(max_workers=n_workers) as ex:
-        futures = {}
-        for desc, cmd in jobs:
-            print(f"    {YELLOW}QUEUED{RESET} {desc}")
-            futures[ex.submit(_worker, desc, cmd)] = desc
-        for f in as_completed(futures):
-            desc, ok, elapsed, stderr_tail = f.result()
-            status = f"{GREEN}OK{RESET}" if ok else f"\033[31mFAILED{RESET}"
-            print(f"    {status} ({elapsed:.1f}s)  {desc}")
-            if not ok:
-                if stderr_tail:
-                    print(f"    \033[31mSTDERR:\033[0m {stderr_tail[:2000]}")
-                for other in futures:
-                    other.cancel()
-                return False
+    for desc, cmd in jobs:
+        if not _run(cmd, desc):
+            return False
     return True
 
 
@@ -221,7 +210,7 @@ def phase1(args) -> bool:
         return True
 
     for key, cmd, desc in [
-        ("1.1_signals", ["python", "-m", "data.load_signals"], "1.1 Signals CSV → Parquet"),
+        ("1.1_signals", _build_signals_cmd(args), "1.1 Signals CSV → Parquet"),
         ("1.2_universes", ["python", "-m", "data.load_universes"], "1.2 PIT universe membership"),
         ("1.3_prices", ["python", "-m", "data.load_prices"], "1.3 Prices & volume (yfinance)"),
         ("1.4_shares", ["python", "-m", "data.load_shares"], "1.4 Shares outstanding (yfinance)"),
@@ -822,6 +811,11 @@ def main():
     parser.add_argument("--from-phase", type=int, choices=[1, 2, 3, 4, 5, 6, 7, 8], default=1)
     parser.add_argument("--stop-at-phase", type=int, choices=[1, 2, 3, 4, 5, 6, 7, 8], default=8)
     parser.add_argument("--tier", choices=["enhanced", "stretch", "both"], default="enhanced")
+    parser.add_argument(
+        "--signals-zip", type=Path, default=None,
+        help="Path to the signal data ZIP file. "
+             "Default: data/Earnings_ATC_until_2026-04-21.csv.zip",
+    )
     parser.add_argument(
         "--universes", nargs="+", default=["sp500", "sp1500", "ru3k"],
         help="Universes for Phase 5 (default: sp500 sp1500 ru3k)",

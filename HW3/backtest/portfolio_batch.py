@@ -206,7 +206,7 @@ def run_jobs(
         return outputs
 
     if max_workers is None:
-        max_workers = min(os.cpu_count() or 4, 2, len(jobs))
+        max_workers = min(os.cpu_count() or 4, 4, len(jobs))
 
     log.info(
         "Dispatching %d portfolio jobs across %d workers",

@@ -168,7 +168,7 @@ def run_quintile_analysis(
     df = df.loc[:, needed_cols].copy()
     gc.collect()
 
-    _n_jobs = n_jobs if n_jobs > 0 else min(os.cpu_count() or 4, 2)
+    _n_jobs = n_jobs if n_jobs > 0 else min(os.cpu_count() or 4, 6)
     global _QUINTILE_GLOBAL_DF
     _QUINTILE_GLOBAL_DF = df
 

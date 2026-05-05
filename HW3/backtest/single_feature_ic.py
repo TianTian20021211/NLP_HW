@@ -332,7 +332,7 @@ def run_single_feature_ic(
     total_tasks = len(features) * len(HORIZONS) * len(SIGNAL_TYPES)
     tasks = list(itertools.product(features, HORIZONS, SIGNAL_TYPES))
 
-    _n_jobs = n_jobs if n_jobs > 0 else min(os.cpu_count() or 4, 2)
+    _n_jobs = n_jobs if n_jobs > 0 else min(os.cpu_count() or 4, 6)
 
     # ---- Monthly / yearly / sector IC combined (single pass per combo) ----
     global _IC_GLOBAL_DF

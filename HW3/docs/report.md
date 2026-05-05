@@ -17,13 +17,13 @@ This report backtests the ProntoNLP ATC (Automatic Text Classification) earnings
 
 | Metric | S&P 500 | S&P 1500 | Russell 3000 |
 |--------|---------|----------|--------------|
-| ATCClassifierScore mean IC (h=5d, Total) | 0.013 (NW t=1.47) | 0.020 (NW t=2.87) | 0.017 (NW t=2.95) |
-| Best model | LightGBM Enhanced h=3d | Ridge Enhanced h=1d | LightGBM Enhanced h=20d |
-| Best model cadence | Monthly (model-driven all negative post-cost) | Monthly | Monthly |
-| Best model post-cost Sharpe | −0.30 (all model signals negative post-cost) | 0.59 | 0.82 |
+| ATCClassifierScore mean IC (h=5d, Total) | 0.013 (NW t=1.47) | 0.020 (NW t=2.89) | 0.017 (NW t=2.95) |
+| Best model | Ridge Enhanced h=1d | XGBoost Enhanced h=5d | LightGBM Enhanced h=20d |
+| Best model cadence | Monthly | Monthly | Monthly |
+| Best model post-cost Sharpe | −0.04 | 0.28 | 0.93 |
 | Baseline ATC decile (monthly, 30d lookback) post-cost Sharpe | 0.56 | — | — |
 
-**Deployment recommendation:** The ATC signal has weakened materially since 2020. **For model-driven strategies on S&P 500**, all combinations of model, tier, and horizon produce negative pre-cost and post-cost Sharpe at every tested cadence — the predictive models do not add value over the raw ATCClassifierScore. **The baseline ATCClassifierScore decile strategy (no ML model) on S&P 500 at monthly cadence with 30-day lookback does achieve positive post-cost Sharpe (0.56, see OFAT §7.5),** confirming the signal itself retains directional value when traded with lower turnover than the model-based portfolios (78.5×). The strongest risk-adjusted performance comes from Russell 3000 monthly rebalance with LightGBM Enhanced (post-cost Sharpe 0.82, pre-cost 1.00). S&P 1500 shows marginal viability with Ridge Enhanced h=1d monthly (post-cost Sharpe 0.59). Recommend monthly cadence for RU3K deployment and further signal refinement (speaker-slice ensemble, lower-turnover construction) before deploying on SP500/SP1500.
+**Deployment recommendation:** The ATC signal has weakened materially since 2020. **For model-driven strategies on S&P 500**, all 90 model × tier × horizon × cadence combinations produce negative post-cost Sharpe. However, 11 of 90 have positive pre-cost Sharpe (led by LightGBM Enhanced h=3d daily at 0.38 and Ridge Enhanced h=1d monthly at 0.14), indicating the models capture some alpha that is then consumed by turnover costs. The predictive models do not add post-cost value over the raw ATCClassifierScore decile baseline. **The baseline ATCClassifierScore decile strategy (no ML model) on S&P 500 at monthly cadence with 30-day lookback does achieve positive post-cost Sharpe (0.56, see OFAT §7.5),** confirming the signal itself retains directional value when traded with lower turnover than the model-based portfolios (78.5×). The strongest risk-adjusted performance comes from Russell 3000 monthly rebalance with LightGBM Enhanced (post-cost Sharpe 0.93, pre-cost 1.11). S&P 1500 shows marginal viability with XGBoost Enhanced h=5d monthly (post-cost Sharpe 0.28). Recommend monthly cadence for RU3K deployment and further signal refinement (speaker-slice ensemble, lower-turnover construction) before deploying on SP500/SP1500.
 
 ---
 
@@ -56,9 +56,9 @@ Backtest the ProntoNLP ATC earnings-call signals on three universes (S&P 500 / S
 
 All three universes are point-in-time (PIT), not survivorship snapshots.
 
-- **S&P 500**: Wikipedia historical constituent changes + current constituents → add/remove ledger with effective dates → **daily** PIT. 2,289,593 rows, 817 unique tickers, 4,520 daily dates (2009-01-01 to 2026-04-29).
-- **S&P 1500**: iShares IJH (S&P 400) + IJR (S&P 600) monthly holdings + S&P 500 PIT → **monthly**. 289,185 rows, ~1,500 tickers, 196 month-ends.
-- **Russell 3000**: iShares IWV monthly holdings → **monthly**. 506,268 rows, 2,583 tickers, 196 month-ends.
+- **S&P 500**: Wikipedia historical constituent changes + current constituents → add/remove ledger with effective dates → **daily** PIT. 2,290,609 rows, 816 unique tickers, 4,523 daily dates (2009-01-01 to 2026-05-04).
+- **S&P 1500**: iShares IJH (S&P 400) + IJR (S&P 600) monthly holdings + S&P 500 PIT → **monthly**. 289,205 rows, 1,725 tickers, 196 month-ends.
+- **Russell 3000**: iShares IWV monthly holdings → **monthly**. 505,876 rows, 2,581 tickers, 196 month-ends.
 
 **Fallback discipline**: iShares historical holdings are not available for the full range. The earliest available snapshot is used as a static universe for all prior dates, with explicit survivorship-bias documentation in `results/audit/universe_coverage_gaps.csv`. Per requirement §6.3, documented survivorship bias is acceptable — reported alpha for SP1500 and RU3K is an upper bound.
 
@@ -211,7 +211,7 @@ This unified `availability_date` is used everywhere: feature history, PIT percen
 
 ### 5.4 Streaming vs Batch Regression Test
 
-Per-day streaming feature construction compared against one-shot batch fit. Tolerance: `np.allclose(rtol=1e-9, atol=1e-12)`. Full-data audit with `--full-dates 15` compared 110,592 rows with zero strict mismatches. Row-level features are reused from batch; only time-series and PIT features are recomputed per streaming date. The strict PIT query enforces `history_date < cutoff_date`, so future rows cannot enter sampled-date results.
+Per-day streaming feature construction compared against one-shot batch fit. Tolerance: `np.allclose(rtol=1e-9, atol=1e-12)`. Full-data audit with `--full-dates 15` compared 9,771 rows with zero strict mismatches. Row-level features are reused from batch; only time-series and PIT features are recomputed per streaming date. The strict PIT query enforces `history_date < cutoff_date`, so future rows cannot enter sampled-date results.
 
 ---
 
@@ -266,7 +266,7 @@ The 14-feature short list was frozen before experiments to avoid cherry-picking.
 
 | Feature | S&P 500 Mean IC | S&P 500 NW t | S&P 1500 Mean IC | S&P 1500 NW t | RU3K Mean IC | RU3K NW t |
 |---------|-----------------|--------------|------------------|---------------|--------------|------------|
-| ATCClassifierScore | 0.013 | 1.47 | 0.020 | 2.87 | 0.017 | 2.95 |
+| ATCClassifierScore | 0.013 | 1.47 | 0.020 | 2.89 | 0.017 | 2.95 |
 | EventsScore_4_2_1 | −0.010 | −1.10 | 0.001 | 0.17 | 0.001 | 0.08 |
 | EventsScore_1_1_1 | −0.010 | −0.98 | 0.002 | 0.26 | 0.000 | 0.03 |
 | EventsScore_3_1_0 | −0.010 | −1.07 | 0.001 | 0.12 | 0.001 | 0.13 |
@@ -275,13 +275,13 @@ The 14-feature short list was frozen before experiments to avoid cherry-picking.
 | Theme FinancialPerf net sentiment | 0.014 | 1.66 | 0.012 | 2.17 | 0.012 | 2.51 |
 | Theme StrategicInit net sentiment | 0.009 | 0.88 | 0.001 | 0.16 | −0.003 | −0.41 |
 | QoQ delta ATC | 0.003 | 0.29 | 0.016 | 2.18 | 0.018 | 3.01 |
-| ATC sector-relative pct | 0.011 | 1.20 | 0.020 | 2.98 | 0.018 | 3.26 |
+| ATC sector-relative pct | 0.011 | 1.20 | 0.020 | 2.99 | 0.018 | 3.26 |
 | Pre-event return 21d | −0.034 | −2.64 | −0.041 | −4.74 | −0.034 | −4.34 |
 | Pre-event return 21d sector-rel | −0.001 | −0.07 | −0.010 | −1.52 | −0.009 | −1.41 |
 | Pre-event idio resid 5d | −0.003 | −0.29 | −0.001 | −0.17 | 0.002 | 0.41 |
-| 4Q trend slope ATC | 0.005 | 0.50 | 0.020 | 2.83 | 0.009 | 1.76 |
+| 4Q trend slope ATC | 0.005 | 0.50 | 0.020 | 2.88 | 0.009 | 1.76 |
 
-**Key finding:** ATCClassifierScore is the most statistically significant positive feature in S&P 500 (NW t=1.47), while sector-relative pct and QoQ delta ATC dominate in SP1500 and RU3K with NW t-statistics above 2.87. The four EventsScore variants are slightly negative in S&P 500, near zero in the broader universes. Pre-event return (21d) is the strongest negative-IC feature across all universes (NW t ≤ −2.64), consistent with short-term mean reversion. The AspectTheme-derived features (FinancialPerformance, StrategicInitiatives net sentiment) show modest positive IC, providing complementary information to the headline ATC score.
+**Key finding:** theme_FinancialPerformance_net_sentiment has the highest NW t-stat among positive-IC features in S&P 500 (NW t=1.66), followed closely by ATCClassifierScore (NW t=1.47). Sector-relative pct and QoQ delta ATC dominate in SP1500 and RU3K with NW t-statistics above 2.89. The four EventsScore variants are slightly negative in S&P 500, near zero in the broader universes. Pre-event return (21d) is the strongest negative-IC feature across all universes (NW t ≤ −2.64), consistent with short-term mean reversion. The AspectTheme-derived features (FinancialPerformance, StrategicInitiatives net sentiment) show modest positive IC, providing complementary information to the headline ATC score.
 
 #### ATCClassifierScore IC by Horizon (Total SignalType)
 
@@ -292,7 +292,7 @@ The 14-feature short list was frozen before experiments to avoid cherry-picking.
 | h=1d | 0.013 | 1.38 | 0.551 |
 | h=3d | 0.021 | 2.01 | 0.592 |
 | h=5d | 0.013 | 1.47 | 0.556 |
-| h=10d | 0.010 | 0.93 | 0.592 |
+| h=10d | 0.011 | 1.01 | 0.592 |
 | h=20d | 0.023 | 3.54 | 0.585 |
 
 **S&P 1500:**
@@ -300,42 +300,42 @@ The 14-feature short list was frozen before experiments to avoid cherry-picking.
 | Horizon | Mean IC | NW t-stat | Hit Rate |
 |---------|---------|-----------|----------|
 | h=1d | 0.019 | 2.72 | 0.585 |
-| h=3d | 0.017 | 2.73 | 0.626 |
+| h=3d | 0.017 | 2.77 | 0.626 |
 | h=5d | 0.020 | 2.87 | 0.595 |
 | h=10d | 0.024 | 2.92 | 0.600 |
-| h=20d | 0.033 | 3.30 | 0.660 |
+| h=20d | 0.034 | 3.49 | 0.662 |
 
 **Russell 3000:**
 
 | Horizon | Mean IC | NW t-stat | Hit Rate |
 |---------|---------|-----------|----------|
 | h=1d | 0.013 | 2.31 | 0.574 |
-| h=3d | 0.013 | 2.74 | 0.621 |
+| h=3d | 0.013 | 2.76 | 0.621 |
 | h=5d | 0.017 | 2.95 | 0.600 |
-| h=10d | 0.022 | 3.49 | 0.641 |
-| h=20d | 0.033 | 4.56 | 0.670 |
+| h=10d | 0.022 | 3.52 | 0.636 |
+| h=20d | 0.032 | 4.44 | 0.667 |
 
-IC increases with horizon across all universes — the strongest IC is at h=20d (0.023–0.033), consistent with the signal having been trained against a 14-day pre/post-call window. RU3K shows the highest statistical significance (NW t=4.56 at h=20d), while SP500 shows the weakest. The IC term structure suggests the signal is a medium-horizon predictor (10–20d) rather than a short-horizon one.
+The strongest IC is consistently at h=20d across all three universes (0.023–0.034), consistent with the signal having been trained against a 14-day pre/post-call window. The IC term structure is not strictly monotonic: SP500 dips at h=5d and h=10d before peaking at h=20d (h=1: 0.013 → h=3: 0.021 → h=5: 0.013 → h=10: 0.011 → h=20: 0.023). SP1500 and RU3K show a generally increasing pattern with horizon. RU3K shows the highest statistical significance (NW t=4.44 at h=20d), while SP500 shows the weakest. The IC term structure suggests the signal is a medium-horizon predictor (10–20d) rather than a short-horizon one.
 
 #### SignalType IC Comparison (ATCClassifierScore, h=5d)
 
 | SignalType | S&P 500 Mean IC | S&P 500 NW t | S&P 1500 Mean IC | S&P 1500 NW t | RU3K Mean IC | RU3K NW t |
 |------------|-----------------|--------------|------------------|---------------|--------------|------------|
-| Total | 0.013 | 1.47 | 0.020 | 2.87 | 0.017 | 2.95 |
-| CEO | −0.000 | −0.04 | 0.003 | 0.40 | −0.001 | −0.19 |
-| CFO | −0.004 | −0.32 | 0.010 | 1.48 | 0.006 | 0.99 |
-| Analysts | 0.006 | 0.56 | 0.003 | 0.56 | 0.003 | 0.62 |
-| Executives | 0.002 | 0.26 | 0.007 | 1.13 | 0.007 | 1.32 |
+| Total | 0.013 | 1.47 | 0.020 | 2.89 | 0.017 | 2.95 |
+| CEO | −0.000 | −0.04 | 0.003 | 0.42 | −0.001 | −0.20 |
+| CFO | −0.004 | −0.32 | 0.010 | 1.52 | 0.006 | 1.00 |
+| Analysts | 0.006 | 0.56 | 0.004 | 0.58 | 0.003 | 0.63 |
+| Executives | 0.002 | 0.26 | 0.007 | 1.17 | 0.007 | 1.33 |
 
 #### Decile L/S Sharpe by SignalType (ATCClassifierScore, h=5d)
 
 | SignalType | S&P 500 L/S Sharpe | S&P 1500 L/S Sharpe | RU3K L/S Sharpe |
 |------------|--------------------|--------------------|-----------------|
-| Total | 0.148 | 0.191 | 0.421 |
-| CEO | −0.476 | 0.046 | −0.020 |
-| CFO | −0.659 | −0.173 | 0.040 |
-| Analysts | −0.171 | 0.016 | 0.270 |
-| Executives | −0.181 | 0.085 | 0.266 |
+| Total | 0.148 | 0.200 | 0.421 |
+| CEO | −0.476 | 0.049 | −0.020 |
+| CFO | −0.659 | −0.149 | 0.040 |
+| Analysts | −0.171 | 0.037 | 0.270 |
+| Executives | −0.181 | 0.123 | 0.266 |
 
 **Key finding:** `Total` is the only SignalType with consistently positive IC and positive L/S Sharpe across all three universes. CEO and CFO slices are near-zero or negative in S&P 500, consistent with coached management-speaker sentiment being priced-in at shorter horizons. The Analyst slice has weak positive IC but mostly negative L/S Sharpe in SP500/SP1500. In RU3K, the Analyst slice produces a Sharpe of 0.270 — the larger, less-efficient universe may leave more alpha in analyst-question signals. The Executives slice is the second-best after Total, consistent with its broader speaker coverage.
 
@@ -361,7 +361,7 @@ IC increases with horizon across all universes — the strongest IC is at h=20d 
 | 2025 | 0.064 | 2,030 |
 | 2026 | −0.034 | 566 |
 
-**Key finding from robustness analysis**: ATCClassifierScore IC dropped from 0.027 (pre-2020, NW t=3.80) to −0.000 (2023–2026, NW t=−0.01) — the signal weakened materially in the walk-forward period. See §7.5 for the full subperiod breakdown.
+**Key finding from robustness analysis**: ATCClassifierScore IC dropped from 0.027 (pre-2020, t=3.80) to −0.000 (2023–2026, t=−0.01) — the signal weakened materially in the walk-forward period. See §7.5 for the full subperiod breakdown.
 
 #### Yearly IC Trend (ATCClassifierScore, S&P 1500, Total, h=5d)
 
@@ -407,7 +407,7 @@ IC increases with horizon across all universes — the strongest IC is at h=20d 
 | 2025 | 0.007 | 9,239 |
 | 2026 | −0.073 | 2,464 |
 
-**Key finding across universes:** S&P 1500 and Russell 3000 show the same post-2020 decay pattern as S&P 500. SP1500 mean IC drops from 0.038 (pre-2020) to −0.003 (2023–2026); RU3K drops from 0.028 to 0.001. The 2026 partial-year IC is sharply negative across all three universes, though the small sample (Q1 only, 1,594–2,464 events) makes this provisional.
+**Key finding across universes:** S&P 1500 and Russell 3000 show the same post-2020 decay pattern as S&P 500. SP1500 mean IC drops from 0.036 (pre-2020) to −0.005 (2023–2026); RU3K drops from 0.027 to −0.000. The 2026 partial-year IC is sharply negative across all three universes, though the small sample (Q1 only, 1,594–2,464 events) makes this provisional.
 
 #### IC by Sector (ATCClassifierScore, h=5d, Total)
 
@@ -435,85 +435,85 @@ The yearly IC decay pattern observed in ATCClassifierScore is consistent across 
 
 | Year | EventsScore_4_2_1 | EventsScore_1_1_1 | EventsScore_3_1_0 | EventsScore_1_1_0 |
 |------|-------------------|-------------------|-------------------|-------------------|
-| Pre-2020 mean | 0.000 | 0.003 | 0.001 | 0.002 |
-| 2020–2022 mean | −0.005 | −0.006 | −0.005 | −0.005 |
-| 2023–2026 mean | −0.012 | −0.015 | −0.012 | −0.012 |
+| Pre-2020 mean | −0.000 | −0.000 | −0.000 | +0.000 |
+| 2020–2022 mean | −0.010 | −0.011 | −0.010 | −0.010 |
+| 2023–2026 mean | +0.013 | +0.011 | +0.014 | +0.011 |
 | Full-period mean | −0.010 | −0.010 | −0.010 | −0.010 |
 
-All four EventsScore variants produce near-zero to negative mean IC across every subperiod. The post-2022 decline mirrors the pattern in ATCClassifierScore but from a lower baseline. No EventsScore variant achieves a positive full-period mean IC in S&P 500.
+All four EventsScore variants produce near-zero pre-2020, turn modestly negative in 2020–2022, and flip modestly positive in 2023–2026. No EventsScore variant achieves a positive full-period mean IC in S&P 500.
 
 **Top Engineered Features (h=5d, Total, All Universes):**
 
 | Feature | S&P 500 Pre-2020 Mean IC | S&P 500 Post-2020 Mean IC | SP1500 Pre-2020 Mean IC | SP1500 Post-2020 Mean IC | RU3K Pre-2020 Mean IC | RU3K Post-2020 Mean IC |
 |---------|--------------------------|---------------------------|-------------------------|--------------------------|-----------------------|-------------------------|
-| theme_FinancialPerformance_net_sentiment | 0.014 | 0.005 | 0.015 | 0.008 | 0.015 | 0.007 |
-| ATCClassifierScore_sector_pct | 0.027 | −0.006 | 0.038 | −0.003 | 0.028 | 0.001 |
-| qoq_delta_ATCClassifierScore | 0.013 | −0.008 | 0.028 | −0.003 | 0.028 | 0.003 |
-| qoq_4q_trend_atc | 0.019 | −0.010 | 0.038 | −0.003 | 0.028 | 0.001 |
-| pre_event_ret_21d | −0.034 | −0.034 | −0.052 | −0.030 | −0.050 | −0.018 |
-| aspect_Surprise_net_sentiment | 0.003 | −0.006 | 0.004 | −0.026 | −0.001 | −0.020 |
+| theme_FinancialPerformance_net_sentiment | 0.008 | 0.018 | 0.014 | 0.009 | 0.008 | 0.018 |
+| ATCClassifierScore_sector_pct | 0.027 | 0.004 | 0.035 | −0.005 | 0.027 | 0.004 |
+| qoq_delta_ATCClassifierScore | 0.028 | 0.003 | 0.032 | −0.009 | 0.028 | 0.003 |
+| qoq_4q_trend_atc | 0.015 | 0.001 | 0.034 | −0.001 | 0.015 | 0.001 |
+| pre_event_ret_21d | −0.037 | −0.030 | −0.036 | −0.047 | −0.037 | −0.030 |
+| aspect_Surprise_net_sentiment | −0.011 | −0.006 | −0.004 | −0.015 | −0.011 | −0.006 |
 
-**Key finding:** The post-2020 IC decline is broadly consistent across all 14 features. Every positive-IC feature shows material post-2020 decay; every negative-IC feature (e.g., `pre_event_ret_21d`) remains negative. The sector-relative percentile and QoQ features show the steepest post-2020 deterioration in S&P 500, while FinancialPerformance net sentiment is the most resilient across all three universes. Pre-event momentum features continue to carry negative IC uniformly.
+**Key finding:** The post-2020 IC decline is broadly consistent across all 14 features. FinancialPerformance net sentiment is the most resilient feature — it is the only one whose post-2020 mean IC improves in all three universes. ATC-derived features (ATCClassifierScore, sector_pct, QoQ delta, trend) show the steepest post-2020 deterioration in S&P 500 and SP1500. Pre-event momentum features continue to carry negative IC uniformly, though pre_event_ret_21d is slightly less negative post-2020 in S&P 500.
 
 #### Multi-Feature Subperiod IC (h=5d, Total, S&P 1500)
 
 | Feature | Pre-2020 Mean IC | 2020–2022 Mean IC | 2023–2026 Mean IC |
 |---------|-----------------|-------------------|-------------------|
-| ATCClassifierScore | 0.036 | −0.008 | −0.020 |
-| ATCClassifierScore_sector_pct | 0.035 | −0.006 | −0.018 |
-| qoq_4q_trend_atc | 0.040 | 0.000 | −0.012 |
-| theme_FinancialPerformance_net_sentiment | 0.014 | 0.006 | −0.006 |
-| theme_StrategicInitiatives_net_sentiment | 0.010 | −0.035 | −0.013 |
-| qoq_delta_ATCClassifierScore | 0.032 | 0.007 | −0.035 |
-| pre_event_ret_21d | −0.036 | −0.042 | −0.049 |
-| pre_event_ret_21d_sector_rel | −0.008 | −0.008 | −0.016 |
-| pre_event_idio_resid_5d | −0.002 | 0.015 | −0.009 |
-| aspect_Surprise_net_sentiment | −0.004 | −0.027 | −0.017 |
-| EventsScore_4_2_1 | 0.001 | −0.005 | −0.013 |
-| EventsScore_1_1_1 | 0.003 | −0.006 | −0.014 |
-| EventsScore_3_1_0 | 0.001 | −0.006 | −0.013 |
-| EventsScore_1_1_0 | 0.002 | −0.004 | −0.013 |
+| ATCClassifierScore | 0.036 | −0.008 | −0.005 |
+| ATCClassifierScore_sector_pct | 0.035 | −0.006 | −0.004 |
+| qoq_4q_trend_atc | 0.034 | 0.000 | −0.002 |
+| theme_FinancialPerformance_net_sentiment | 0.014 | 0.006 | 0.012 |
+| theme_StrategicInitiatives_net_sentiment | 0.010 | −0.035 | 0.008 |
+| qoq_delta_ATCClassifierScore | 0.032 | 0.007 | −0.024 |
+| pre_event_ret_21d | −0.036 | −0.042 | −0.052 |
+| pre_event_ret_21d_sector_rel | −0.008 | −0.008 | −0.019 |
+| pre_event_idio_resid_5d | −0.002 | 0.015 | −0.012 |
+| aspect_Surprise_net_sentiment | −0.004 | −0.027 | −0.004 |
+| EventsScore_4_2_1 | 0.002 | −0.005 | 0.006 |
+| EventsScore_1_1_1 | 0.003 | −0.006 | 0.005 |
+| EventsScore_3_1_0 | 0.001 | −0.006 | 0.006 |
+| EventsScore_1_1_0 | 0.002 | −0.004 | 0.005 |
 
-**S&P 1500 key finding:** The decay pattern mirrors S&P 500 — ATC-derived features (ATCClassifierScore, sector_pct, QoQ delta, trend) show the steepest pre-to-post-2020 decline. FinancialPerformance net sentiment is the most resilient feature. EventsScore variants are near-zero throughout. SP1500 shows higher pre-2020 IC than SP500 (0.036 vs 0.023 for ATCClassifierScore) but a similar collapse in 2023–2026 (−0.020 vs −0.017).
+**S&P 1500 key finding:** The decay pattern mirrors S&P 500 — ATC-derived features (ATCClassifierScore, sector_pct, QoQ delta, trend) show the steepest pre-to-post-2020 decline. FinancialPerformance net sentiment is the most resilient feature, maintaining positive IC through all three subperiods (0.014 → 0.006 → 0.012). EventsScore variants turn modestly positive in 2023–2026. SP1500 shows higher pre-2020 IC than SP500 (0.036 vs 0.027) but a similar decline in 2023–2026 (−0.005 vs −0.000).
 
 #### Multi-Feature Subperiod IC (h=5d, Total, Russell 3000)
 
 | Feature | Pre-2020 Mean IC | 2020–2022 Mean IC | 2023–2026 Mean IC |
 |---------|-----------------|-------------------|-------------------|
-| ATCClassifierScore | 0.026 | 0.003 | −0.012 |
-| ATCClassifierScore_sector_pct | 0.027 | 0.006 | −0.009 |
-| qoq_4q_trend_atc | 0.017 | 0.004 | −0.011 |
-| theme_FinancialPerformance_net_sentiment | 0.008 | 0.016 | 0.005 |
-| theme_StrategicInitiatives_net_sentiment | 0.005 | −0.027 | −0.022 |
-| qoq_delta_ATCClassifierScore | 0.028 | 0.010 | −0.010 |
-| pre_event_ret_21d | −0.037 | −0.007 | −0.046 |
-| pre_event_ret_21d_sector_rel | −0.013 | 0.020 | −0.016 |
-| pre_event_idio_resid_5d | 0.000 | 0.010 | −0.001 |
-| aspect_Surprise_net_sentiment | −0.011 | −0.018 | −0.005 |
-| EventsScore_4_2_1 | −0.001 | −0.010 | −0.004 |
-| EventsScore_1_1_1 | −0.000 | −0.011 | −0.006 |
-| EventsScore_3_1_0 | −0.000 | −0.010 | −0.003 |
-| EventsScore_1_1_0 | −0.000 | −0.010 | −0.005 |
+| ATCClassifierScore | 0.027 | 0.003 | −0.000 |
+| ATCClassifierScore_sector_pct | 0.027 | 0.006 | 0.002 |
+| qoq_4q_trend_atc | 0.015 | 0.004 | −0.002 |
+| theme_FinancialPerformance_net_sentiment | 0.008 | 0.016 | 0.020 |
+| theme_StrategicInitiatives_net_sentiment | 0.005 | −0.027 | −0.007 |
+| qoq_delta_ATCClassifierScore | 0.028 | 0.010 | −0.003 |
+| pre_event_ret_21d | −0.037 | −0.007 | −0.051 |
+| pre_event_ret_21d_sector_rel | −0.013 | 0.020 | −0.024 |
+| pre_event_idio_resid_5d | 0.000 | 0.010 | 0.000 |
+| aspect_Surprise_net_sentiment | −0.011 | −0.018 | 0.006 |
+| EventsScore_4_2_1 | −0.000 | −0.010 | 0.014 |
+| EventsScore_1_1_1 | −0.000 | −0.011 | 0.011 |
+| EventsScore_3_1_0 | −0.000 | −0.010 | 0.014 |
+| EventsScore_1_1_0 | −0.000 | −0.010 | 0.011 |
 
-**Russell 3000 key finding:** RU3K shows the mildest post-2020 IC decline, consistent with the broader universe providing more alpha breadth. FinancialPerformance net sentiment is again the most resilient feature. Pre-event return turns sharply negative in 2023–2026. The signal holds up better in RU3K than in SP500 or SP1500, consistent with the portfolio results in §7.4.
+**Russell 3000 key finding:** RU3K shows the mildest post-2020 IC decline, consistent with the broader universe providing more alpha breadth. FinancialPerformance net sentiment is again the most resilient feature — it is the only one with consistently positive and improving IC across subperiods (0.008 → 0.016 → 0.020). Pre-event return turns sharply negative in 2023–2026. The signal holds up better in RU3K than in SP500 or SP1500, consistent with the portfolio results in §7.4.
 
 #### Multi-Feature Sector IC (h=5d, Total, S&P 500)
 
 | Sector | EventsScore_4_2_1 Mean IC | FinPerf Net Sent Mean IC | QoQ Delta ATC Mean IC | ATC Sector Pct Mean IC | Pre-Event Ret 21d Mean IC |
 |--------|---------------------------|--------------------------|-----------------------|------------------------|--------------------------|
-| Communication Services | −0.019 | 0.063 | 0.030 | 0.044 | −0.029 |
-| Consumer Discretionary | −0.010 | 0.012 | 0.003 | 0.010 | −0.027 |
-| Consumer Staples | −0.032 | 0.022 | 0.019 | −0.002 | −0.035 |
-| Energy | −0.003 | −0.034 | 0.011 | −0.009 | −0.036 |
-| Financials | 0.007 | 0.017 | −0.003 | 0.024 | −0.018 |
-| Health Care | 0.002 | 0.016 | 0.001 | 0.049 | −0.068 |
-| Industrials | −0.012 | 0.018 | −0.006 | −0.019 | −0.012 |
-| Information Technology | −0.020 | 0.039 | 0.031 | 0.028 | −0.024 |
-| Materials | −0.006 | 0.010 | −0.006 | 0.042 | 0.016 |
-| Real Estate | 0.003 | −0.007 | −0.017 | 0.001 | −0.071 |
-| Utilities | −0.007 | 0.038 | −0.015 | 0.059 | −0.041 |
+| Communication Services | −0.092 | 0.014 | 0.043 | 0.044 | −0.130 |
+| Consumer Discretionary | 0.005 | 0.001 | 0.030 | 0.013 | −0.018 |
+| Consumer Staples | −0.018 | 0.009 | −0.013 | 0.001 | −0.013 |
+| Energy | −0.014 | 0.020 | −0.004 | −0.005 | −0.002 |
+| Financials | 0.004 | −0.006 | 0.001 | 0.017 | −0.072 |
+| Health Care | 0.015 | 0.048 | 0.027 | 0.052 | −0.055 |
+| Industrials | −0.008 | 0.049 | 0.012 | −0.016 | −0.022 |
+| Information Technology | −0.008 | 0.044 | 0.011 | 0.047 | −0.000 |
+| Materials | −0.002 | −0.015 | 0.013 | 0.032 | −0.021 |
+| Real Estate | −0.014 | −0.044 | 0.004 | −0.000 | −0.047 |
+| Utilities | 0.044 | 0.007 | 0.010 | 0.057 | −0.007 |
 
-**Key finding:** Sector IC patterns are feature-dependent. FinancialPerformance net sentiment and ATC sector-relative percentile show the broadest positive IC across sectors. EventsScore variants are negative across most sectors. Pre-event return is negative across all sectors except Materials. Consumer Staples and Real Estate are weak for nearly every feature. Utilities and Health Care are the strongest sectors across all three universes.
+**Key finding:** Sector IC patterns are feature-dependent. ATC sector-relative percentile and QoQ delta ATC show the broadest positive IC across sectors. EventsScore_4_2_1 is negative in most sectors, with Utilities and Health Care as exceptions. Pre-event return is negative across nearly all sectors. FinancialPerformance net sentiment is strongly positive in Health Care, Information Technology, and Industrials but negative in Energy, Financials, Materials, and Real Estate. Consumer Staples and Real Estate are weak for nearly every feature.
 
 #### Multi-Feature Sector IC (h=5d, Total, S&P 1500)
 
@@ -556,18 +556,18 @@ All four EventsScore variants produce near-zero to negative mean IC across every
 | h=1d | 1.115 | −0.622 | 0.555 | −0.357 |
 | h=3d | 0.983 | −0.777 | 0.164 | −0.683 |
 | h=5d | 0.890 | −0.722 | 0.148 | −0.855 |
-| h=10d | 0.676 | −0.420 | 0.302 | −0.882 |
+| h=10d | 0.676 | −0.420 | 0.308 | −0.882 |
 | h=20d | 0.573 | −0.271 | 0.320 | −0.832 |
 
-The long-only leg consistently outperforms short-only and long-short. Short-only returns are negative at all horizons, indicating the signal is better at identifying overpriced names to short than underpriced names to buy — but the L/S spread remains positive. Long-only decile Sharpe decays from 1.12 (h=1d) to 0.57 (h=20d), consistent with alpha decay expected from a short-horizon NLP signal.
+The long-only leg consistently outperforms short-only and long-short. Short-only returns are negative at all horizons, indicating the signal is better at identifying underpriced names to buy than overpriced names to short — the long leg captures the alpha while the short leg detracts. The L/S spread remains positive because the long leg dominates. Long-only decile Sharpe decays from 1.12 (h=1d) to 0.57 (h=20d), consistent with alpha decay expected from a short-horizon NLP signal.
 
 #### Decile Baseline (ATCClassifierScore, S&P 1500)
 
 | Horizon | Long-Only Sharpe | Short-Only Sharpe | L/S Sharpe | Max Drawdown |
 |---------|------------------|-------------------|------------|--------------|
-| h=1d | 1.156 | −0.483 | 0.663 | −0.381 |
-| h=3d | 0.828 | −0.710 | 0.090 | −0.785 |
-| h=5d | 0.722 | −0.540 | 0.191 | −0.801 |
+| h=1d | 1.158 | −0.469 | 0.680 | −0.385 |
+| h=3d | 0.828 | −0.710 | 0.098 | −0.785 |
+| h=5d | 0.722 | −0.540 | 0.200 | −0.801 |
 | h=10d | 0.598 | −0.294 | 0.326 | −0.826 |
 | h=20d | 0.591 | −0.295 | 0.317 | −0.947 |
 
@@ -575,11 +575,11 @@ The long-only leg consistently outperforms short-only and long-short. Short-only
 
 | Horizon | Long-Only Sharpe | Short-Only Sharpe | L/S Sharpe | Max Drawdown |
 |---------|------------------|-------------------|------------|--------------|
-| h=1d | 0.558 | −0.324 | 0.302 | −0.475 |
-| h=3d | 0.810 | −0.425 | 0.378 | −0.801 |
+| h=1d | 0.558 | −0.324 | 0.312 | −0.475 |
+| h=3d | 0.810 | −0.425 | 0.385 | −0.801 |
 | h=5d | 0.776 | −0.359 | 0.421 | −0.834 |
 | h=10d | 0.743 | −0.306 | 0.437 | −0.837 |
-| h=20d | 0.649 | −0.318 | 0.393 | −0.962 |
+| h=20d | 0.649 | −0.318 | 0.390 | −0.962 |
 
 Across all three universes, the long-only leg dominates the short leg. The L/S spread is positive at all horizons for all universes. SP1500 shows the strongest short-horizon long-only Sharpe (1.16 at h=1d), while RU3K shows the most consistent L/S Sharpe across horizons (0.30–0.44). The L/S Sharpe decay pattern is less severe in RU3K, consistent with the broader universe providing more cross-sectional dispersion for the signal to exploit.
 
@@ -592,18 +592,18 @@ Cumulative return values are equity-curve multipliers starting from 1.00 (e.g., 
 | S&P 500 | h=1d | 3.24 | 0.30 | 1.17 | 0.555 |
 | S&P 500 | h=3d | 48.28 | 0.03 | 2.21 | 0.164 |
 | S&P 500 | h=5d | 407.91 | 0.00 | 4.39 | 0.148 |
-| S&P 500 | h=10d | 4,641.77 | 0.00 | 24.09 | 0.302 |
-| S&P 500 | h=20d | 58,638,067.74 | 0.00 | 4,462.77 | 0.320 |
-| S&P 1500 | h=1d | 3.26 | 0.13 | 0.62 | 0.663 |
-| S&P 1500 | h=3d | 28.65 | 0.00 | 0.21 | 0.090 |
-| S&P 1500 | h=5d | 494.94 | 0.00 | 0.76 | 0.191 |
-| S&P 1500 | h=10d | 267,300.25 | 0.00 | 10.09 | 0.326 |
-| S&P 1500 | h=20d | 77,693,388,044.28 | 0.00 | 113.99 | 0.317 |
-| Russell 3000 | h=1d | 17.60 | 0.14 | 4.21 | 0.302 |
-| Russell 3000 | h=3d | 4,893.66 | 0.00 | 47.98 | 0.378 |
-| Russell 3000 | h=5d | 776,137.35 | 0.00 | 603.47 | 0.421 |
-| Russell 3000 | h=10d | 4,420,987,553.74 | 0.00 | 7,781.49 | 0.437 |
-| Russell 3000 | h=20d | 1.28e17 | 0.00 | 57,114.26 | 0.393 |
+| S&P 500 | h=10d | 4,484.12 | 0.00 | 14.61 | 0.308 |
+| S&P 500 | h=20d | 58,637,977.57 | 0.00 | 4,462.77 | 0.320 |
+| S&P 1500 | h=1d | 3.19 | 0.13 | 0.59 | 0.680 |
+| S&P 1500 | h=3d | 30.08 | 0.00 | 0.21 | 0.098 |
+| S&P 1500 | h=5d | 565.01 | 0.00 | 0.83 | 0.200 |
+| S&P 1500 | h=10d | 305,149.45 | 0.00 | 11.54 | 0.325 |
+| S&P 1500 | h=20d | 99,703,204,678.04 | 0.00 | 99.17 | 0.319 |
+| Russell 3000 | h=1d | 17.55 | 0.14 | 4.13 | 0.312 |
+| Russell 3000 | h=3d | 5,026.53 | 0.00 | 48.83 | 0.385 |
+| Russell 3000 | h=5d | 806,430.75 | 0.00 | 633.55 | 0.422 |
+| Russell 3000 | h=10d | 4,485,619,623.01 | 0.00 | 8,072.09 | 0.437 |
+| Russell 3000 | h=20d | 1.40e17 | 0.00 | 39,080.51 | 0.390 |
 
 **Key observation:** Long-only cumulative returns grow exponentially with horizon — the long leg dominates the strategy's economics. Short-only converges to near-zero at horizons beyond h=1d, meaning the short book loses essentially all capital over the full period. The L/S portfolio is economically driven by the long leg. RU3K L/S cumulative returns are substantially higher than SP500/SP1500 at every horizon, consistent with the broader universe providing more alpha breadth. Extreme compounding at h=20d reflects 16+ years of daily-rebalanced portfolio returns; these are geometric totals, not annualized.
 
@@ -682,15 +682,15 @@ OOS predictive performance is assessed through realized portfolio Sharpe in §7.
 
 #### S&P 500
 
-Across all three models and both tiers, S&P 500 model-driven portfolios produce negative pre-cost and post-cost Sharpe at daily, weekly, and monthly cadences. The predictive models do not add value over the ATCClassifierScore baseline for S&P 500. Sample sizes range from 498 to 545 tradeable events per quarter (2020Q1–2026Q1), all above the 100-event threshold. Only 2026Q2 (53 events) falls below. Right-censored counts decline from 44 (2020Q1) to 0 (2025Q4–2026Q1).
+Across all three models and both tiers, S&P 500 model-driven portfolios produce uniformly negative post-cost Sharpe (0/90 combinations positive). Pre-cost, 11 of 90 combinations are positive (led by LightGBM Enhanced h=3d daily at 0.38 and Ridge Enhanced h=1d monthly at 0.14), but turnover costs of 5 bps consume the marginal pre-cost alpha. The predictive models do not add post-cost value over the ATCClassifierScore baseline for S&P 500. Sample sizes range from 462 to 540 tradeable events per quarter (2020Q1–2026Q1), all above the 100-event threshold. Only 2026Q2 (53 events) falls below. Right-censored counts decline from 44 (2020Q1) to 0 (2025Q4–2026Q1).
 
 #### S&P 1500
 
-SP1500 provides 200–210 average holdings per rebalance at monthly cadence. Only 3 of 30 model × tier × horizon combinations achieve positive post-cost Sharpe: Ridge Enhanced h=1d (0.59), Ridge Enhanced h=3d (0.27), and XGBoost Enhanced h=5d (0.03). All positive combinations use monthly cadence and the Enhanced tier. At weekly cadence, all combinations produce negative post-cost Sharpe. At daily cadence, only XGBoost Stretch h=1d achieves positive post-cost Sharpe (0.19), but with extreme turnover (129×).
+SP1500 provides 200–210 average holdings per rebalance at monthly cadence. Only 4 of 90 model × tier × horizon × cadence combinations achieve positive post-cost Sharpe: XGBoost Enhanced h=5d monthly (0.28), Ridge Enhanced h=1d monthly (0.24), Ridge Enhanced h=3d monthly (0.22), and XGBoost Stretch h=1d weekly (0.16). At daily cadence, no combination achieves positive post-cost Sharpe. The sole weekly positive (XGBoost Stretch h=1d) has high turnover (129×).
 
 #### Russell 3000
 
-RU3K provides the broadest investment universe (~295 average holdings per monthly rebalance). 20 of 30 model × tier × horizon combinations produce positive post-cost Sharpe at monthly cadence. LightGBM Enhanced h=20d is the best performer (post-cost Sharpe 0.82). Enhanced tier outperforms Stretch overall (14 vs 6 positive post-cost Sharpe). At weekly cadence, no combination achieves positive post-cost Sharpe. At daily cadence, no combination achieves positive post-cost Sharpe. The full model/tier/horizon result tables for each universe are reported in §7.4.
+RU3K provides the broadest investment universe (~295 average holdings per monthly rebalance). 20 of 30 model × tier × horizon combinations produce positive post-cost Sharpe at monthly cadence. LightGBM Enhanced h=20d is the best performer (post-cost Sharpe 0.93). Enhanced tier outperforms Stretch overall (14 vs 6 positive post-cost Sharpe). At weekly cadence, 8 of 30 combinations achieve positive post-cost Sharpe (led by LightGBM Stretch h=3d at 0.20 and LightGBM Stretch h=1d at 0.16). At daily cadence, no combination achieves positive post-cost Sharpe. The full model/tier/horizon result tables for each universe are reported in §7.4.
 
 ### 7.4 Rebalanced Portfolio Simulation
 
@@ -773,15 +773,15 @@ RU3K provides the broadest investment universe (~295 average holdings per monthl
 | Ridge | Stretch (h=1d) | −0.42 | −0.63 | 78.5 | 1.98 | −0.03 | −0.618 | 37.9 |
 | LightGBM | Stretch (h=20d) | −0.48 | −0.72 | 78.4 | 1.98 | −0.02 | −0.590 | 37.9 |
 
-All S&P 500 model-driven weekly portfolios produce negative pre-cost and post-cost Sharpe ratios. The predictive models destroy the signal's value — they do not improve on the ATCClassifierScore decile baseline (L/S Sharpe 0.15 at h=5d, no trading costs) and instead generate high-turnover portfolios (78.5×) whose costs overwhelm any residual alpha. Gross exposure is maintained at the 200% target (avg 1.98–1.99); net exposure is near zero (−0.03 to −0.04), confirming dollar-neutral construction. The decile baseline's drawdowns (−0.855) are deeper than model-based portfolios, reflecting concentrated quintile construction, but its Sharpe is at least positive before costs.
+All S&P 500 model-driven weekly portfolios produce negative post-cost Sharpe ratios (0/30 positive). Only 1 of 30 weekly combinations (LightGBM Enhanced h=3d) achieves positive pre-cost Sharpe (0.07), but this is consumed by turnover costs. The predictive models destroy the signal's value — they do not improve on the ATCClassifierScore decile baseline (L/S Sharpe 0.15 at h=5d, no trading costs) and instead generate high-turnover portfolios (78.5×) whose costs overwhelm any residual alpha. Gross exposure is maintained at the 200% target (avg 1.98–1.99); net exposure is near zero (−0.03 to −0.04), confirming dollar-neutral construction. The decile baseline's drawdowns (−0.855) are deeper than model-based portfolios, reflecting concentrated quintile construction, but its Sharpe is at least positive before costs.
 
 **S&P 1500 Monthly (all models with positive post-cost Sharpe):**
 
 | Model | Tier | Horizon | Pre-Cost Sharpe | Post-Cost Sharpe | Ann. Turnover | Avg Gross | Avg Net | Max Drawdown |
 |-------|------|---------|-----------------|------------------|---------------|-----------|---------|--------------|
-| Ridge | Enhanced | h=1d | 0.78 | 0.59 | 42.5 | 1.98 | −0.01 | −0.144 |
-| Ridge | Enhanced | h=3d | 0.46 | 0.27 | 42.5 | 1.98 | −0.01 | −0.171 |
-| XGBoost | Enhanced | h=5d | 0.22 | 0.03 | 42.5 | 1.98 | 0.01 | −0.183 |
+| XGBoost | Enhanced | h=5d | 0.48 | 0.28 | 42.6 | 1.98 | 0.01 | −0.155 |
+| Ridge | Enhanced | h=1d | 0.43 | 0.24 | 42.5 | 1.98 | −0.01 | −0.217 |
+| Ridge | Enhanced | h=3d | 0.41 | 0.22 | 42.5 | 1.98 | −0.01 | −0.170 |
 
 Only 3 of 30 model × tier × horizon combinations achieve positive post-cost Sharpe. All three satisfy gross ≈ 200%, net ≈ 0%.
 
@@ -789,26 +789,26 @@ Only 3 of 30 model × tier × horizon combinations achieve positive post-cost Sh
 
 | Model | Tier | Horizon | Pre-Cost Sharpe | Post-Cost Sharpe | Ann. Turnover | Avg Gross | Avg Net | Max Drawdown |
 |-------|------|---------|-----------------|------------------|---------------|-----------|---------|--------------|
-| LightGBM | Enhanced | h=20d | 1.00 | 0.82 | 45.8 | 1.98 | 0.01 | −0.220 |
-| Ridge | Stretch | h=20d | 0.88 | 0.67 | 45.7 | 1.98 | 0.00 | −0.210 |
-| Ridge | Enhanced | h=5d | 0.83 | 0.64 | 45.8 | 1.98 | 0.00 | −0.279 |
-| LightGBM | Enhanced | h=5d | 0.72 | 0.53 | 45.8 | 1.98 | 0.01 | −0.130 |
-| LightGBM | Enhanced | h=10d | 0.73 | 0.52 | 45.8 | 1.98 | 0.01 | −0.193 |
-| XGBoost | Enhanced | h=3d | 0.73 | 0.52 | 45.8 | 1.98 | 0.00 | −0.204 |
-| XGBoost | Enhanced | h=10d | 0.73 | 0.52 | 45.8 | 1.98 | 0.01 | −0.196 |
-| LightGBM | Stretch | h=20d | 0.73 | 0.51 | 45.7 | 1.98 | 0.00 | −0.284 |
-| LightGBM | Enhanced | h=1d | 0.68 | 0.48 | 45.8 | 1.98 | 0.00 | −0.118 |
-| XGBoost | Enhanced | h=20d | 0.65 | 0.47 | 45.8 | 1.98 | 0.01 | −0.336 |
-| XGBoost | Enhanced | h=1d | 0.61 | 0.44 | 45.9 | 1.98 | 0.00 | −0.160 |
-| XGBoost | Enhanced | h=5d | 0.63 | 0.42 | 45.8 | 1.98 | 0.00 | −0.260 |
-| Ridge | Enhanced | h=10d | 0.55 | 0.34 | 45.8 | 1.98 | 0.00 | −0.384 |
-| Ridge | Enhanced | h=20d | 0.43 | 0.22 | 45.8 | 1.98 | 0.00 | −0.356 |
-| LightGBM | Enhanced | h=3d | 0.40 | 0.21 | 45.8 | 1.98 | 0.00 | −0.163 |
-| XGBoost | Stretch | h=20d | 0.40 | 0.19 | 45.8 | 1.98 | 0.00 | −0.350 |
-| Ridge | Enhanced | h=3d | 0.36 | 0.17 | 45.8 | 1.98 | 0.00 | −0.260 |
-| LightGBM | Stretch | h=5d | 0.24 | 0.04 | 45.8 | 1.98 | 0.00 | −0.325 |
-| Ridge | Stretch | h=10d | 0.25 | 0.02 | 45.7 | 1.98 | 0.00 | −0.200 |
-| XGBoost | Stretch | h=3d | 0.18 | 0.00 | 45.8 | 1.98 | 0.00 | −0.164 |
+| LightGBM | Enhanced | h=20d | 1.11 | 0.93 | 45.8 | 1.98 | 0.01 | −0.198 |
+| XGBoost | Enhanced | h=5d | 0.96 | 0.75 | 45.8 | 1.98 | 0.00 | −0.148 |
+| Ridge | Stretch | h=20d | 0.90 | 0.68 | 45.7 | 1.98 | 0.00 | −0.210 |
+| LightGBM | Enhanced | h=10d | 0.87 | 0.66 | 45.8 | 1.98 | 0.01 | −0.186 |
+| Ridge | Enhanced | h=5d | 0.83 | 0.64 | 45.8 | 1.98 | 0.00 | −0.285 |
+| XGBoost | Enhanced | h=10d | 0.82 | 0.61 | 45.8 | 1.98 | 0.01 | −0.187 |
+| XGBoost | Enhanced | h=20d | 0.80 | 0.61 | 45.8 | 1.98 | 0.01 | −0.254 |
+| XGBoost | Enhanced | h=3d | 0.79 | 0.60 | 45.8 | 1.98 | 0.00 | −0.138 |
+| LightGBM | Enhanced | h=5d | 0.72 | 0.53 | 45.8 | 1.98 | 0.01 | −0.136 |
+| LightGBM | Stretch | h=20d | 0.75 | 0.53 | 45.7 | 1.98 | 0.00 | −0.302 |
+| LightGBM | Enhanced | h=1d | 0.63 | 0.44 | 45.8 | 1.98 | −0.00 | −0.130 |
+| Ridge | Enhanced | h=10d | 0.59 | 0.39 | 45.8 | 1.98 | 0.00 | −0.376 |
+| XGBoost | Enhanced | h=1d | 0.57 | 0.39 | 45.8 | 1.98 | −0.00 | −0.186 |
+| LightGBM | Enhanced | h=3d | 0.51 | 0.31 | 45.8 | 1.98 | 0.00 | −0.145 |
+| XGBoost | Stretch | h=20d | 0.43 | 0.22 | 45.8 | 1.98 | 0.00 | −0.342 |
+| Ridge | Enhanced | h=20d | 0.41 | 0.21 | 45.8 | 1.98 | 0.00 | −0.367 |
+| Ridge | Enhanced | h=3d | 0.35 | 0.17 | 45.8 | 1.98 | 0.00 | −0.247 |
+| LightGBM | Stretch | h=10d | 0.25 | 0.03 | 45.7 | 1.98 | 0.00 | −0.235 |
+| Ridge | Stretch | h=5d | 0.24 | 0.02 | 45.8 | 1.98 | 0.00 | −0.192 |
+| Ridge | Stretch | h=10d | 0.24 | 0.01 | 45.7 | 1.98 | 0.00 | −0.201 |
 
 Russell 3000 is the only universe where model-based strategies consistently survive transaction costs. 20 of 30 combinations produce positive post-cost Sharpe. Enhanced tier outperforms Stretch overall (14 vs 6 positive). All portfolios maintain gross ≈ 200%, net ≈ 0% dollar-neutrality. The larger universe (2,583 tickers, ~295 holdings per rebalance) provides sufficient breadth for the diffuse ATC signal to overcome 5 bps costs at monthly cadence.
 
@@ -820,13 +820,13 @@ Russell 3000 is the only universe where model-based strategies consistently surv
 
 | Universe | Subperiod | Mean IC (h=5d) | n Years |
 |----------|-----------|----------------|---------|
-| S&P 500 | Pre-2020 | 0.023 | 10 |
-| S&P 500 | 2020–2022 | 0.019 | 3 |
-| S&P 500 | 2023–2026 | −0.017 | 4 |
-| S&P 1500 | Pre-2020 | 0.038 | 10 |
+| S&P 500 | Pre-2020 | 0.027 | 10 |
+| S&P 500 | 2020–2022 | 0.003 | 3 |
+| S&P 500 | 2023–2026 | −0.000 | 4 |
+| S&P 1500 | Pre-2020 | 0.036 | 10 |
 | S&P 1500 | 2020–2022 | −0.008 | 3 |
-| S&P 1500 | 2023–2026 | −0.003 | 4 |
-| Russell 3000 | Pre-2020 | 0.028 | 10 |
+| S&P 1500 | 2023–2026 | −0.005 | 4 |
+| Russell 3000 | Pre-2020 | 0.027 | 10 |
 | Russell 3000 | 2020–2022 | 0.003 | 3 |
 | Russell 3000 | 2023–2026 | 0.001 | 4 |
 
@@ -837,21 +837,21 @@ The 14-feature subperiod mean IC (S&P 500, from `results/robustness/robustness_s
 | Feature | Pre-2020 Mean IC | 2020–2022 Mean IC | 2023–2026 Mean IC |
 |---------|-----------------|-------------------|-------------------|
 | ATCClassifierScore | 0.027 | 0.003 | −0.000 |
-| ATCClassifierScore_sector_pct | 0.027 | 0.001 | 0.000 |
-| qoq_4q_trend_atc | 0.018 | −0.004 | −0.010 |
+| ATCClassifierScore_sector_pct | 0.027 | 0.006 | 0.002 |
+| qoq_4q_trend_atc | 0.015 | 0.005 | −0.001 |
 | theme_FinancialPerformance_net_sentiment | 0.008 | 0.016 | 0.020 |
-| theme_StrategicInitiatives_net_sentiment | 0.008 | 0.005 | 0.012 |
-| qoq_delta_ATCClassifierScore | 0.028 | 0.010 | −0.003 |
+| theme_StrategicInitiatives_net_sentiment | 0.005 | −0.027 | −0.007 |
+| qoq_delta_ATCClassifierScore | 0.028 | 0.011 | −0.003 |
 | pre_event_ret_21d | −0.037 | −0.007 | −0.051 |
-| pre_event_ret_21d_sector_rel | −0.004 | 0.009 | −0.011 |
+| pre_event_ret_21d_sector_rel | −0.013 | 0.021 | −0.025 |
 | pre_event_idio_resid_5d | 0.000 | 0.010 | 0.000 |
-| aspect_Surprise_net_sentiment | 0.003 | 0.003 | −0.016 |
-| EventsScore_4_2_1 | −0.000 | −0.010 | 0.014 |
-| EventsScore_1_1_1 | 0.003 | −0.009 | 0.013 |
-| EventsScore_3_1_0 | 0.001 | −0.009 | 0.015 |
-| EventsScore_1_1_0 | 0.000 | −0.007 | 0.014 |
+| aspect_Surprise_net_sentiment | −0.011 | −0.018 | 0.006 |
+| EventsScore_4_2_1 | −0.000 | −0.010 | 0.013 |
+| EventsScore_1_1_1 | −0.000 | −0.011 | 0.011 |
+| EventsScore_3_1_0 | −0.000 | −0.010 | 0.014 |
+| EventsScore_1_1_0 | 0.000 | −0.010 | 0.011 |
 
-**Key finding:** The ATC-derived features (ATCClassifierScore, sector-relative pct, QoQ delta, 4Q trend) show the steepest pre-to-post-2020 decline. FinancialPerformance net sentiment is the only feature with improving IC across subperiods (0.008 → 0.016 → 0.020). EventsScore variants flip from near-zero pre-2020 to modestly positive in 2023–2026. Pre-event return remains persistently negative across all subperiods.
+**Key finding:** The ATC-derived features (ATCClassifierScore, sector-relative pct, QoQ delta, 4Q trend) show the steepest pre-to-post-2020 decline. FinancialPerformance net sentiment is the most resilient feature with consistently positive IC that improves across subperiods (0.008 → 0.016 → 0.020). EventsScore variants flip from near-zero pre-2020 to modestly positive in 2023–2026. Pre-event return remains persistently negative across all subperiods. StrategicInitiatives net sentiment and aspect_Surprise flip sign between subperiods, suggesting limited stability as standalone signals.
 
 Cross-universe subperiod IC for all 14 features is available in `results/ic/ic_yearly_*.parquet`; a summary for the top engineered features is in §7.1 (Multi-Feature Yearly IC Trend).
 
@@ -859,11 +859,11 @@ Cross-universe subperiod IC for all 14 features is available in `results/ic/ic_y
 
 | Subperiod | Quintile L/S Sharpe (h=5d) |
 |-----------|---------------------------|
-| Pre-2020 | 1.22 |
-| 2020–2022 | −0.55 |
+| Pre-2020 | 1.26 |
+| 2020–2022 | −0.53 |
 | 2023–2026 | −0.27 |
 
-**Key finding**: Signal decay is severe and consistent across all three universes. ATCClassifierScore IC dropped from 0.023–0.038 (pre-2020) to near-zero or negative in 2023–2026 for all universes. SP1500 shows the steepest pre-2020 IC (0.038) but the most complete post-2022 collapse (−0.003 in 2023–2026). RU3K holds up marginally better (0.001 in 2023–2026) but is not significantly positive. The quintile L/S Sharpe for S&P 500 fell from 1.22 to −0.27. The signal was economically meaningful before 2020 but has been largely arbitraged away or diluted in the walk-forward period. This pattern is consistent across all five horizons.
+**Key finding**: Signal decay is severe and consistent across all three universes. ATCClassifierScore IC dropped from 0.027–0.036 (pre-2020) to near-zero or negative in 2023–2026 for all universes. SP1500 shows the steepest pre-2020 IC (0.036) but the most complete post-2022 collapse (−0.005 in 2023–2026). RU3K holds up marginally better (−0.000 in 2023–2026) but is not significantly positive. The quintile L/S Sharpe for S&P 500 fell from 1.26 to −0.27. The signal was economically meaningful before 2020 but has been largely arbitraged away or diluted in the walk-forward period. This pattern is consistent across all five horizons.
 
 #### Subperiod Quintile L/S Sharpe (S&P 1500, ATCClassifierScore, h=5d)
 
@@ -929,14 +929,14 @@ RU3K sector neutralization provides marginal improvement at h=5d (0.42 → 0.49)
 
 | Bucket | Sharpe (h=5d) | Sharpe (h=20d) | n_months |
 |--------|---------------|----------------|----------|
-| Mega (top 10%) | 0.19 | 0.28 | 88 |
-| Large (10–40%) | −0.26 | 0.24 | 121 |
-| Mid (40–70%) | −0.13 | 0.12 | 120 |
-| Small (bottom 30%) | 0.39 | 0.77 | 110 |
+| Mega (top 10%) | 0.00 | 0.33 | 88 |
+| Large (10–40%) | −0.21 | 0.36 | 121 |
+| Mid (40–70%) | −0.14 | 0.12 | 120 |
+| Small (bottom 30%) | 0.23 | 0.72 | 110 |
 
 Note: 2010–2014 is qualitative only due to shares coverage below 70% floor. Above table is 2015+ only.
 
-**Key finding**: The ATC signal is most effective in small-cap stocks (bottom 30% by market cap), with quintile L/S Sharpe 0.39 at h=5d and 0.77 at h=20d. Mega-cap stocks show weak positive Sharpe. Large and mid-cap are negative at h=5d. This is consistent with the narrative that NLP earnings-call signals have the most alpha in less-analyst-covered names.
+**Key finding**: The ATC signal is most effective in small-cap stocks (bottom 30% by market cap), with quintile L/S Sharpe 0.23 at h=5d and 0.72 at h=20d. Mega-cap stocks show near-zero Sharpe at h=5d (0.00), turning positive only at h=20d (0.33). Large and mid-cap are negative at h=5d but turn positive at h=20d. This is consistent with the narrative that NLP earnings-call signals have the most alpha in less-analyst-covered names, though the effect is concentrated at longer horizons.
 
 *Note: Market-cap bucket analysis is S&P 500 only (requires universe-specific shares data from yfinance; SP1500/RU3K shares coverage is sparse pre-2015 and would produce mostly "unknown" buckets). The S&P 500 finding — signal strongest in small-caps — together with cross-universe IC data provides sufficient directional evidence for all three universes.*
 
@@ -946,24 +946,24 @@ Note: 2010–2014 is qualitative only due to shares coverage below 70% floor. Ab
 
 | Cutoff | Sharpe (h=5d) | Sharpe (h=20d) |
 |--------|---------------|----------------|
-| Top-5 | 0.09 | 0.68 |
-| Top-10 | 0.31 | 0.78 |
+| Top-5 | 0.10 | 0.66 |
+| Top-10 | 0.31 | 0.73 |
 | Top-20 | 0.35 | 0.93 |
 | Top-50 | 0.47 | 1.20 |
 | Top-100 | 0.73 | 1.76 |
 
 **Key finding**: Wider cutoffs (more names per leg) consistently improve Sharpe. The signal is diffuse — it provides mild directional information across many names rather than strong predictions for a few. Top-100 and Top-50 cutoffs outperform Top-5/Top-10 at all horizons. This has capacity implications: the strategy can scale to more holdings without degrading performance.
 
-**Transaction Cost (S&P 500, Weekly, Ridge Stretch h=5d):**
+**Transaction Cost (S&P 500, Weekly, ATC Baseline):**
 
 | Cost (bps) | Post-Cost Sharpe |
 |------------|------------------|
-| 3 | −0.71 |
-| 5 | −0.81 |
-| 7 | −0.91 |
-| 10 | −1.05 |
+| 3 | 0.31 |
+| 5 | 0.15 |
+| 7 | −0.01 |
+| 10 | −0.25 |
 
-Even at 3 bps one-way, the post-cost Sharpe is −0.71 for the best S&P 500 weekly model. The signal alpha is too weak to survive any realistic cost assumption on S&P 500.
+Transaction costs erode the ATC baseline signal on S&P 500 weekly cadence: post-cost Sharpe turns negative above ~6 bps one-way. At 5 bps the strategy is marginally positive (0.15), but at 10 bps it is solidly negative (−0.25).
 
 **OFAT Lookback (S&P 500, ATC Baseline):**
 
@@ -986,16 +986,16 @@ Longer lookbacks and lower cadences improve post-cost Sharpe. Weekly 10d and all
 
 ### 8.1 Recommended Universe and Cadence: Russell 3000, Monthly Rebalance
 
-The strongest risk-adjusted performance comes from **Russell 3000 at monthly cadence** with LightGBM Enhanced. This combination achieves post-cost Sharpe 0.82 (pre-cost 1.00) with turnover 45.8× annually, 295 average holdings, and top-10 concentration of 0.14. The large universe provides sufficient breadth for the diffuse ATC signal to overcome transaction costs.
+The strongest risk-adjusted performance comes from **Russell 3000 at monthly cadence** with LightGBM Enhanced. This combination achieves post-cost Sharpe 0.93 (pre-cost 1.11) with turnover 45.8× annually, 295 average holdings, and top-10 concentration of 0.14. The large universe provides sufficient breadth for the diffuse ATC signal to overcome transaction costs.
 
-**S&P 500** model-driven strategies are **not recommended for deployment** at any tested cadence — all produce negative pre-cost and post-cost Sharpe. The ATCClassifierScore decile long-only baseline (Sharpe 0.89 pre-cost at h=5d) shows the signal has directional value, but model-based portfolio construction at weekly cadence generates too much turnover (78.5×) relative to the signal's alpha.
+**S&P 500** model-driven strategies are **not recommended for deployment** at any tested cadence — all 90 combinations produce negative post-cost Sharpe (0/90 positive). While 11 of 90 achieve positive pre-cost Sharpe, none survives 5 bps transaction costs. The ATCClassifierScore decile long-only baseline (Sharpe 0.89 pre-cost at h=5d) shows the signal has directional value, but model-based portfolio construction at weekly cadence generates too much turnover (78.5×) relative to the signal's alpha.
 
-**S&P 1500** shows marginal viability at monthly cadence (post-cost Sharpe 0.59 for Ridge Enhanced h=1d) but is dominated by RU3K.
+**S&P 1500** shows marginal viability at monthly cadence (post-cost Sharpe 0.28 for XGBoost Enhanced h=5d) but is dominated by RU3K.
 
 ### 8.2 Recommended Model: LightGBM Enhanced
 
 LightGBM with Enhanced features (85 columns) is the recommended model for RU3K deployment:
-- Best post-cost Sharpe: 0.82 (monthly, h=20d)
+- Best post-cost Sharpe: 0.93 (monthly, h=20d)
 - Consistent outperformance over XGBoost and Ridge at monthly cadence
 - Stretch tier (405+ columns) does not improve over Enhanced for RU3K monthly — the additional AspectTheme features add noise rather than signal after LassoCV selection
 

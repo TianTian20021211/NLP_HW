@@ -5,17 +5,17 @@ daily/weekly/monthly rebalance cadences.
 
 ## Quick start
 
-1. Place `Earnings_ATC_until_2026-04-21.csv.zip` in the project root.
+1. Acquire `Earnings_ATC_until_2026-04-21.csv.zip` (instructor-provided).
 2. Install dependencies:
 
    ```bash
    pip install pandas numpy scipy scikit-learn lightgbm xgboost yfinance \
-               matplotlib weasyprint markdown pygments pyarrow numba joblib
+               matplotlib weasyprint markdown pygments pyarrow numba joblib requests
    ```
 3. Run the full pipeline:
 
    ```bash
-   python run_all.py --tier both
+   python run_all.py --tier both --signals-zip /path/to/Earnings_ATC_until_2026-04-21.csv.zip
    ```
 4. Output: `reports/final_report.pdf`
 
@@ -27,6 +27,7 @@ python run_all.py --from-phase 4 --stop-at-phase 5   # walk-forward + experiment
 python run_all.py --tier enhanced                     # enhanced tier only (85 cols)
 python run_all.py --tier both                         # enhanced + stretch tiers
 python run_all.py --dry-run --tier both               # preview without executing
+python run_all.py --signals-zip /path/to/data.csv.zip  # custom data file location
 ```
 
 ## Data sources

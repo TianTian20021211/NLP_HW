@@ -951,7 +951,7 @@ def tune_ridge(
 
     for tr, vl in progress(cv_splits, desc="ridge tuning", unit="fold"):
         X_tr, X_vl = _preprocess_train_val(X, tr, vl, scale=True)
-        fold_scores: list[float] = Parallel(n_jobs=-1)(
+        fold_scores: list[float] = Parallel(n_jobs=8)(
             delayed(_fit_ridge_alpha)(a, X_tr, y[tr], X_vl, y[vl])
             for a in alphas
         )
@@ -1001,7 +1001,7 @@ def tune_lightgbm(
     scores_by_trial: list[list[float]] = [[] for _ in trials]
     for tr, vl in progress(cv_splits, desc="lgbm tuning", unit="fold"):
         X_tr, X_vl = _preprocess_train_val(X, tr, vl, scale=False)
-        fold_scores: list[float] = Parallel(n_jobs=-1)(
+        fold_scores: list[float] = Parallel(n_jobs=8)(
             delayed(_fit_lgbm_trial)(params, X_tr, y[tr], X_vl, y[vl], SEED)
             for params in trials
         )
@@ -1054,7 +1054,7 @@ def tune_xgboost(
     scores_by_trial: list[list[float]] = [[] for _ in trials]
     for tr, vl in progress(cv_splits, desc="xgb tuning", unit="fold"):
         X_tr, X_vl = _preprocess_train_val(X, tr, vl, scale=False)
-        fold_scores: list[float] = Parallel(n_jobs=-1)(
+        fold_scores: list[float] = Parallel(n_jobs=8)(
             delayed(_fit_xgb_trial)(params, X_tr, y[tr], X_vl, y[vl], SEED)
             for params in trials
         )

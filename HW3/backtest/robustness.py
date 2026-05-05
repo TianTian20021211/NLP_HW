@@ -18,7 +18,7 @@ import itertools
 import json
 import logging
 import os
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ProcessPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -200,10 +200,10 @@ def run_subperiod_ic(
 
     combos = list(itertools.product(features, HORIZONS, SIGNAL_TYPES))
     _ROBUSTNESS_DFS = signal_dfs
-    _n_jobs = n_jobs if n_jobs else min(os.cpu_count() or 4, 2)
+    _n_jobs = n_jobs if n_jobs else min(os.cpu_count() or 4, 6)
 
     if _n_jobs > 1:
-        with ThreadPoolExecutor(max_workers=_n_jobs) as ex:
+        with ProcessPoolExecutor(max_workers=_n_jobs) as ex:
             futures = [ex.submit(_subperiod_ic_worker, c) for c in combos]
             chunk_rows = []
             for f in progress(as_completed(futures), total=len(combos), desc="Subperiod IC"):
@@ -250,10 +250,10 @@ def run_subperiod_quintile(
 
     _ROBUSTNESS_DFS = signal_dfs
     combos = list(itertools.product(features, HORIZONS, SIGNAL_TYPES))
-    _n_jobs = n_jobs if n_jobs else min(os.cpu_count() or 4, 2)
+    _n_jobs = n_jobs if n_jobs else min(os.cpu_count() or 4, 6)
 
     if _n_jobs > 1:
-        with ThreadPoolExecutor(max_workers=_n_jobs) as ex:
+        with ProcessPoolExecutor(max_workers=_n_jobs) as ex:
             futures = [ex.submit(_subperiod_quintile_worker, c) for c in combos]
             chunk_rows = []
             for f in progress(as_completed(futures), total=len(combos), desc="Subperiod quintile"):
@@ -1347,6 +1347,7 @@ def _run_beta_window_section(
     universe_name: str,
     price_cache_dir: Path,
     output_dir: Path,
+    tier: str = "enhanced",
 ) -> pd.DataFrame:
     """Recompute R8 idiosyncratic residual IC under beta window variants.
 
@@ -1366,7 +1367,7 @@ def _run_beta_window_section(
         if beta_window == 60:
             resid = df["pre_event_idio_resid_5d"]
         else:
-            cache_path = cache_dir / f"momentum_beta_{beta_window}_{universe_name}.parquet"
+            cache_path = cache_dir / f"momentum_beta_{beta_window}_{universe_name}_{tier}.parquet"
             if cache_path.exists():
                 momentum = pd.read_parquet(cache_path)
                 resid = momentum["pre_event_idio_resid_5d"]
@@ -1536,7 +1537,7 @@ def run_all_robustness(
 
     # Sections as (func, args, attr_name_or_None)
     # None attr means side-effect-only (file written by func itself)
-    _n_jobs = n_jobs if n_jobs > 0 else 1
+    _n_jobs = n_jobs if n_jobs > 0 else 3
     sections: list[tuple[Any, tuple, str | None]] = [
         (_run_subperiod_ic_section, (signal_dfs, available_features, output_dir), "subperiod_ic"),
         (_run_subperiod_quintile_section, (signal_dfs, available_features, output_dir), "subperiod_quintile"),
@@ -1547,7 +1548,7 @@ def run_all_robustness(
         (_run_portfolio_combined_section, (total_df, universe_name, price_cache_dir, output_dir), None),
         (_run_label_purge_gap_section, (df, output_dir), "label_purge_gap"),
         (_run_bootstrap_section, (total_df, output_dir), "bootstrap_ci"),
-        (_run_beta_window_section, (signal_dfs, df, universe_name, price_cache_dir, output_dir), "beta_window"),
+        (_run_beta_window_section, (signal_dfs, df, universe_name, price_cache_dir, output_dir, tier), "beta_window"),
     ]
     if not skip_mcap:
         sections.append(
@@ -1555,7 +1556,7 @@ def run_all_robustness(
         )
 
     if _n_jobs > 1:
-        with ThreadPoolExecutor(max_workers=_n_jobs) as ex:
+        with ProcessPoolExecutor(max_workers=_n_jobs) as ex:
             future_map = {}
             for func, fargs, attr in sections:
                 future_map[ex.submit(func, *fargs)] = (func, attr)

@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import pickle
 import time
 import warnings
@@ -133,7 +134,7 @@ def _select_stretch_features(
         cv=cv_splits,
         random_state=SEED,
         max_iter=5000,
-        n_jobs=4,
+        n_jobs=min(os.cpu_count(), 8),
     )
     lasso.fit(X_train, y_train)
 
@@ -228,7 +229,7 @@ def _make_model(model_name: str, hparams: dict[str, Any]) -> Any:
             colsample_bytree=float(hparams.get("colsample_bytree", 0.8)),
             random_state=SEED,
             verbose=-1,
-            n_jobs=4,
+            n_jobs=min(os.cpu_count(), 8),
         )
 
     if model_name == "xgboost":
@@ -246,7 +247,7 @@ def _make_model(model_name: str, hparams: dict[str, Any]) -> Any:
             reg_lambda=float(hparams.get("reg_lambda", 10.0)),
             random_state=SEED,
             verbosity=0,
-            n_jobs=4,
+            n_jobs=min(os.cpu_count(), 8),
         )
 
     raise ValueError(f"unknown model: {model_name}")
